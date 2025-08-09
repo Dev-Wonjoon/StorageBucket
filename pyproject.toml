@@ -1,0 +1,12 @@
+[project]
+name = "storagebucket-app"
+version = "0.1.0"
+description = "SNS Scrap and Viewer"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "instaloader>=4.14.2",
+    "pyside6>=6.9.1",
+    "sqlmodel>=0.0.24",
+    "yt-dlp>=2025.7.21",
+]
