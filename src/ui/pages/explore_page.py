@@ -22,13 +22,3 @@ class CommonButton(QPushButton):
         if icon_path:
             self.setIcon(QIcon(icon_path))
             self.setIconSize(self.size() * 0.8)
-        
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                
-            }
-            
-            """)

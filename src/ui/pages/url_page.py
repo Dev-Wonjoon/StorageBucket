@@ -6,12 +6,6 @@ from PySide6.QtCore import Qt
 class UrlWidget(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Storage Bucket")
-        
-        screen_size = QGuiApplication.primaryScreen().availableGeometry()
-        width = int(screen_size.width() * 0.45)
-        height = int(screen_size.height() * 0.50)
-        self.resize(width, height)
         
         layout = QVBoxLayout(self)
         layout.addStretch(1)
