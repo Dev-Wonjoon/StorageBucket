@@ -1,15 +1,26 @@
-import json
+import json, sys
 from pathlib import Path
+
+
+def _app_base_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[2]
+
+BASE_DIR: Path = _app_base_dir()
+SRC_DIR: Path = BASE_DIR / "src"
 
 
 class Config:
     
-    CONFIG_DIR = Path.home() / ".config" / "StorageBucket"
+    CONFIG_DIR = BASE_DIR / ".config" / "StorageBucket"
     CONFIG_FILE = CONFIG_DIR / "settings.json"
     
     DEFAULTS = {
         "database_type": "sqlite",
-        "database_name": "bucket.db"
+        "database_name": "bucket.db",
+        "project_root": str(BASE_DIR),
+        "download_dir": str(BASE_DIR / "downloads"),
     }
     
     @classmethod
@@ -57,3 +68,34 @@ class Config:
         
         sep = "///" if _type == "sqlite" else "//"
         return f"{_type}:{sep}{_name}"
+
+    @classmethod
+    def base_dir(cls) -> Path: return BASE_DIR
+
+    @classmethod
+    def set_download_dir(cls, path: str | Path) -> None:
+        p = Path(path).expanduser()
+        if not p.is_absolute():
+            p = BASE_DIR / p
+        p.mkdir(parents=True, exist_ok=True)
+        cfg = cls._load()
+        cfg["download_dir"] = str(Path)
+        cls._save(cfg)
+    
+    @classmethod
+    def download_dir(cls) -> Path:
+        raw = cls._load().get("download_dir", str(BASE_DIR / "downloads"))
+        p = Path(raw).expanduser()
+        if not p.is_absolute(): p = BASE_DIR / p
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+    
+    @classmethod
+    def workers_dir(cls) -> Path:
+        return BASE_DIR / "workers"
+    
+    
+    @classmethod
+    def default_outtmpl(cls) -> str:
+        return str(cls.download_dir() / "%(title)s_%(id)s.%(ext)s")
+        
