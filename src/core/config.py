@@ -89,13 +89,3 @@ class Config:
         if not p.is_absolute(): p = BASE_DIR / p
         p.mkdir(parents=True, exist_ok=True)
         return p
-    
-    @classmethod
-    def workers_dir(cls) -> Path:
-        return BASE_DIR / "workers"
-    
-    
-    @classmethod
-    def default_outtmpl(cls) -> str:
-        return str(cls.download_dir() / "%(title)s_%(id)s.%(ext)s")
-        

@@ -9,8 +9,8 @@ class Profile(SQLModel, table=True):
     __tablename__ = "profile"
     
     id: int = Field(default=None, primary_key=True)
-    profile_id = Field(default=None, nullable=False)
-    owner_name = Field(default=None, nullable=False)
+    profile_id: str = Field(default=None, nullable=False)
+    owner_name: str = Field(default=None, nullable=False)
     
     medias: List[Media] = Relationship(back_populates="profile")
     
