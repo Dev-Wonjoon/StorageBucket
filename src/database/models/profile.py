@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 from sqlmodel import SQLModel, Field, Relationship
 from pydantic import field_validator
-from database.models.media import Media
+from src.database.models.media import Media
 
 
 class Profile(SQLModel, table=True):
@@ -14,4 +14,4 @@ class Profile(SQLModel, table=True):
     
     medias: List[Media] = Relationship(back_populates="profile")
     
-    updated_at: datetime = Field(default_factory=datetime.now(tz="Asia/Seoul"))
+    updated_at: datetime = Field(default_factory=datetime.now)

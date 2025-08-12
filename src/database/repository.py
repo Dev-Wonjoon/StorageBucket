@@ -1,4 +1,5 @@
 from PySide6.QtCore import QObject, QThread, Signal
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, select, func
 from typing import Type, TypeVar, List, Optional, Dict
 
@@ -131,16 +132,16 @@ class MediaRepository(BaseRepository):
         if page < 1:
             page = 1
         offset = (page - 1) * page_size
-        statement = select(self.model).order_by(Media.created_at.desc()).offset(offset).limit(page_size)
+        statement = (select(self.model)
+                     .options(selectinload(Media.platform), selectinload(Media.profile))
+                     .order_by(Media.created_at.desc())
+                     .offset(offset)
+                     .limit(page_size))
         return db_session.exec(statement).all()
     
-    def get_all_paginated_async(self, page: int, page_size: int, on_finished, on_error):
+    def get_all_paginated_async(self, page: int, page_size: int):
         worker = DatabaseReadWorker(self.get_all_paginated, page=page, page_size=page_size)
-        worker.finished.connect(on_finished)
-        worker.error.connect(on_error)
-        worker.finished(worker.deleteLater)
-        worker.error.connect(worker.deleteLater)
-        worker.start()
+        return worker
     
     def create_with_relations(self, db_session: Session, media_data: Dict) -> Media:
         platform_repo = PlatformRepository()
@@ -149,23 +150,23 @@ class MediaRepository(BaseRepository):
         
         platform = platform_repo.get_or_create(db_session, name=media_data["platform"])
         profile = profile_repo.get_or_create(db_session, owner_name=media_data["uploader"],
-                                             owner_id=media_data.get("uploader_id"))
+                                             proifile_id=media_data.get("uploader_id"))
         
-        tag_object = []
+        tags_object = []
         if "tags" in media_data and media_data["tags"]:
             for tag_name in media_data["tags"]:
                 tag = tag_repo.get_or_create(db_session, name=tag_name)
                 if tag:
-                    tag_object.append(tag)
+                    tags_object.append(tag)
         
         media = Media(
             title=media_data["title"],
-            filepath=str(media_data["filename"]),
+            filepath=str(media_data["filepath"]),
             url=media_data["url"],
             file_size=media_data.get("filesize"),
             platform_id=platform.id,
             profile_id=profile.id,
-            tags=tag_object
+            tags=tags_object
         )
         
         db_session.add(media)

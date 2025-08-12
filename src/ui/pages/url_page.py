@@ -1,7 +1,7 @@
 # 파일 경로: src/ui/pages/url_page.py
 
 from pathlib import Path
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, 
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit,
                                QPushButton, QTableWidget, QTableWidgetItem, QProgressBar)
 from PySide6.QtGui import QGuiApplication, QKeyEvent, QKeySequence
 from PySide6.QtCore import Qt, Signal
@@ -25,7 +25,7 @@ class PasteDownloadLineEdit(QLineEdit):
 class UrlWidget(QWidget):
     def __init__(self):
         super().__init__()
-        
+
         # [수정] DownloadController 인스턴스 생성
         self.ctrl = DownloadController()
         # [추가] 위젯에서 사용할 멤버 변수 초기화
@@ -34,19 +34,19 @@ class UrlWidget(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20) # 여백 추가
-        
+
         # --- UI 구성 (변경 없음) ---
         url_label = QLabel("Download URL:")
         layout.addWidget(url_label)
-        
+
         self.url_input = PasteDownloadLineEdit()
         self.url_input.setPlaceholderText("다운로드 할 URL을 입력 (YouTube, Instagram 등)")
         layout.addWidget(self.url_input)
-        
+
         btn_download = QPushButton("다운로드")
         btn_download.setFixedHeight(40)
         layout.addWidget(btn_download)
-        
+
         # [수정] 테이블 컬럼에 "Source" 추가
         self.table = QTableWidget(0, 6, self)
         self.table.setHorizontalHeaderLabels(["Task ID", "Source", "URL", "Progress", "Status", "Action"])
@@ -59,7 +59,7 @@ class UrlWidget(QWidget):
         self.table.setColumnWidth(2, 250)
         self.table.setColumnWidth(4, 150)
         layout.addWidget(self.table, 1)
-        
+
         # --- 시그널 연결 [수정] ---
         btn_download.clicked.connect(lambda: self._start_download(self.url_input.text()))
         self.url_input.returnPressed.connect(lambda: self._start_download(self.url_input.text()))
@@ -70,41 +70,43 @@ class UrlWidget(QWidget):
         self.ctrl.task_progress.connect(self._on_task_progress)
         self.ctrl.task_error.connect(self._on_task_error)
         self.ctrl.task_finished.connect(self._on_task_finished)
+        self.ctrl.task_saved.connect(self._on_task_saved)
+
 
     def _start_download(self, url: str):
         url = (url or "").strip()
         if not url:
             self._log("URL이 비어있습니다.", level="warning")
             return
-        
+
         # [수정] 컨트롤러의 start_download 메서드 호출
         task = self.ctrl.start_download(url)
         if task:
             self._log(f"[등록] Task ID: {task.id}, Source: {task.source}")
         else:
             self._log(f"[오류] 지원하지 않는 URL이거나 시작에 실패했습니다: {url}", level="error")
-            
+
     def _on_task_added(self, task: DownloadTask):
         row = self.table.rowCount()
         self.table.insertRow(row)
         self._task_row[task.id] = row
-        
+
         self.table.setItem(row, 0, QTableWidgetItem(task.id))
         self.table.setItem(row, 1, QTableWidgetItem(task.source)) # Source 추가
         self.table.setItem(row, 2, QTableWidgetItem(task.url))    # URL 컬럼 인덱스 변경
-        
+
         bar = QProgressBar()
         bar.setRange(0, 100)
         bar.setValue(0)
         self.table.setCellWidget(row, 3, bar) # Progress 컬럼
         self.table.setItem(row, 4, QTableWidgetItem("Queued")) # Status 컬럼
-        
+
         btn = QPushButton("취소")
         btn.clicked.connect(lambda _, t=task.id: self._cancel_task(t))
         self.table.setCellWidget(row, 5, btn) # Action 컬럼
-        
+
         self._row_widgets[task.id] = {"bar": bar, "btn": btn}
-    
+
     def _cancel_task(self, tid: str):
         if self.ctrl.cancel_download(tid):
             self._log(f"[취소 요청] {tid}")
@@ -126,24 +128,24 @@ class UrlWidget(QWidget):
             done = payload.get("downloaded_bytes") or 0
             pct = int(done * 100 / total) if total else 0
             bar.setValue(pct)
-            
+
             speed = payload.get("speed")
             eta = payload.get("eta")
             status_text = f"{pct}%"
             if speed: status_text += f" @ {self._pretty_speed(speed)}"
             if eta: status_text += f", ETA: {eta}s"
             status_item.setText(status_text)
-            
+
         elif st == "finished":
             bar.setValue(100)
             fn = payload.get("filename") or "Unknown"
             status_item.setText(f"완료: {Path(fn).name}")
-            
+
     def _on_task_error(self, tid: str, error_msg: str):
         self._log(f"[오류][{tid}] {error_msg}", level="error")
         row = self._task_row.get(tid)
         if row is None: return
-        
+
         self.table.item(row, 4).setText(f"오류")
         self._row_widgets[tid]["btn"].setEnabled(False)
 
@@ -151,16 +153,26 @@ class UrlWidget(QWidget):
         self._log(f"[종료][{tid}] Exit Code: {code}")
         row = self._task_row.get(tid)
         if row is None: return
-        
+
         self._row_widgets[tid]["btn"].setEnabled(False)
-        
+
         status = "성공" if code == 0 else f"실패 (코드: {code})"
         current_status_item = self.table.item(row, 4)
-        
+
         # 오류가 아닐 때만 상태 업데이트
         if "오류" not in current_status_item.text():
              current_status_item.setText(status)
-        
+             if code == 0:
+                 current_status_item.setText("Saving to DB...")
+
+    def _on_task_saved(self, tid: str):
+        self._log(f"[DB 저장 완료] {tid}")
+        row = self._task_row.get(tid)
+        if row is None: return
+
+        status_item = self.table.item(row, 4)
+        status_item.setText("저장 완료")
+
     def _pretty_speed(self, bps: float) -> str:
         if not isinstance(bps, (int, float)) or bps <= 0:
             return ""
@@ -173,7 +185,7 @@ class UrlWidget(QWidget):
             return f"{bps:.1f} {units[i]}"
         except Exception:
             return "-"
-    
+
     def _log(self, msg: str, level="info"):
         # self.log.appendPlainText(msg) # 별도의 로그 위젯이 있다면 사용
         print(f"[{level.upper()}] {msg}")

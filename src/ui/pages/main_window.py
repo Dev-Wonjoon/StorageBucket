@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QSettings
 from src.ui.widgets.side_tab import SideTab
 from src.ui.widgets.nav_bar import NavBar
 from .url_page import UrlWidget
-
+from .list_page import ListPage
 
 APP_ORG = "StorageBucket"
 APP_NAME = "StorageBucketApp"
@@ -56,7 +56,9 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.stack, 1)
         
         self.url_page = UrlWidget()
+        self.list_page = ListPage()
         self.stack.addWidget(self.url_page)
+        self.stack.addWidget(self.list_page)
         
         self.sidebar.currentChanged.connect(self.stack.setCurrentIndex)
         self.sidebar.setCurrentIndex(url_idx)

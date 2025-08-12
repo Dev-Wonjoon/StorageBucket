@@ -16,7 +16,7 @@ class Media(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     title: str = Field(default=None, nullable=False)
     filepath: str = Field(default=None, nullable=False)
-    url = Optional[str] = Field(default=None, nullable=True)
+    url: Optional[str] = Field(default=None, nullable=True)
     filesize: Optional[int] = Field(default=None, sa_column=Column(BigInteger))
     thumbnail_path: str = Field(default=None, nullable=True)
     
@@ -25,5 +25,6 @@ class Media(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now, sa_column_kwargs={"onupdate": datetime.now})
     
+    platform: "Platform" = Relationship(back_populates="medias")
     profile: "Profile" = Relationship(back_populates="medias")
     tags: List["Tag"] = Relationship(back_populates="medias", link_model=MediaTag)

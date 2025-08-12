@@ -1,7 +1,7 @@
 from typing import List
 from sqlmodel import SQLModel, Field, Relationship
 from pydantic import field_validator
-from database.models.media import Media
+from src.database.models.media import Media
 
 
 class Platform(SQLModel, table=True):
