@@ -1,3 +1,4 @@
+from pathlib import Path
 from PySide6.QtCore import QObject, QThread, Signal
 from typing import Optional
 from uuid import uuid4
@@ -19,21 +20,25 @@ class YtdlpDownloadThread(QThread):
         self.opts["progress_hooks"] = [self._progress_hook]
         self.opts["quiet"] = True
         self.opts["no_warnings"] = True
+        self.daemon = True
 
     def run(self):
         try:
             with yt_dlp.YoutubeDL(self.opts) as ydl:
                 info_dict = ydl.extract_info(self.url, download=True)
-                filepath = ydl.prepare_filename(info_dict)
+                filepath = Path(ydl.prepare_filename(info_dict))
+                thumbnail_path = filepath.with_suffix(".jpg")
+                if not thumbnail_path.exists():
+                    thumbnail_path = filepath.with_suffix(".webp")
                 metadata = {
                     "title": info_dict.get("title"),
                     "filename": filepath,
+                    "thumbnail_path": str(thumbnail_path) if thumbnail_path.exists() else None,
                     "url": info_dict.get("webpage_url"),
                     "filesize": info_dict.get("filesize") or info_dict.get("filesize_approx"),
                     "platform": info_dict.get("extractor_key"),
                     "uploader": info_dict.get("uploader"),
                     "uploader_id": info_dict.get("uploader_id"),
-                    "tags": info_dict.get("tags")
                 }
                 self.metadata_ready.emit(metadata)
             self.finished.emit(0)
@@ -66,7 +71,9 @@ class YtdlpDownloader(QObject):
         output_template = source_path / f"%(title)s_{uid}.%(ext)s"
         ydl_opts = {
             "format": "bestvideo+bestaudio/best",
-            "outtmpl": str(output_template)
+            "outtmpl": str(output_template),
+            "merge_output_format": "mp4",
+            "writethumbnail": True,
         }
 
         self._thread = YtdlpDownloadThread(url, ydl_opts, self)
@@ -74,6 +81,7 @@ class YtdlpDownloader(QObject):
         self._thread.error.connect(self.error)
         self._thread.finished.connect(self.finished)
         self._thread.metadata_ready.connect(self.metadata_ready)
+        self._thread.finished.connect(self._thread.deleteLater)
         self._thread.start()
 
     def kill(self):

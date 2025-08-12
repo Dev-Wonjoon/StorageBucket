@@ -16,6 +16,7 @@ class DatabaseWriteWorker(QThread):
     def __init__(self, media_data: Dict, parent=None):
         super().__init__(parent)
         self.media_data = media_data
+        self.daemon = True
     def run(self):
         try:
             with get_session() as session:
@@ -34,6 +35,7 @@ class DatabaseReadWorker(QThread):
         self.repo_method = repo_method
         self.args = args
         self.kwargs = kwargs
+        self.daemon = True
     
     def run(self):
         try:
@@ -146,27 +148,19 @@ class MediaRepository(BaseRepository):
     def create_with_relations(self, db_session: Session, media_data: Dict) -> Media:
         platform_repo = PlatformRepository()
         profile_repo = ProfileRepository()
-        tag_repo = TagRepository()
         
         platform = platform_repo.get_or_create(db_session, name=media_data["platform"])
         profile = profile_repo.get_or_create(db_session, owner_name=media_data["uploader"],
                                              proifile_id=media_data.get("uploader_id"))
         
-        tags_object = []
-        if "tags" in media_data and media_data["tags"]:
-            for tag_name in media_data["tags"]:
-                tag = tag_repo.get_or_create(db_session, name=tag_name)
-                if tag:
-                    tags_object.append(tag)
-        
         media = Media(
             title=media_data["title"],
             filepath=str(media_data["filepath"]),
             url=media_data["url"],
-            file_size=media_data.get("filesize"),
+            filesize=media_data.get("filesize"),
+            thumbnail_path=media_data.get("thumbnail_path"),
             platform_id=platform.id,
             profile_id=profile.id,
-            tags=tags_object
         )
         
         db_session.add(media)

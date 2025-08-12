@@ -3,7 +3,7 @@ from typing import Optional, Dict
 from uuid import uuid4
 from urllib.parse import urlparse
 import re
-from src.workers.instalodaer_downloader import InstagramDownloader
+from src.workers.instaloader_downloader import InstagramDownloader
 from src.workers.ytdlp_downloader import YtdlpDownloader
 from src.database.repository import DatabaseWriteWorker
 
@@ -73,7 +73,7 @@ class DownloadManager(QObject):
         if task_id in self._workers:
             task = self._tasks[task_id]
             worker = self._workers[task_id]
-            worker.start(task.url)
+            worker.start(task.url, source=task.source)
 
     def cancel_task(self, task_id: str) -> bool:
         if task_id in self._workers:
@@ -101,7 +101,6 @@ class DownloadManager(QObject):
             "platform": metadata.get("platform"),
             "uploader": metadata.get("uploader"),
             "uploader_id": metadata.get("uploader_id"),
-            "tags": metadata.get("tags")
         }
         
         db_worker = DatabaseWriteWorker(media_data)
