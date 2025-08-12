@@ -10,42 +10,6 @@ from src.database.models.profile import Profile
 from src.database.models.tag import Tag
 
 
-class DatabaseWriteWorker(QThread):
-    error = Signal(str)
-    finished = Signal()
-    def __init__(self, media_data: Dict, parent=None):
-        super().__init__(parent)
-        self.media_data = media_data
-        self.daemon = True
-    def run(self):
-        try:
-            with get_session() as session:
-                media_repo = MediaRepository()
-                media_repo.create_with_relations(session, self.media_data)
-            self.finished.emit()
-        except Exception as e:
-            self.error.emit(f"Database write failed: {e}")
-            
-class DatabaseReadWorker(QThread):
-    error = Signal(str)
-    finished = Signal(list)
-    
-    def __init__(self, repo_method, *args, **kwargs):
-        super().__init__()
-        self.repo_method = repo_method
-        self.args = args
-        self.kwargs = kwargs
-        self.daemon = True
-    
-    def run(self):
-        try:
-            with get_session() as session:
-                result = self.repo_method(session, *self.args, **self.kwargs)
-                self.finished.emit(result if isinstance(result, list) else [result])
-        except Exception as e:
-            self.error.emit(f"Database read failed: {e}")
-
-
 T = TypeVar("T", bound=SQLModel)
 class BaseRepository:
     def __init__(self, model: Type[T]):
@@ -141,17 +105,17 @@ class MediaRepository(BaseRepository):
                      .limit(page_size))
         return db_session.exec(statement).all()
     
-    def get_all_paginated_async(self, page: int, page_size: int):
-        worker = DatabaseReadWorker(self.get_all_paginated, page=page, page_size=page_size)
-        return worker
-    
     def create_with_relations(self, db_session: Session, media_data: Dict) -> Media:
         platform_repo = PlatformRepository()
         profile_repo = ProfileRepository()
         
-        platform = platform_repo.get_or_create(db_session, name=media_data["platform"])
-        profile = profile_repo.get_or_create(db_session, owner_name=media_data["uploader"],
+        platform_name = media_data["platform"] or "unknown"
+        platform = platform_repo.get_or_create(db_session, name=platform_name)
+        profile_id = None
+        if media_data["uploader"]:
+            profile = profile_repo.get_or_create(db_session, owner_name=media_data["uploader"],
                                              proifile_id=media_data.get("uploader_id"))
+            profile_id = profile.id
         
         media = Media(
             title=media_data["title"],

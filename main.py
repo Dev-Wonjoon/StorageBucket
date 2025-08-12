@@ -1,12 +1,14 @@
 import sys
 from PySide6.QtWidgets import QApplication
 
+from src.core.logger import setup_logging
 from src.database.settings import init_db
 from src.ui.pages.main_window import MainWindow
 
 
 def main():
-    engine = init_db()
+    setup_logging()
+    init_db()
     
     app = QApplication(sys.argv)
     window = MainWindow()

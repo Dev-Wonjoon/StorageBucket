@@ -2,10 +2,11 @@ from PySide6.QtCore import QObject, QThread, Signal
 from typing import Optional, Dict
 from uuid import uuid4
 from urllib.parse import urlparse
-import re
+import re, logging
+
+from src.services.thread_manager import Task, thread_manager
 from src.workers.instaloader_downloader import InstagramDownloader
 from src.workers.ytdlp_downloader import YtdlpDownloader
-from src.database.repository import DatabaseWriteWorker
 
 class DownloadTask:
     def __init__(self, task_id: str, url: str, source: str):
@@ -18,19 +19,17 @@ class DownloadManager(QObject):
     task_progress = Signal(str, dict)
     task_error = Signal(str, str)
     task_finished = Signal(str, int)
-    task_saved = Signal(str)
+    download_successed = Signal(str, dict)
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._tasks: Dict[str, DownloadTask] = {}
-        self._workers: Dict[str, QThread] = {}
-        self._db_workers: Dict[str, DatabaseWriteWorker] = {}
 
-    def _get_downloader(self, url: str) -> Optional[QObject]:
+    def _get_downloader_class(self, url: str):
         if re.search(r"instagram\.com", url):
-            return InstagramDownloader()
+            return InstagramDownloader
         else:
-            return YtdlpDownloader()
+            return YtdlpDownloader
 
     def _get_source_from_url(self, url: str) -> str:
         try:
@@ -48,73 +47,41 @@ class DownloadManager(QObject):
         except Exception:
             return "unknown"
 
-    def create_task(self, url: str) -> Optional[DownloadTask]:
-        downloader = self._get_downloader(url)
-        if not downloader:
-            return None
+    def start_download(self, url: str) -> Optional[DownloadTask]:
         task_id = uuid4().hex[:12]
-        if isinstance(downloader, InstagramDownloader):
-            source = "Instagram"
-        else:
-            source = self._get_source_from_url(url)
-        task = DownloadTask(task_id, url, source)
-
-        self._tasks[task_id] = task
-        self._workers[task_id] = downloader
-
-        downloader.progress.connect(lambda p, tid=task_id: self.task_progress.emit(tid, p))
-        downloader.error.connect(lambda e, tid=task_id: self.task_error.emit(tid, e))
-        downloader.finished.connect(lambda c, tid=task_id: self._on_task_finished(tid, c))
-        downloader.metadata_ready.connect(lambda m, tid=task_id: self._on_metadata_ready(tid, m))
-
-        return task
-
-    def start_task(self, task_id: str):
-        if task_id in self._workers:
-            task = self._tasks[task_id]
-            worker = self._workers[task_id]
-            worker.start(task.url, source=task.source)
-
-    def cancel_task(self, task_id: str) -> bool:
-        if task_id in self._workers:
-            self._workers[task_id].kill()
-            return True
-        if task_id in self._db_workers:
-            # DB worker cannot be killed, just remove it
-            self._db_workers.pop(task_id, None)
-            return True
-        return False
-
-    def cancel_all_tasks(self):
-        for worker in self._workers.values():
-            worker.kill()
-        self._db_workers.clear()
-
-
-    def _on_metadata_ready(self, task_id: str, metadata: dict):
-        """Save metadata to the database in a separate thread."""
-        media_data = {
-            "title": metadata.get("title"),
-            "filepath": str(metadata.get("filename")),
-            "url": metadata.get("url"),
-            "file_size": metadata.get("filesize"),
-            "platform": metadata.get("platform"),
-            "uploader": metadata.get("uploader"),
-            "uploader_id": metadata.get("uploader_id"),
-        }
+        source = self._get_source_from_url(url)
+        task_info = DownloadTask(task_id, url, source)
+        self._tasks[task_id] = task_info
         
-        db_worker = DatabaseWriteWorker(media_data)
-        db_worker.finished.connect(lambda tid=task_id: self._on_db_write_finished(tid))
-        db_worker.error.connect(lambda e, tid=task_id: self.task_error.emit(tid, e))
-        self._db_workers[task_id] = db_worker
-        db_worker.start()
+        def on_download_success(metadata: dict):
+            self.task_finished.emit(task_id, 0)
+            self.download_successed.emit(task_id, metadata)
+            self._tasks.pop(task_id, None)
+        
+        def on_download_error(error_msg: str):
+            self.task_error.emit(task_id, error_msg)
+            self.task_finished.emit(task_id, 1)
+            self._tasks.pop(task_id, None)
+        
+        def on_progress(progress_data: dict):
+            self.task_progress.emit(task_id, progress_data)
+        
+        DownloaderClass = self._get_downloader_class(url)
+        downloader_instance = DownloaderClass(url, source, on_progress)
+        download_task = Task(
+            target=downloader_instance,
+            on_success=on_download_success,
+            on_error=on_download_error
+        )
+        thread_manager.submit(download_task)
 
-    def _on_db_write_finished(self, task_id: str):
-        self.task_saved.emit(task_id)
-        self._db_workers.pop(task_id, None)
+        return task_info
 
-    def _on_task_finished(self, task_id: str, exit_code: int):
-        self.task_finished.emit(task_id, exit_code)
-        self._workers.pop(task_id, None)
-        if exit_code != 0: # If download fails, remove task
-             self._tasks.pop(task_id, None)
+
+    def cancel_task(self):
+        logging.info("작업 취소는 현재 지원되지 않습니다.")
+
+    def cancel_all_tasks(self, task_id: str):
+        logging.info(f"'{task_id}' 작업 취소는 현재 지원되지 않습니다.")
+        return False
+    

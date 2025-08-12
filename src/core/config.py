@@ -18,7 +18,7 @@ class Config:
     
     DEFAULTS = {
         "database_type": "sqlite",
-        "database_name": "bucket.db",
+        "database_name": str(BASE_DIR / "bucket.db"),
         "project_root": str(BASE_DIR),
         "download_dir": str(BASE_DIR / "downloads"),
     }
@@ -66,8 +66,8 @@ class Config:
         _type = cls.database_type()
         _name = cls.database_name()
         
-        sep = "///" if _type == "sqlite" else "//"
-        return f"{_type}:{sep}{_name}"
+        db_path = Path(_name)
+        return f"{_type}:///{db_path}"
 
     @classmethod
     def base_dir(cls) -> Path: return BASE_DIR

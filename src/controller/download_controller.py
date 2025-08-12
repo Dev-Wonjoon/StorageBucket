@@ -1,7 +1,14 @@
 from PySide6.QtCore import QObject, Signal, Slot
-from typing import Optional, Dict
+from sqlmodel import Session, create_engine
+from typing import Optional
 from uuid import uuid4
+
+from src.database.models.media_data import MediaData
+from src.database.repository import MediaRepository
+from src.database.settings import Config
 from src.services.download_manager import DownloadManager, DownloadTask
+from src.services.thread_manager import Task, thread_manager
+
 
 
 class DownloadController(QObject):
@@ -17,22 +24,54 @@ class DownloadController(QObject):
         self._manager.task_progress.connect(self.task_progress)
         self._manager.task_error.connect(self.task_error)
         self._manager.task_finished.connect(self.task_finished)
-        self._manager.task_saved.connect(self.task_saved)
+        self._manager.download_successed.connect(self.task_saved)
 
     def start_download(self, url: str) -> Optional[DownloadTask]:
         url = (url or "").strip()
         if not url:
             return None
 
-        task = self._manager.create_task(url)
+        task = self._manager.start_download(url)
         if task:
             self.task_added.emit(task)
-            self._manager.start_task(task.id)
             return task
         else:
             self.task_error.emit(uuid4().hex[:12], "지원하지 않는 URL입니다.")
             return None
 
+    def on_download_successed(self, task_id: str, metadata: dict):
+        try:
+            task_info = self._manager._tasks.get(task_id)
+            if not task_info: return
+            media_data = (MediaData.builder()
+                      .with_dict(metadata)
+                      .with_platform(task_info.source)
+                      .build())
+        except ValueError as e:
+            self.task_error.emit(task_id, f"메타데이터 생성 실패: {e}")
+            return
+        
+        def db_write_target(media_data):
+            local_engine = create_engine(Config)
+            with Session(local_engine) as session:
+                media_repo = MediaRepository()
+                media_repo.create_with_relations(session, media_data)
+        
+        def on_db_success(result):
+            self.task_saved.emit(task_id)
+        
+        def on_db_error(error_msg: str):
+            self.task_error.emit(task_id, f"DB 저장 실패: {error_msg}")
+        
+        db_task = Task(
+            target=db_write_target,
+            args=(media_data,),
+            on_success=on_db_success,
+            on_error=on_db_error,
+        )
+        thread_manager.submit(db_task)
+            
+    
     def cancel_download(self, task_id: str) -> bool:
         return self._manager.cancel_task(task_id)
 

@@ -12,3 +12,4 @@ wheels/
 *.bat
 downloads/
 *.txt
+.logs/
