@@ -25,6 +25,6 @@ class Media(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.now, sa_column_kwargs={"onupdate": datetime.now}, nullable=False)
     
-    platform: "Platform" = Relationship(back_populates="medias")
-    profile: "Profile" = Relationship(back_populates="medias")
-    tags: List["Tag"] = Relationship(back_populates="medias", link_model=MediaTag)
+    platform: "Platform" = Relationship(back_populates="medias") # type: ignore
+    profile: "Profile" = Relationship(back_populates="medias") # type: ignore
+    tags: List["Tag"] = Relationship(back_populates="medias", link_model=MediaTag) # type: ignore

@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QSettings
 from src.ui.widgets.side_tab import SideTab
 from src.ui.widgets.nav_bar import NavBar
 from .url_page import UrlWidget
-from .list_page import ListPage
+from .media_list import MediaListPage
 
 APP_ORG = "StorageBucket"
 APP_NAME = "StorageBucketApp"
@@ -48,20 +48,16 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(content_layout, 1)
         
         self.sidebar = SideTab(fixed_width=200)
-        url_idx = self.sidebar.addTab("다운로드")
         list_idx = self.sidebar.addTab("목록 보기")
         content_layout.addWidget(self.sidebar)
         
         self.stack = QStackedWidget()
         content_layout.addWidget(self.stack, 1)
         
-        self.url_page = UrlWidget()
-        self.list_page = ListPage()
-        self.stack.addWidget(self.url_page)
+        self.list_page = MediaListPage()
         self.stack.addWidget(self.list_page)
         
         self.sidebar.currentChanged.connect(self.stack.setCurrentIndex)
-        self.sidebar.setCurrentIndex(url_idx)
         
         self.apply_theme(saved_theme)
     
