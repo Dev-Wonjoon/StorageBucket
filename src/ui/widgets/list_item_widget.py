@@ -16,7 +16,7 @@ class ListItemWidget(QWidget):
         main_layout.setSpacing(15)
         
         self.thumbnail_label = QLabel()
-        self.thumbnail_label.setFixedHeight(120, 80)
+        self.thumbnail_label.setFixedSize(120, 80)
         self.thumbnail_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(self.thumbnail_label)
         

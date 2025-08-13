@@ -6,8 +6,8 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 
-from sqlmodel import Session, create_engine
 from src.core.config import Config
+from src.database.settings import get_session
 from src.database.repository import MediaRepository
 from src.services.thread_manager import Task, thread_manager
 from src.ui.widgets.list_item_widget import ListItemWidget
@@ -45,8 +45,7 @@ class ListPage(QWidget):
         load_id_for_task = self.current_load_id
         
         def _fetch_data(page, page_size):
-            local_engine = create_engine(Config.database_url())
-            with Session(local_engine) as session:
+            with get_session() as session:
                 return self.media_repo.get_all_paginated(session, page, page_size)
         
         task = Task(

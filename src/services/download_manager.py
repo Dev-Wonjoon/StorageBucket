@@ -64,7 +64,7 @@ class DownloadManager(QObject):
             self._tasks.pop(task_id, None)
         
         def on_progress(progress_data: dict):
-            self.task_progress.emit(task_id, progress_data)
+            self.task_progress.emit (task_id, progress_data)
         
         DownloaderClass = self._get_downloader_class(url)
         downloader_instance = DownloaderClass(url, source, on_progress)
