@@ -1,5 +1,7 @@
 from PySide6.QtCore import QObject, Signal
+
 from src.database.repository import MediaRepository
+from src.database.settings import get_session
 from src.services.thread_manager import Task, thread_manager
 
 
@@ -24,7 +26,7 @@ class MediaListController(QObject):
         self.is_loading = False
         self.is_last_page = False
         self.reset_done.emit()
-        self.load_next_page
+        self.load_next_page()
     
     def load_next_page(self):
         if self.is_loading or self.is_last_page:
@@ -33,7 +35,8 @@ class MediaListController(QObject):
         self.is_loading = True
         
         def _fetch(page, size):
-            return self.media_repo.get_all_paginated(page, size)
+            with get_session() as session:
+                return self.media_repo.get_all_paginated(session, page, size)
         
         def _on_success(media_list):
             if load_id_for_task != self.current_load_id:
