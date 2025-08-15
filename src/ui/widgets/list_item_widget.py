@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QSpacerItem, QSizePolicy
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QSpacerItem, QSizePolicy, QCheckBox
 
 from src.database.models.media import Media
 
@@ -20,7 +20,6 @@ class ListItemWidget(QWidget):
         self.thumbnail_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(self.thumbnail_label)
         
-        # 정보 텍스트 (제목, 플랫폼, 업로더)
         info_layout = QVBoxLayout()
         info_layout.setContentsMargins(0, 0, 0, 0)
         info_layout.setSpacing(2)
@@ -38,6 +37,10 @@ class ListItemWidget(QWidget):
         main_layout.addLayout(info_layout, 1)
         
         self.set_data(media)
+        
+        self.checkbox = QCheckBox(self)
+        self.checkbox.hide()
+        main_layout.addWidget(self.checkbox)
     
     def set_data(self, media: Media):
         if media.thumbnail_path:
@@ -48,3 +51,10 @@ class ListItemWidget(QWidget):
             self.thumbnail_label.setPixmap(scaled_pixmap)
         else:
             self.thumbnail_label.setText("No Img")
+    
+    def set_select_mode(self, enabled: bool):
+        self.checkbox.setChecked(False)
+        self.checkbox.setVisible(enabled)
+        
+    def is_checked(self) -> bool:
+        return self.checkbox.isVisible() and self.checkbox.isChecked()

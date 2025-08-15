@@ -35,9 +35,13 @@ class MediaListPage(QWidget):
         self.controller.reset_done.connect(self.clear)
         self.controller.error.connect(lambda msg, _id: logger.info(f"id: {_id}"))
         self.controller.refresh()
+        
+        self.header.ctrl.task_saved.connect(lambda *_: self.controller.refresh())
     
     def clear(self):
         self.list_widget.clear()
+    
+    
     
     def _on_page_loaded(self, media_list: list, _load_id: int):
         self.append_medias(media_list)

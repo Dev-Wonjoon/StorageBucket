@@ -1,6 +1,6 @@
 from PySide6.QtCore import QObject, Signal
 
-from src.database.repository import MediaRepository
+from src.database.repository import MediaRepository, TagRepository
 from src.database.settings import get_session
 from src.services.thread_manager import Task, thread_manager
 
@@ -10,10 +10,12 @@ class MediaListController(QObject):
     error = Signal(str, int)
     reset_done = Signal()
     end_reached = Signal()
+    tags_added = Signal(list, list)
     
     def __init__(self, page_size: int = 25, parent=None):
         super().__init__(parent)
         self.media_repo = MediaRepository()
+        self.tag_repo = TagRepository()
         self.page_size = page_size
         self.current_page = 1
         self.is_loading = False
@@ -64,3 +66,34 @@ class MediaListController(QObject):
             on_error=_on_error,
         )
         thread_manager.submit(task)
+    
+    def add_tags_to_media(self, media_ids: list[int], tags: list[str]):
+        if not media_ids or not tags:
+            return
+        
+        def _work(ids, tag_list):
+            norm, seen = [], set()
+            for t in tag_list:
+                s = (t or "").strip().lower()
+                if not s or s in seen:
+                    continue
+                seen.add(s); norm.append(s)
+            from sqlmodel import select
+            with get_session() as session:
+                if hasattr(self.tag_repo, "upsert_by_names"):
+                    tag_rows = self.tag_repo.upsert_by_names(norm, session=session)
+                else:
+                    from src.database.models.tag import Tag
+                    tag_rows = []
+                    stmt = select(Tag).where(Tag.name.in_(norm))
+                    existing = {t.name: t for t in session.exec(stmt).all()}
+                    for name in norm:
+                        tag = existing.get(name)
+                        if not tag:
+                            tag = Tag(name=name)
+                            session.add(tag)
+                            session.flush()
+                        tag_rows.append(tag)
+                tag_ids = [t.id for t in tag_rows]
+            
+                if 
