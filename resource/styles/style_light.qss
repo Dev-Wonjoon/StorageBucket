@@ -1,0 +1,125 @@
+/* ===== 기본 스타일 (라이트) ===== */
+QWidget {
+    background-color: #f5f7fa;
+    color: #2c3e50;
+    font-family: 'Segoe UI', 'Roboto', sans-serif;
+    font-size: 13px;
+}
+
+/* ===== 버튼 ===== */
+QPushButton {
+    padding: 10px 15px;
+    border-radius: 5px;
+    background-color: #007ACC;
+    outline: 3px solid #007ACC;
+    outline-offset: -3px;
+    border: none;
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 400ms;
+}
+QPushButton:hover {
+    background-color: transparent;
+    color: #007ACC;
+}
+QPushButton:pressed {
+    background-color: #005a99;
+    color: white;
+}
+
+/* ===== 입력창 ===== */
+QLineEdit, QTextEdit {
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    padding: 6px 10px;
+    background-color: white;
+    selection-background-color: #007ACC;
+}
+QLineEdit:focus, QTextEdit:focus {
+    border-color: #007ACC;
+}
+
+/* ===== 콤보박스 ===== */
+QComboBox {
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    padding: 6px 10px;
+    background-color: white;
+}
+QComboBox:focus {
+    border-color: #007ACC;
+}
+
+/* ===== 체크박스 & 라디오 ===== */
+QCheckBox, QRadioButton {
+    spacing: 6px;
+}
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #007ACC;
+    border-radius: 3px;
+    background: white;
+}
+QCheckBox::indicator:checked {
+    background-color: #007ACC;
+}
+QRadioButton::indicator {
+    border-radius: 8px;
+}
+QRadioButton::indicator:checked {
+    background-color: #007ACC;
+}
+
+/* ===== QFrame 카드 스타일 ===== */
+QFrame {
+    background-color: white;
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+}
+
+/* ===== 테이블 ===== */
+QTableWidget, QTableView {
+    background-color: white;
+    gridline-color: #e0e0e0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+QHeaderView::section {
+    background-color: #007ACC;
+    color: white;
+    font-weight: bold;
+    border: none;
+    padding: 6px;
+}
+
+/* ===== 스크롤바 ===== */
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 0px;
+}
+QScrollBar::handle:vertical {
+    background: #007ACC;
+    min-height: 20px;
+    border-radius: 5px;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    margin: 0px;
+}
+QScrollBar::handle:horizontal {
+    background: #007ACC;
+    min-width: 20px;
+    border-radius: 5px;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0;
+}
