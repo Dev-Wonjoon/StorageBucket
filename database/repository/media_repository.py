@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 
 from .generic_repository import GenericRepository
-from screens.main_screen.model import MediaItem
+from screens.main_window.model import MediaItem
 from common.components.media_detail import MediaDetailItem
 from ..models.media import Media
 from ..models.tag import Tag
@@ -13,14 +13,15 @@ class MediaRepository(GenericRepository[Media]):
         super().__init__(session, Media)
     
     def get_all_as_media_items(self) -> List[MediaItem]:
-        stmt = select(Media.id, Media.title, Media.thumbnail_path)
-        results = self.session.exec(stmt).all()
+        results = self.get_all()
     
         return [
             MediaItem(
                 id=media.id,
                 title=media.title,
-                thumbnail_path=media.thumbnail_path
+                thumbnail_path=media.thumbnail_path or media.filepath,
+                profile_name=media.profile.owner_name if media.profile else "Unknown",
+                tags=[tag.name for tag in media.tags]
             ) for media in results
         ]
     
