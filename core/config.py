@@ -5,7 +5,7 @@ from PySide6.QtCore import QObject, Signal
 class ConfigManager(QObject):
     _instance = None
     
-    download_directory_chnaged = Signal(str)
+    download_directory_changed = Signal(str)
     settings_changed = Signal()
     
     def __new__(cls, *args, **kwargs):
@@ -54,7 +54,7 @@ class ConfigManager(QObject):
         path = Path(path)
         self.config.set('Paths', 'download_directory', str(path))
         self._save_config()
-        self.download_directory_chnaged.emit(path)
+        self.download_directory_changed.emit(path)
         self.settings_changed.emit()
     
     def set_thumbnail_quality(self, quality: int):

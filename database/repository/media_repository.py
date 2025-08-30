@@ -5,8 +5,7 @@ from sqlalchemy.orm import selectinload
 from .generic_repository import GenericRepository
 from screens.main_window.model import MediaItem
 from common.components.media_detail import MediaDetailItem
-from ..models.media import Media
-from ..models.tag import Tag
+from database.models.media import Media
 
 class MediaRepository(GenericRepository[Media]):
     def __init__(self, session: Session):
