@@ -1,6 +1,9 @@
 from sqlmodel import SQLModel, Field, Column, BigInteger, Relationship
 from typing import Optional, List
 from datetime import datetime
+from .platform import Platform
+from .profile import Profile
+from .media_tag import MediaTag
 
 class Media(SQLModel, table=True):
     __tablename__ = "media"
@@ -17,6 +20,6 @@ class Media(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.now, sa_column_kwargs={"onupdate": datetime.now}, nullable=False)
     
-    platform: Optional["Platform"] = Relationship(back_populates="medias")
-    profile: Optional["Profile"] = Relationship(back_populates="medias")
-    tags: List["MediaTag"] = Relationship(back_populates="medias", link_model="MediaTag")
+    platform: Optional[Platform] = Relationship(back_populates="medias")
+    profile: Optional[Profile] = Relationship(back_populates="medias")
+    tags: List["Tag"] = Relationship(back_populates="medias", link_model=MediaTag)

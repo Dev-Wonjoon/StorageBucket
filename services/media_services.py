@@ -11,7 +11,7 @@ from workers.base_worker import BaseDownloadWorker
 logger = logging.getLogger(__name__)
 
 class MediaService(QObject):
-    media_added = Signal(MediaItem)
+    media_added = Signal(list)
     error_occurred = Signal(str)
     
     def __init__(self, media_repo: MediaRepository, tag_repo: TagRepository, config: ConfigManager):
@@ -22,15 +22,15 @@ class MediaService(QObject):
         self.download_worker = None
         self._all_media_items_cache = []
     
-    def get_initial_media_items(self):
+    def get_initial_media_items(self) -> list[MediaItem]:
         self._all_media_items_cache = self.media_repo.get_all_as_media_items()
         return self._all_media_items_cache
     
-    def get_available_tags(self):
+    def get_available_tags(self) -> list[str]:
         all_tags = self.tag_repo.get_all()
         return ['All'] + [tag.name for tag in all_tags]
     
-    def filter_media_by_tag(self, tag_name: str):
+    def filter_media_by_tag(self, tag_name: str) -> list[MediaItem]:
         if tag_name == "All":
             return self._all_media_items_cache
         return [

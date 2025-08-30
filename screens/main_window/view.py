@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QListWidget, QSpacerItem, QSizePolicy, QLineEdit, QListWidgetItem
+from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QListWidget, QSpacerItem, QSizePolicy, QLineEdit, QListWidgetItem, QListView
 from PySide6.QtCore import Slot
 from screens.main_window.viewmodel import MainWindowViewModel
 from common.components.gallery_item.widget import GalleryItemWidget
@@ -55,18 +55,19 @@ class MainWindow(QMainWindow):
         
         top_bar_layout = self._create_top_bar()
         
-        self.filter_bar_layout = QHBoxLayout()
-        filter_widget = QWidget()
-        filter_widget.setLayout(self.filter_bar_layout)
-        filter_widget.setFixedWidth(50)
+        self.filter_bar = QWidget()
+        self.filter_bar_layout = QHBoxLayout(self.filter_bar)
+        self.filter_bar_layout.setContentsMargins(0, 0, 0, 0)
+        self.filter_bar_layout.addSpacing(6)
         
         self.gallery_list = QListWidget()
         self.gallery_list.setViewMode(QListWidget.ViewMode.IconMode)
-        self.gallery_list.setResizeMode(QListWidget.ViewMode.Adjust)
+        self.gallery_list.setResizeMode(QListView.Adjust)
         self.gallery_list.setMovement(QListWidget.Movement.Static)
         self.gallery_list.setSpacing(20)
         
         layout.addLayout(top_bar_layout)
+        layout.addWidget(self.filter_bar)
         layout.addWidget(self.gallery_list, 1)
         return panel
     
@@ -89,7 +90,8 @@ class MainWindow(QMainWindow):
         while self.filter_bar_layout.count():
             child = self.filter_bar_layout.takeAt(0)
             if child.widget():
-                child.widget().deleteLater()
+                child.widget().setParent(None)
+        
         for tag_name in tags:
             btn = StyledButton(text=tag_name)
             btn.setObjectName("FilterButton")

@@ -41,6 +41,9 @@ class ConfigManager(QObject):
         with open(self.config_file, 'w', encoding='utf-8') as f:
             self.config.write(f)
     
+    def get_theme(self) -> str:
+        return self.config.get("Settings", "default_theme", fallback="dark")
+    
     def get_download_directory(self) -> str:
         path_str = self.config.get('Paths', 'download_directory', fallback='downloads')
         path = Path(path_str)
