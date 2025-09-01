@@ -1,5 +1,5 @@
 from PySide6.QtCore import QObject, Signal, Slot
-from services.media_services import MediaService
+from services.media_service import MediaService
 
 class MainWindowViewModel(QObject):
     media_items_changed = Signal(list)

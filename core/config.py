@@ -28,7 +28,8 @@ class ConfigManager(QObject):
     
     def _create_default_config(self):
         self.config['Paths'] = {
-            'download_directory': 'downloads'
+            'download_directory': 'downloads',
+            'thumbnail_directory': 'thumbnails',
         }
         self.config['Settings'] = {
             'default_theme': 'white',

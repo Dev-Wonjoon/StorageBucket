@@ -6,8 +6,8 @@ from sqlmodel import create_engine, Session, SQLModel
 from .config import ConfigManager
 from database.repository.media_repository import MediaRepository
 from database.repository.tag_repository import TagRepository
-from services.media_services import MediaService
-from services.media_services import MediaService
+from services.media_service import MediaService
+from services.media_service import MediaService
 from screens.main_window.viewmodel import MainWindowViewModel
 from screens.main_window.view import MainWindow
 
