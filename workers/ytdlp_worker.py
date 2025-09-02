@@ -27,7 +27,8 @@ class YtdlpWorker(BaseDownloadWorker):
         domain = self.get_domain_name(self.url)
         
         try:
-            download_path = Path(self.config.get_download_directory() / domain)
+            base_dir = Path(self.config.get_download_directory())
+            download_path = base_dir / domain
             download_path.mkdir(parents=True, exist_ok=True)
             
             ydl_opts = {
@@ -37,37 +38,37 @@ class YtdlpWorker(BaseDownloadWorker):
                 'noplaylist': True,
                 'merge_output_format': 'mp4',
             }
+            files: list[FileInfo] = []
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(self.url, download=True)
                 
-            files: list[FileInfo] = []
             
-            if "entries" in info:
-                for entry in info["entries"]:
-                    if not entry:
-                        continue
-                    filename = ydl.prepare_filename(entry)
+                if "entries" in info:
+                    for entry in info["entries"]:
+                        if not entry:
+                            continue
+                        filename = ydl.prepare_filename(entry)
+                        filepath = str(Path(filename))
+                        files.append(
+                            FileInfo(
+                                filepath=filepath,
+                                filename=Path(filepath).name,
+                                filesize=Path(filepath).stat().st_size if Path(filepath).exists() else None,
+                                thumbnail_url=entry.get("thumbnail"),
+                            )
+                        )
+                else:
+                    filename = ydl.prepare_filename(info)
                     filepath = str(Path(filename))
                     files.append(
                         FileInfo(
                             filepath=filepath,
-                            filename=Path(filepath).name,
+                            filename=str(Path(filename)),
                             filesize=Path(filepath).stat().st_size if Path(filepath).exists() else None,
-                            thumbnail_url=entry.get("thumbnail"),
+                            thumbnail_url=info.get("thumbnail")
                         )
                     )
-            else:
-                filename = ydl.prepare_filename(info)
-                filepath = str(Path(filename))
-                files.append(
-                    FileInfo(
-                        filepath=filepath,
-                        filename=str(Path(filename)),
-                        filesize=Path(filepath).stat().st_size if Path(filepath).exists() else None,
-                        thumbnail_url=info.get("thumbnail")
-                    )
-                )
             media_info = DownloadMediaInfo(
                 files=files,
                 source_url=self.url,

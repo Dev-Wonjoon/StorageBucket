@@ -35,14 +35,14 @@ class GalleryItemWidget(QWidget):
         author_layout.addStretch()
         
         info_layout.addWidget(title_label)
-        info_layout.addWidget(author_layout)
+        info_layout.addLayout(author_layout)
         
         main_layout.addWidget(self.thumbnail_label, 1)
         main_layout.addWidget(info_widget)
         
     def set_thumbnail(self, path):
         pixmap = QPixmap(path)
-        if pixmap.isNull(path):
+        if pixmap.isNull():
             pixmap = QPixmap(self.sizeHint().width(), 180)
             pixmap.fill(QColor('#444'))
         self.thumbnail_label.setPixmap(pixmap)

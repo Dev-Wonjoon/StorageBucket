@@ -78,35 +78,30 @@ class MediaService(QObject):
             self.error_occurred.emit(f"다운로드 실패: {e}")
     
     def _on_download_success(self, media_info: DownloadMediaInfo):
+        logger.info(f"[MediaService] DB에 저장 시도: {media_info.source_url}")
+        platform = self._get_platform_from_url(media_info.source_url)
+        added_items: list[MediaItem] = []
+            
         try:
-            platform = self._get_platform_from_url(media_info.source_url)
-            added_items: list[MediaItem] = []
-            
-            
             for file_info in media_info.files:
                 local_thumbnail = self._save_thumbnail(file_info.thumbnail_url, platform.name)
-                new_media = self.media_repo.create(
-                    Media(
-                        title=media_info.title or Path(file_info.filename).stem,
-                        filepath=file_info.filepath,
-                        url=media_info.source_url,
-                        thumbnail_path=local_thumbnail,
-                        filesize=file_info.filesize,
-                    )
+                
+                media = Media(
+                    title=media_info.title or Path(file_info.filename).stem,
+                    filepath=file_info.filepath,
+                    url=media_info.source_url,
+                    thumbnail_path=local_thumbnail,
+                    filesize=file_info.filesize,
+                    platform_id=platform.id
                 )
-            
-            ui_item = MediaItem(
-                id=new_media.id,
-                title=new_media.title,
-                filepath=new_media.filepath,
-                thumbnail_path=new_media,
-                profile_name=new_media.profile.name if new_media.profile else None,
-                tags=[t.name for t in new_media.tags] if new_media.tags else []
-            )
-            
-            self.media_added.emit([ui_item])
+                
+                ui_item = self.media_repo.create_and_get_item(media)
+                added_items.append(ui_item)
         except Exception as e:
-            self.error_occurred.emit(f"DB 저장 실패: {e}")
+                logger.exception("[MediaService] DB 저장 실패")
+                self.error_occurred.emit(f"DB 저장 실패: {e}")
+        if added_items:
+            self.media_added.emit(added_items)
     
     def _on_download_failed(self, message: str):
         self.error_occurred.emit(f"다운로드 실패: {message}")
@@ -115,7 +110,7 @@ class MediaService(QObject):
     def _extract_domain(self, url: str) -> str:
         parsed = urlparse(url)
         host = parsed.netloc.split(":")[0]
-        parts = host.split["."]
+        parts = host.split(".")
         if len(parts) >= 2:
             return parts[-2].lower()
         return host.lower()

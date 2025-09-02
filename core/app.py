@@ -1,9 +1,9 @@
 import sys, logging
 from pathlib import Path
 from PySide6.QtWidgets import QApplication
-from sqlmodel import create_engine, Session, SQLModel
 
 from .config import ConfigManager
+from .database import init_db
 from database.repository.media_repository import MediaRepository
 from database.repository.tag_repository import TagRepository
 from database.repository.platform_repository import PlatformRepository
@@ -19,13 +19,14 @@ class App:
         self.app = QApplication(sys.argv)
         self._setup_logging()
         self.config = self._setup_config()
-        self.db_session = self._setup_database()
+        
+        init_db()
         
         self._load_stylesheet()
         
-        tag_repo = TagRepository(self.db_session)
-        media_repo = MediaRepository(self.db_session)
-        platform_repo = PlatformRepository(self.db_session)
+        tag_repo = TagRepository()
+        media_repo = MediaRepository()
+        platform_repo = PlatformRepository()
         media_service = MediaService(media_repo, tag_repo, platform_repo, self.config)
         main_vm = MainWindowViewModel(media_service)
         
@@ -39,13 +40,6 @@ class App:
     def _setup_config(self) -> ConfigManager:
         logger.info("설정 관리자를 초기화합니다.")
         return ConfigManager(config_file='resource/config.ini')
-    
-    def _setup_database(self) -> Session:
-        logger.info("데이터베이스를 설정합니다.")
-        engine = create_engine("sqlite:///storagebucket.db")
-        SQLModel.metadata.create_all(engine)
-        logger.info("데이터베이스 테이블 생성 완료")
-        return Session(engine)
     
     def _load_stylesheet(self):
         theme = self.config.get_theme()
