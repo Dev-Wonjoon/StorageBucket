@@ -11,6 +11,7 @@ from database.repository.platform_repository import PlatformRepository
 from database.models.media import Media
 from database.models.platform import Platform
 from screens.main_window.model import MediaItem
+from workers.instaloader_worker import InstaloaderWorker
 from workers.ytdlp_worker import YtdlpWorker
 from workers.data_model import DownloadMediaInfo
 
@@ -68,11 +69,14 @@ class MediaService(QObject):
     def download_media(self, url: str):
         logger.info(f"[MediaService] 다운로드 시작: {url}")
         try:
+            domain = self._extract_domain(url)
+            worker_cls = self._get_worker_for_domain(domain)
             self.download_worker = YtdlpWorker(url)
             self.download_worker.success.connect(self._on_download_success)
             self.download_worker.failed.connect(self._on_download_failed)
-            self.download_worker.run()
-            logger.info(f"[MediaService] YtdlpWorker 실행됨")
+            self.download_worker.finished.connect(self.download_worker.deleteLater)
+            self.download_worker.start()
+            logger.info(f"[MediaService] {worker_cls.__name__} 실행됨 ({domain})")
         except Exception as e:
             logger.exception(f"[MediaService] 다운로드 실패: {e}")
             self.error_occurred.emit(f"다운로드 실패: {e}")
@@ -141,3 +145,8 @@ class MediaService(QObject):
         except Exception as e:
             self.error_occurred.emit(f"썸네일 저장 실패: {e}")
             return None
+    
+    def _get_worker_for_domain(self, domain: str):
+        if domain in ("instagram", "insta"):
+            return InstaloaderWorker
+        return YtdlpWorker

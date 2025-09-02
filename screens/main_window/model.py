@@ -7,5 +7,6 @@ class MediaItem:
     title: str
     filepath: str
     thumbnail_path: Optional[str]
+    platform_name: Optional[str]
     profile_name: Optional[str]
     tags: List[str]

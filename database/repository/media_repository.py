@@ -26,6 +26,7 @@ class MediaRepository(GenericRepository[Media]):
                 title=obj_in.title,
                 filepath=obj_in.filepath,
                 thumbnail_path=obj_in.thumbnail_path or obj_in.filepath,
+                platform_name=obj_in.platform.name,
                 profile_name=profile_name,
                 tags=tags
             )
@@ -40,7 +41,8 @@ class MediaRepository(GenericRepository[Media]):
                     filepath=media.filepath,
                     thumbnail_path=media.thumbnail_path or media.filepath,
                     profile_name=media.profile.owner_name if media.profile else "Unknown",
-                    tags=[tag.name for tag in media.tags]
+                    platform_name=media.platform.name if media.platform else "Unknown",
+                    tags=[tag.name for tag in media.tags] if media.tags else []
                 ) for media in results
             ]
     
