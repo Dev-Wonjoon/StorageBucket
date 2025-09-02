@@ -1,0 +1,13 @@
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, QSizePolicy, QLineEdit
+from common.components.styled_button.widget import StyledButton
+
+
+class MainTopBar(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QHBoxLayout(self)
+        layout.addWidget(QLabel("DashBoard", objectName="TitleLabel"))
+        layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
+        layout.addWidget(StyledButton(text="Feed"))
+        layout.addWidget(StyledButton(text="Edit"))
+        layout.addWidget(QLineEdit(placeholderText="Search..."))

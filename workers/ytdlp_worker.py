@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 from .base_worker import BaseDownloadWorker
 from .data_model import DownloadMediaInfo, FileInfo
-from ..core.config import ConfigManager
+from core.config import ConfigManager
 
 
 class YtdlpWorker(BaseDownloadWorker):
@@ -28,37 +28,54 @@ class YtdlpWorker(BaseDownloadWorker):
         
         try:
             download_path = Path(self.config.get_download_directory() / domain)
-            download_path.mkdir(parent=True, exist_ok=True)
+            download_path.mkdir(parents=True, exist_ok=True)
             
             ydl_opts = {
-                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+                'format': 'bestvideo+bestaudio/best',
                 'outtmpl': str(download_path / "%(title)s_%(id)s.%(ext)s"),
                 'quiet': True,
-                'noplaylist': True
+                'noplaylist': True,
+                'merge_output_format': 'mp4',
             }
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(self.url, download=True)
                 
+            files: list[FileInfo] = []
+            
+            if "entries" in info:
+                for entry in info["entries"]:
+                    if not entry:
+                        continue
+                    filename = ydl.prepare_filename(entry)
+                    filepath = str(Path(filename))
+                    files.append(
+                        FileInfo(
+                            filepath=filepath,
+                            filename=Path(filepath).name,
+                            filesize=Path(filepath).stat().st_size if Path(filepath).exists() else None,
+                            thumbnail_url=entry.get("thumbnail"),
+                        )
+                    )
+            else:
                 filename = ydl.prepare_filename(info)
                 filepath = str(Path(filename))
-            
-            file_info = FileInfo(
-                filepath=filepath,
-                filename=Path(filepath).name,
-                filesize=Path(filepath).stat().st_size if Path(filepath).exists() else None,
-            )
-            
+                files.append(
+                    FileInfo(
+                        filepath=filepath,
+                        filename=str(Path(filename)),
+                        filesize=Path(filepath).stat().st_size if Path(filepath).exists() else None,
+                        thumbnail_url=info.get("thumbnail")
+                    )
+                )
             media_info = DownloadMediaInfo(
-                files=[FileInfo],
+                files=files,
                 source_url=self.url,
                 title=info.get("title"),
-                thumbnail_url=info.get("thumbnail"),
                 platform_name=domain,
                 uploader=info.get("uploader"),
-                upload_date=info.get("upload_date"),
+                upload_date=info.get("upload_date")
             )
-            
-            self.finished.emit(media_info)
+            self.success.emit(media_info)
         except Exception as e:
-            self.error.emit(str(e))
+            self.failed.emit(str(e))

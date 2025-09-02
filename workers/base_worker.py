@@ -3,8 +3,8 @@ from .data_model import DownloadMediaInfo
 
 
 class BaseDownloadWorker(QThread):
-    finished = Signal(DownloadMediaInfo)
-    error = Signal(str)
+    success = Signal(DownloadMediaInfo)
+    failed = Signal(str)
     
     def __init__(self, url: str, parent=None):
         super().__init__(parent)

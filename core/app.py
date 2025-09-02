@@ -6,6 +6,7 @@ from sqlmodel import create_engine, Session, SQLModel
 from .config import ConfigManager
 from database.repository.media_repository import MediaRepository
 from database.repository.tag_repository import TagRepository
+from database.repository.platform_repository import PlatformRepository
 from services.media_service import MediaService
 from services.media_service import MediaService
 from screens.main_window.viewmodel import MainWindowViewModel
@@ -24,7 +25,8 @@ class App:
         
         tag_repo = TagRepository(self.db_session)
         media_repo = MediaRepository(self.db_session)
-        media_service = MediaService(media_repo, tag_repo, self.config)
+        platform_repo = PlatformRepository(self.db_session)
+        media_service = MediaService(media_repo, tag_repo, platform_repo, self.config)
         main_vm = MainWindowViewModel(media_service)
         
         self.main_window = MainWindow(main_vm)

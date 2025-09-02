@@ -1,5 +1,9 @@
+import logging
 from PySide6.QtCore import QObject, Signal, Slot
 from services.media_service import MediaService
+
+logger = logging.getLogger(__name__)
+
 
 class MainWindowViewModel(QObject):
     media_items_changed = Signal(list)
@@ -29,3 +33,8 @@ class MainWindowViewModel(QObject):
     def refresh_gallery(self):
         refreshed_items = self.media_service.get_initial_media_items()
         self.media_items_changed.emit(refreshed_items)
+        
+    @Slot(str)
+    def download_media(self, url: str):
+        
+        self.media_service.download_media(url)
