@@ -25,27 +25,17 @@ class GalleryItemWidget(QWidget):
         
         info_widget = QWidget()
         info_layout = QVBoxLayout(info_widget)
+        info_layout.setContentsMargins(6, 4, 6, 4)
+        info_layout.setSpacing(2)
         
-        title_label = InfoLabel(
-            text=item.title,
-            color="#00BFFF",
-            bold=True,
-            elide=True,
-            max_width=260
-        )
+        title_label = InfoLabel(text=item.title, elide = True)
         title_label.clicked.connect(lambda text: self.label_clicked.emit({"title", text}))
         
-        platform_label = InfoLabel(
-            text=item.platform_name or "Unknown",
-            color="#FFD700",
-        )
+        platform_label = InfoLabel(text=item.platform_name or "Unknown",)
         platform_label.clicked.connect(lambda text: self.label_clicked.emit(("platform", text)))
         
         author_layout = QHBoxLayout()
-        author_label = InfoLabel(
-            text=item.profile_name or "Unknown",
-            color="#AAAAAA"
-        )
+        author_label = InfoLabel(text=item.profile_name or "Unknown",)
         author_label.clicked.connect(lambda text: self.label_clicked.emit("profile", text))
         
         

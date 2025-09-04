@@ -6,27 +6,26 @@ from PySide6.QtCore import Qt, Signal
 class InfoLabel(QLabel):
     clicked = Signal(str)
     
-    def __init__(self, text: str, color: str = "#FFFFFF", bold: bool = False, elide: bool = False, max_width: int = 260):
+    def __init__(self, text: str, bold: bool = False, elide: bool = False, max_width: int = 260):
         super().__init__()
         self._full_text = text
+        self.max_width = max_width
+        self.elide = elide
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.setWordWrap(True)
-        
-        style = f"color: {color};"
-        if bold:
-            style += " font-weight: bold;"
-        self.setStyleSheet(style)
-        self.setCursor(Qt.PointingHandCursor)
-        self.setMinimumHeight(self.fontMetrics().height() + 6)
+        self.setWordWrap(False)
+        self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        _fm = QFontMetrics(self.font())
+        self.setMinimumHeight(_fm.lineSpacing() + 2)
         
         if elide:
             fm = QFontMetrics(self.font())
-            elide_text = fm.elidedText(text, Qt.TextElideMode.ElideRight, max_width)
-            self.setText(elide_text)
-            self.setToolTip(text)
+            elided = fm.elidedText(self._full_text, Qt.TextElideMode.ElideRight, max_width)
+            self.setText(elided)
+            self.setToolTip(self._full_text)
         else:
-            self.setText(text)
+            self.setText(self._full_text)
     
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit(self._full_text)
+        super().mousePressEvent(event)
