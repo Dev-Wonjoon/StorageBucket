@@ -8,6 +8,4 @@ class MainTopBar(QWidget):
         layout = QHBoxLayout(self)
         layout.addWidget(QLabel("DashBoard", objectName="TitleLabel"))
         layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
-        layout.addWidget(StyledButton(text="Feed"))
-        layout.addWidget(StyledButton(text="Edit"))
         layout.addWidget(QLineEdit(placeholderText="Search..."))

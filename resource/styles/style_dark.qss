@@ -2,8 +2,6 @@
 QWidget {
     background-color: #1e1e1e;
     color: #e0e0e0;
-    font-family: 'Segoe UI', 'Roboto', sans-serif;
-    font-size: 13px;
 }
 
 /* ===== 버튼 ===== */
@@ -14,7 +12,6 @@ QPushButton {
     border: 2px solid #007ACC;
     color: white;
     font-weight: 600;
-    font-size: 14px;
 }
 QPushButton:hover {
     background-color: transparent;

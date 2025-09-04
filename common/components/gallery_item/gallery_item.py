@@ -1,16 +1,16 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtGui import QPixmap, QColor, QCursor
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QSize
 from screens.main_window.model import MediaItem
+from .info_label import InfoLabel
 
 
 class GalleryItemWidget(QWidget):
-    clicked = Signal(MediaItem)
+    label_clicked = Signal(MediaItem)
     
     def __init__(self, item: MediaItem):
         super().__init__()
         self.item = item
-        self.setFixedSize(280, 240)
         self.setObjectName("GalleryItem")
         
         self.setCursor(QCursor(Qt.PointingHandCursor))
@@ -20,27 +20,33 @@ class GalleryItemWidget(QWidget):
         main_layout.setSpacing(4)
         
         self.thumbnail_label = QLabel()
-        self.thumbnail_label.setObjectName("ThumbnailLabel")
         self.thumbnail_label.setScaledContents(True)
         self.set_thumbnail(item.thumbnail_path)
         
         info_widget = QWidget()
-        info_widget.setObjectName("InfoOverlay")
         info_layout = QVBoxLayout(info_widget)
-        info_layout.setContentsMargins(6, 4, 6, 4)
-        info_layout.setSpacing(2)
         
-        title_label = QLabel(item.title)
-        title_label.setObjectName("TitleLabel")
-        title_label.setStyleSheet("color: #00BFFF; font-weight: bold;")
+        title_label = InfoLabel(
+            text=item.title,
+            color="#00BFFF",
+            bold=True,
+            elide=True,
+            max_width=260
+        )
+        title_label.clicked.connect(lambda text: self.label_clicked.emit({"title", text}))
         
-        platform_label = QLabel(item.platform_name or "Unknown")
-        platform_label.setObjectName("PlatformLabel")
-        platform_label.setStyleSheet("color: #FFD700")
+        platform_label = InfoLabel(
+            text=item.platform_name or "Unknown",
+            color="#FFD700",
+        )
+        platform_label.clicked.connect(lambda text: self.label_clicked.emit(("platform", text)))
         
         author_layout = QHBoxLayout()
-        author_label = QLabel(item.profile_name or "Unknown")
-        author_label.setObjectName("AuthorLabel")
+        author_label = InfoLabel(
+            text=item.profile_name or "Unknown",
+            color="#AAAAAA"
+        )
+        author_label.clicked.connect(lambda text: self.label_clicked.emit("profile", text))
         
         
         author_layout.addWidget(author_label)
@@ -59,3 +65,6 @@ class GalleryItemWidget(QWidget):
             pixmap = QPixmap(self.sizeHint().width(), 180)
             pixmap.fill(QColor('#444'))
         self.thumbnail_label.setPixmap(pixmap)
+    
+    def sizeHint(self):
+        return QSize(300, 240)

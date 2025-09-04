@@ -4,7 +4,7 @@ from PySide6.QtCore import QSize, Qt
 
 
 class StyledButton(QPushButton):
-    def __init__(self, text="", icon_path=None, tooltip="", fixed_size=None):
+    def __init__(self, text="", icon_path=None, tooltip=""):
         super().__init__(text)
         
         self.setObjectName("StyledButton")
@@ -20,7 +20,3 @@ class StyledButton(QPushButton):
                 self.setToolTip(tooltip)
             
             self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-            if fixed_size:
-                self.setFixedSize(fixed_size)
-            else:
-                self.setFixedSize(36, 36)

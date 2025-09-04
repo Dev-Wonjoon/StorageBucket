@@ -1,6 +1,7 @@
 import sys, logging
 from pathlib import Path
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QFont
 
 from .config import ConfigManager
 from .database import init_db
@@ -18,7 +19,9 @@ class App:
     def __init__(self):
         self.app = QApplication(sys.argv)
         self._setup_logging()
+        self._setup_font()
         self.config = self._setup_config()
+        
         
         init_db()
         
@@ -50,6 +53,10 @@ class App:
                 self.app.setStyleSheet(f.read())
         else:
             logger.warning(f"테마 파일을 찾을 수 없습니다. '{style_file}'")
+
+    def _setup_font(self):
+        font = QFont("Segoe UI", 14)
+        self.app.setFont(font)
     
     def run(self):
         logger.info("애플리케이션 시작")
