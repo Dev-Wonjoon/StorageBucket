@@ -9,9 +9,12 @@ class MainLeftPanel(QWidget):
         
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Stoage Bucket", objectName="LogoLabel"))
-        layout.addWidget(StyledButton(text="Feed"))
-        layout.addWidget(StyledButton(text="Search"))
-        layout.addWidget(StyledButton(text="Album"))
+        # layout.addWidget(StyledButton(text="Feed"))
+        # layout.addWidget(StyledButton(text="Search"))
+        # layout.addWidget(StyledButton(text="Album"))
         layout.addStretch()
+        
+        self.theme_toggle_button = StyledButton(text="Toggle Theme")
+        layout.addWidget(self.theme_toggle_button)
         layout.addWidget(StyledButton(text="Settings"))
         

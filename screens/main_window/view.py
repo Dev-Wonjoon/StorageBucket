@@ -13,7 +13,7 @@ class MainWindow(QMainWindow):
         
         self._init_ui()
         self._connect_signals()
-        
+         
         self.vm.inital_load()
     
     def _init_ui(self):
@@ -25,6 +25,7 @@ class MainWindow(QMainWindow):
         main_layout.setSpacing(0)
         
         self.left_panel = MainLeftPanel()
+        self.toggle_theme_button = self.left_panel.theme_toggle_button
         self.top_bar = MainTopBar()
         self.filter_bar = FilterBar()
         self.gallery_list = GalleryListWidget()

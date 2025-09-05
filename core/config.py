@@ -7,6 +7,7 @@ class ConfigManager(QObject):
     
     download_directory_changed = Signal(str)
     settings_changed = Signal()
+    theme_changed = Signal(str)
     
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -66,3 +67,10 @@ class ConfigManager(QObject):
         self.config.set('Settings', 'thumbnail_quality', str(quality))
         self._save_config()
         self.settings_changed.emit()
+    
+    def set_theme(self, theme: str):
+        self.config.set('Settings', 'default_theme', theme)
+        self._save_config()
+        self.theme_changed.emit(theme)
+        self.settings_changed.emit()
+        

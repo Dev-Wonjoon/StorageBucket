@@ -26,6 +26,7 @@ class App:
         init_db()
         
         self._load_stylesheet()
+        self.config.theme_changed.connect(self._load_stylesheet)
         
         tag_repo = TagRepository()
         media_repo = MediaRepository()
@@ -34,6 +35,7 @@ class App:
         main_vm = MainWindowViewModel(media_service)
         
         self.main_window = MainWindow(main_vm)
+        self.main_window.toggle_theme_button.clicked.connect(self.toggle_theme)
         
     
     def _setup_logging(self):
@@ -57,6 +59,11 @@ class App:
     def _setup_font(self):
         font = QFont("Segoe UI", 10)
         self.app.setFont(font)
+        
+    def toggle_theme(self):
+        current_theme = self.config.get_theme()
+        new_theme = 'light' if current_theme == 'dark' else 'dark'
+        self.config.set_theme(new_theme)
     
     def run(self):
         logger.info("애플리케이션 시작")
