@@ -55,7 +55,7 @@ class App:
             logger.warning(f"테마 파일을 찾을 수 없습니다. '{style_file}'")
 
     def _setup_font(self):
-        font = QFont("Segoe UI", 14)
+        font = QFont("Segoe UI", 10)
         self.app.setFont(font)
     
     def run(self):

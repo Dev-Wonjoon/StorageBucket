@@ -14,8 +14,6 @@ class InfoLabel(QLabel):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.setWordWrap(False)
         self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        _fm = QFontMetrics(self.font())
-        self.setMinimumHeight(_fm.lineSpacing() + 2)
         
         if elide:
             fm = QFontMetrics(self.font())

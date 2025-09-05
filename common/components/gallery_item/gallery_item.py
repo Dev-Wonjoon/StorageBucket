@@ -21,11 +21,12 @@ class GalleryItemWidget(QWidget):
         
         self.thumbnail_label = QLabel()
         self.thumbnail_label.setScaledContents(True)
+        self.thumbnail_label.setFixedHeight(180)
         self.set_thumbnail(item.thumbnail_path)
         
         info_widget = QWidget()
         info_layout = QVBoxLayout(info_widget)
-        info_layout.setContentsMargins(6, 4, 6, 4)
+        info_layout.setContentsMargins(6, 0, 6, 0)
         info_layout.setSpacing(2)
         
         title_label = InfoLabel(text=item.title, elide = True)
@@ -40,14 +41,14 @@ class GalleryItemWidget(QWidget):
         
         
         author_layout.addWidget(author_label)
-        author_layout.addStretch()
         
         info_layout.addWidget(title_label)
         info_layout.addWidget(platform_label)
         info_layout.addLayout(author_layout)
         
-        main_layout.addWidget(self.thumbnail_label, 1)
+        main_layout.addWidget(self.thumbnail_label)
         main_layout.addWidget(info_widget)
+        main_layout.addStretch(20)
         
     def set_thumbnail(self, path):
         pixmap = QPixmap(path)
@@ -57,4 +58,4 @@ class GalleryItemWidget(QWidget):
         self.thumbnail_label.setPixmap(pixmap)
     
     def sizeHint(self):
-        return QSize(300, 240)
+        return QSize(300, 270)
