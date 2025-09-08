@@ -1,10 +1,8 @@
-/* ===== 기본 스타일 (라이트 모던) ===== */
 QWidget {
     background-color: #f5f6f8;
     color: #2c2c2c;
 }
 
-/* ===== 버튼 ===== */
 QPushButton {
     padding: 8px 16px;
     border-radius: 8px;
@@ -14,14 +12,13 @@ QPushButton {
     font-weight: 600;
 }
 QPushButton:hover {
-    background-color: #1a8cff;   /* 더 밝은 블루 */
+    background-color: #1a8cff;
 }
 
 QPushButton:pressed {
-    background-color: #005a99;   /* 눌렸을 때 딥 블루 */
+    background-color: #005a99;
 }
 
-/* ===== 입력창 ===== */
 QLineEdit, QTextEdit {
     border: 1px solid #d0d0d0;
     border-radius: 6px;
@@ -35,7 +32,6 @@ QLineEdit:focus, QTextEdit:focus {
     background-color: #ffffff;
 }
 
-/* ===== 카드(QFrame) ===== */
 QFrame {
     background-color: #ffffff;
     border-radius: 10px;

@@ -1,48 +1,59 @@
-/* ===== 기본 스타일 (다크) ===== */
 QWidget {
-    background-color: #1e1e1e;
-    color: #e0e0e0;
+    background-color: #2c2c2c;
+    color: #f0f0f0;
 }
 
-/* ===== 버튼 ===== */
 QPushButton {
-    padding: 8px 14px;
-    border-radius: 1px;
-    background-color: #5D8AA8;
-    border: 1px solid #007ACC;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background-color: #007ACC;
+    border: none;
     color: white;
     font-weight: 600;
 }
 QPushButton:hover {
-    background-color: #5682B1;
-    color: #007ACC;
+    background-color: #1a8cff;
 }
 QPushButton:pressed {
     background-color: #005a99;
-    color: white;
 }
 
-/* ===== 입력창 ===== */
 QLineEdit, QTextEdit {
-    border: 2px solid #444;
-    border-radius: 1px;
-    padding: 6px 10px;
-    background-color: #2a2a2a;
-    color: #e0e0e0;
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 8px 12px;
+    background-color: #3a3a3a;
+    color: #f0f0f0;
     selection-background-color: #007ACC;
 }
 QLineEdit:focus, QTextEdit:focus {
-    border-color: #007ACC;
+    border: 2px solid #007ACC;
 }
 
-
-/* ===== 카드(QFrame) ===== */
 QFrame {
-    background-color: #2a2a2a;
-    padding: 12px;
-    border: 1px solid #444;
+    background-color: #3a3a3a;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid #555;
 }
 
-leftPanel {
-    border-right: 3px solid #ffffff;
+QWidget#GalleryItem {
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    border-radius: 8px;
+}
+
+QWidget#GalleryItem:hover {
+    background-color: #4a4a4a;
+    border: 1px solid #007ACC;
+    border-radius: 8px;
+}
+
+GalleryItemWidget QLabel {
+    background-color: #444;
+    border-radius: 8px;
+}
+
+#leftPanel {
+    border-right: 1px solid #555;
 }
