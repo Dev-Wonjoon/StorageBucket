@@ -16,6 +16,7 @@ QPushButton {
 QPushButton:hover {
     background-color: #1a8cff;   /* 더 밝은 블루 */
 }
+
 QPushButton:pressed {
     background-color: #005a99;   /* 눌렸을 때 딥 블루 */
 }
@@ -42,8 +43,13 @@ QFrame {
     border: 1px solid #e0e0e0;
 }
 
-/* ===== 레프트 패널 ===== */
-leftPanel {
+QWidget#GalleryItem {
     background-color: #ffffff;
-    border-right: 2px solid #000000;
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+}
+
+QWidget#GalleryItem:hover {
+    background-color: lightblue;
+    border: 1px solid #007ACC;
 }

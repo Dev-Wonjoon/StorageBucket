@@ -12,6 +12,7 @@ class GalleryItemWidget(QWidget):
         super().__init__()
         self.item = item
         self.setObjectName("GalleryItem")
+        self.setMaximumSize(self.sizeHint())
         
         self.setCursor(QCursor(Qt.PointingHandCursor))
         
@@ -21,7 +22,7 @@ class GalleryItemWidget(QWidget):
         
         self.thumbnail_label = QLabel()
         self.thumbnail_label.setScaledContents(True)
-        self.thumbnail_label.setFixedHeight(180)
+        self.thumbnail_label.setMaximumHeight(180)
         self.set_thumbnail(item.thumbnail_path)
         
         info_widget = QWidget()
@@ -29,7 +30,7 @@ class GalleryItemWidget(QWidget):
         info_layout.setContentsMargins(6, 0, 6, 4)
         info_layout.setSpacing(2)
         
-        title_label = InfoLabel(text=item.title, elide = True)
+        title_label = InfoLabel(text=item.title)
         title_label.clicked.connect(lambda text: self.label_clicked.emit({"title", text}))
         
         platform_label = InfoLabel(text=item.platform_name or "Unknown",)
@@ -48,7 +49,6 @@ class GalleryItemWidget(QWidget):
         
         main_layout.addWidget(self.thumbnail_label)
         main_layout.addWidget(info_widget)
-        main_layout.addStretch()
         
     def set_thumbnail(self, path):
         pixmap = QPixmap(path)
