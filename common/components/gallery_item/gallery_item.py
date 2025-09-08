@@ -53,9 +53,9 @@ class GalleryItemWidget(QWidget):
     def set_thumbnail(self, path):
         pixmap = QPixmap(path)
         if pixmap.isNull():
-            pixmap = QPixmap(self.sizeHint().width(), 180)
-            pixmap.fill(QColor('#444'))
-        self.thumbnail_label.setPixmap(pixmap)
+            self.thumbnail_label.clear()
+        else:
+            self.thumbnail_label.setPixmap(pixmap)
     
     def sizeHint(self):
         return QSize(300, 270)

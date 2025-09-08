@@ -52,4 +52,10 @@ QWidget#GalleryItem {
 QWidget#GalleryItem:hover {
     background-color: lightblue;
     border: 1px solid #007ACC;
+    border-radius: 8px;
+}
+
+GalleryItemWidget QLabel {
+    background-color: #eeeeee;
+    border-radius: 8px;
 }
