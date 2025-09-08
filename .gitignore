@@ -13,3 +13,4 @@ wheels/
 downloads/
 *.txt
 .logs/
+*.png

@@ -5,11 +5,9 @@ from common.components.gallery_item.gallery_item import GalleryItemWidget
 class GalleryListWidget(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setViewMode(QListWidget.ViewMode.IconMode)
         self.setResizeMode(QListView.ResizeMode.Adjust)
         self.setMovement(QListWidget.Movement.Static)
         self.setSpacing(20)
-        self.setWrapping(True)
         self.setFlow(QListView.LeftToRight)
         
     def update_items(self, items):

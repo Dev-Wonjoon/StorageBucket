@@ -2,6 +2,7 @@ from sqlmodel import Session, select
 
 from .generic_repository import GenericRepository
 from database.models.profile import Profile
+from core.database import SessionLocal
 
 
 class ProfileRepository(GenericRepository[Profile]):
@@ -9,5 +10,6 @@ class ProfileRepository(GenericRepository[Profile]):
         super().__init__(session, Profile)
         
     def get_by_profile_id(self, profile_id: str) -> Profile | None:
-        stmt = select(Profile).where(Profile.profile_id == profile_id)
-        return self.session.exec(stmt).first()
+        with SessionLocal() as session:
+            stmt = select(Profile).where(Profile.profile_id == profile_id)
+            return session.exec(stmt).first()

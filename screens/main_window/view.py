@@ -25,8 +25,8 @@ class MainWindow(QMainWindow):
         main_layout.setSpacing(0)
         
         self.left_panel = MainLeftPanel()
-        self.toggle_theme_button = self.left_panel.theme_toggle_button
         self.top_bar = MainTopBar()
+        self.toggle_theme_button = self.top_bar.theme_toggle_button
         self.filter_bar = FilterBar()
         self.gallery_list = GalleryListWidget()
         self.download_bar = DownloadBar(self._on_download_clicked)
@@ -35,11 +35,11 @@ class MainWindow(QMainWindow):
         right_layout = QVBoxLayout(right_panel)
         right_layout.addWidget(self.top_bar)
         right_layout.addWidget(self.filter_bar)
-        right_layout.addWidget(self.gallery_list, 1)
+        right_layout.addWidget(self.gallery_list)
         right_layout.addWidget(self.download_bar)
         
         main_layout.addWidget(self.left_panel)
-        main_layout.addWidget(right_panel, 1)
+        main_layout.addWidget(right_panel)
     
     def _connect_signals(self):
         self.vm.media_items_changed.connect(self.gallery_list.update_items)

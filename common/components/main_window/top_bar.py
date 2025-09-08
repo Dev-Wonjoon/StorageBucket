@@ -6,6 +6,7 @@ class MainTopBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QHBoxLayout(self)
-        layout.addWidget(QLabel("DashBoard", objectName="TitleLabel"))
         layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
+        self.theme_toggle_button = StyledButton(icon_path="day-sunny-icon.png")
+        layout.addWidget(self.theme_toggle_button)
         layout.addWidget(QLineEdit(placeholderText="Search..."))

@@ -52,8 +52,15 @@ class ConfigManager(QObject):
         path.mkdir(parents=True, exist_ok=True)
         return path
     
+    def get_assets_path(self) -> Path:
+        project_root = Path(__file__).resolve().parent.parent
+        assets_dir = project_root / "resource" / "assets"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        return assets_dir
+    
     def get_thumbnail_quality(self) -> int:
         return self.config.getint('Settings', 'thumbnail_quility', fallback=90)
+
         
     def set_download_directory(self, path: str | Path) -> str:
         path = Path(path)
