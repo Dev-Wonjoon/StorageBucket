@@ -14,7 +14,7 @@ class GalleryItemWidget(QWidget):
         self.setObjectName("GalleryItem")
         self.setMaximumSize(self.sizeHint())
         
-        self.setCursor(QCursor(Qt.PointingHandCursor))
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         
         main_layout= QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -50,7 +50,7 @@ class GalleryItemWidget(QWidget):
         main_layout.addWidget(self.thumbnail_label)
         main_layout.addWidget(info_widget)
         
-    def set_thumbnail(self, path):
+    def set_thumbnail(self, path: str | None):
         pixmap = QPixmap(path)
         if pixmap.isNull():
             self.thumbnail_label.clear()

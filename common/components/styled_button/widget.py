@@ -10,10 +10,11 @@ class StyledButton(QPushButton):
         self.config = ConfigManager()
         
         self.setObjectName("StyledButton")
-        self.setCursor(QCursor(Qt.PointingHandCursor))
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         
         if icon_path:
-            full_icon_path = self.config.get_assets_path() / icon_path
+            ui_mode = self.config.get_theme()
+            full_icon_path = self.config.get_assets_path() / ui_mode / icon_path
             if full_icon_path.exists():
                 self.setIcon(QIcon(str(full_icon_path)))
                 self.setIconSize(QSize(24, 24))

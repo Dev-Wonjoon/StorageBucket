@@ -6,6 +6,7 @@ class ConfigManager(QObject):
     _instance = None
     
     download_directory_changed = Signal(str)
+    thumbnail_directory_changed = Signal(str)
     settings_changed = Signal()
     theme_changed = Signal(str)
     
@@ -33,7 +34,7 @@ class ConfigManager(QObject):
             'thumbnail_directory': 'thumbnails',
         }
         self.config['Settings'] = {
-            'default_theme': 'white',
+            'default_theme': 'light',
             'thumbnail_quality': '90'
         }
         with open(self.config_file, 'w', encoding='utf-8') as f:
@@ -48,6 +49,12 @@ class ConfigManager(QObject):
     
     def get_download_directory(self) -> str:
         path_str = self.config.get('Paths', 'download_directory', fallback='downloads')
+        path = Path(path_str)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+    
+    def get_thumbnail_directory(self) -> str:
+        path_str = self.config.get("Paths", 'thumbnail_directory', fallback="thumbnails")
         path = Path(path_str)
         path.mkdir(parents=True, exist_ok=True)
         return path
@@ -68,6 +75,11 @@ class ConfigManager(QObject):
         self._save_config()
         self.download_directory_changed.emit(path)
         self.settings_changed.emit()
+        
+    def set_thumbnail_directory(self, path: str | Path) -> str:
+        path = Path(path)
+        self.config.get('Paths', 'thumbnail_directory', str(path))
+        self.th
     
     def set_thumbnail_quality(self, quality: int):
         quality = max(1, min(100, quality))
