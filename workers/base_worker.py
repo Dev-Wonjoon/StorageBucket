@@ -1,16 +1,23 @@
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QRunnable, QObject, Signal, Slot
 from .data_model import DownloadMediaInfo
 
 
-class BaseDownloadWorker(QThread):
+class BaseDownloadWorker(QRunnable, QObject):
     success = Signal(DownloadMediaInfo)
     failed = Signal(str)
+    finished = Signal()
     
-    def __init__(self, url: str, parent=None):
-        super().__init__(parent)
+    def __init__(self, url: str):
+        super().__init__()
+        QObject.__init__(self)
         self.url = url
-        
+    
+    @Slot()
     def run(self):
-        "이 메서드는 반드시 재정의되어야 합니다."
-        raise NotImplementedError
+        try:
+            raise NotImplementedError("run 메서드는 반드시 구현 되어야 합니다.")
+        except Exception as e:
+            self.failed.emit(str(e))
+        finally:
+            self.finished.emit()
     

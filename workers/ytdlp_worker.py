@@ -1,5 +1,6 @@
 import yt_dlp, requests, logging
 from pathlib import Path
+from PySide6.QtCore import Slot
 from urllib.parse import urlparse
 from .base_worker import BaseDownloadWorker
 from .data_model import DownloadMediaInfo, FileInfo
@@ -8,10 +9,11 @@ from core.config import ConfigManager
 
 class YtdlpWorker(BaseDownloadWorker):
     
-    def __init__(self, url: str, parent=None):
-        super().__init__(url, parent)
+    def __init__(self, url: str):
+        super().__init__(url)
         self.config = ConfigManager()
     
+    @Slot()
     def run(self):
         try:
             domain = self._get_domain_name(self.url)
@@ -30,6 +32,8 @@ class YtdlpWorker(BaseDownloadWorker):
         except Exception as e:
             logging.error("[Worker] 실행 중 심각한 오류 발생", exc_info=True)
             self.failed.emit(str(e))
+        finally:
+            self.finished.emit()
     
     def _get_ydl_opts(self, download_path: Path) -> dict:
         outout_template = download_path / "%(title)s_%(id)s.%(ext)s"
