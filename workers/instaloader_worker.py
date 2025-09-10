@@ -16,17 +16,21 @@ class InstaloaderWorker(BaseDownloadWorker):
     @Slot()
     def run(self):
         try:
+            base_dir = Path(self.config.get_download_directory()) / "instagram"
             loader = instaloader.Instaloader(
                 download_comments=False,
                 save_metadata=False,
                 compress_json=False,
+                dirname_pattern=str(base_dir / "{owner_id}"),
+                filename_pattern="{shortcode}",
                 post_metadata_txt_pattern="",
-                quiet=True
+                quiet=True,
             )
             
             post = self._fetch_post_info(loader, self.url)
+            target_dir = base_dir / str(post.owner_id)
             
-            media_files, thumbnail_path = self._download_contents(loader, post)
+            media_files, thumbnail_path = self._download_contents(loader, post, target_dir)
             
             media_info = self._build_media_info(post, media_files, thumbnail_path)
             
@@ -45,31 +49,40 @@ class InstaloaderWorker(BaseDownloadWorker):
         logging.info(f"'{shortcode}' 포스트 정보를 가져옵니다.")
         return instaloader.Post.from_shortcode(loader.context, shortcode)
     
-    def _download_contents(self, loader: instaloader.Instaloader, post: instaloader.Post) -> tuple[list[Path], str | None]:
-        target_dir = Path(self.config.get_download_directory()) / "instagram" / post.owner_id
-        loader.dirname_pattern = str(target_dir)
-        
+    def _download_contents(self, loader: instaloader.Instaloader, post: instaloader.Post, target_dir: Path) -> tuple[list[Path], str | None]:
         thumbnail_path = None
         if post.is_video:
             logging.info("동영상 감지")
-            thumbnail_path = self._download_thumbnail(post.thumbnail_url, f"{post.shortcode}_thumb")
+            thumbnail_path = self._download_thumbnail(post.url, f"{post.shortcode}_thumb")
 
         logging.info(f"'{post.shortcode}' 미디어 다운로드를 시작합니다...")
-        loader.download_post(post, post.shortcode)
+        loader.download_post(post, "")
         
-        media_files = []
+        renamed_media_files = []
+        file_counter = 1
+        
         for file in sorted(target_dir.glob(f"{post.shortcode}*")):
-            if file.suffix.lower() in ['.jpg', '.jpg', '.png', '.mp4'] and '_thumbnail' not in file.name:
-                media_files.append(file)
-        
-        if not post.is_video and media_files:
-            thumbnail_path = str(media_files[0])
-        
-        if not media_files:
+            if file.suffix.lower() in ['.jpg', '.jpeg', '.png', '.mp4'] and '_thumbnail' not in file.name:
+                upload_date = post.date_local.strftime("%Y%m%d")
+                unique_id = post.shortcode
+                owner_username = post.owner_username
+                extension = file.suffix
+                
+                new_filename = f"{upload_date}_{unique_id}_{owner_username}_{file_counter}{extension}"
+                new_path = file.parent / new_filename
+                
+                file.rename(new_path)
+                renamed_media_files.append(new_path)
+                file_counter += 1
+        if not thumbnail_path and renamed_media_files:
+            for file in renamed_media_files:
+                if file.suffix.lower() in ['.jpg', '.jpeg', '.png']:
+                    thumbnail_path = str(file)
+                    break
+        if not renamed_media_files:
             raise FileNotFoundError("다운로드된 미디어 파일을 찾을 수 없습니다.")
+        return renamed_media_files, thumbnail_path
         
-        return media_files, thumbnail_path
-
     def _build_media_info(self, post: instaloader.Post, media_files: list[Path], thumbnail_path: str | None) -> DownloadMediaInfo:
         files = []
         for filepath in media_files:
