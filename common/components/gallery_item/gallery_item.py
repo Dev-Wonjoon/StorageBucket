@@ -1,3 +1,4 @@
+from pathlib import Path
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtGui import QPixmap, QColor, QCursor
 from PySide6.QtCore import Qt, Signal, QSize
@@ -8,11 +9,11 @@ from .info_label import InfoLabel
 class GalleryItemWidget(QWidget):
     label_clicked = Signal(MediaItem)
     
-    def __init__(self, item: MediaItem):
+    def __init__(self, item: MediaItem, placeholder_pixmap: QPixmap | None):
         super().__init__()
         self.item = item
+        self.placeholder_pixmap = placeholder_pixmap
         self.setObjectName("GalleryItem")
-        self.setMaximumSize(self.sizeHint())
         
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         
@@ -21,8 +22,7 @@ class GalleryItemWidget(QWidget):
         main_layout.setSpacing(4)
         
         self.thumbnail_label = QLabel()
-        self.thumbnail_label.setScaledContents(True)
-        self.thumbnail_label.setMaximumHeight(180)
+        self.thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.set_thumbnail(item.thumbnail_path)
         
         info_widget = QWidget()
@@ -51,11 +51,17 @@ class GalleryItemWidget(QWidget):
         main_layout.addWidget(info_widget)
         
     def set_thumbnail(self, path: str | None):
-        pixmap = QPixmap(path)
-        if pixmap.isNull():
-            self.thumbnail_label.clear()
+        pixmap = None
+        if path and Path(path).exists():
+            pixmap = QPixmap(path)
+        
+        if not pixmap or pixmap.isNull():
+            pixmap = self.placeholder_pixmap
+        
+        if pixmap and not pixmap.isNull():
+            self.thumbnail_label.setVisible(True)
+            scaled_pixmap = pixmap.scaledToHeight(300, Qt.TransformationMode.SmoothTransformation)
+            self.thumbnail_label.setPixmap(scaled_pixmap)
         else:
-            self.thumbnail_label.setPixmap(pixmap)
-    
-    def sizeHint(self):
-        return QSize(300, 270)
+            self.thumbnail_label.clear()
+            self.thumbnail_label.setVisible(False)
