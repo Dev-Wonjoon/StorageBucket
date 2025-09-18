@@ -36,7 +36,6 @@ Think of it as your **personal gallery** where all your favorite photos and vide
 
 1. **Requirements**
    - Python 3.12 or higher
-   - (Optional) Docker environment
 
 2. **Setup & Run**
    ```bash
