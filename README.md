@@ -1,5 +1,7 @@
 # StorageBucket
 
+[English](./README.md) | [한국어](./README.ko.md)
+
 ## Introduction
 **StorageBucket** is a personal media management program.  
 It allows you to **download and organize media from both your local storage and the web** (e.g., YouTube, Instagram, Twitter).  
