@@ -1,4 +1,3 @@
-```markdown
 # StorageBucket
 
 ## 소개
