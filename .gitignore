@@ -231,3 +231,5 @@ thumbnails/
 *.txt
 .logs/
 *.png
+!resource/assets/light/*.png
+!resource/assets/dark/*.png

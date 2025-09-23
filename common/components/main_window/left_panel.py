@@ -7,7 +7,6 @@ class MainLeftPanel(QWidget):
         
         
         self.setObjectName("leftPanel")
-        print(self.objectName())
         self.setMinimumWidth(80)
         
         layout = QVBoxLayout(self)

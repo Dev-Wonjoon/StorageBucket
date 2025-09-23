@@ -1,3 +1,5 @@
+from datetime import datetime
+from pathlib import Path
 from typing import List, Optional
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
@@ -75,3 +77,16 @@ class MediaRepository(GenericRepository[Media]):
                 profile_owner=profile_owner,
                 tags=tags
             )
+    
+    def save_filepaths_to_db(self, filepaths: List[str]):
+        with SessionLocal() as session:
+            for filepath in filepaths:
+                _filepath = Path(filepath)
+                media = Media(
+                    filepath=str(_filepath),
+                    title=_filepath.name,
+                    created_at=datetime.fromtimestamp(_filepath.stat().st_ctime),
+                    filesize=_filepath.stat().st_size,
+                )
+                session.add(media)
+            session.commit()
