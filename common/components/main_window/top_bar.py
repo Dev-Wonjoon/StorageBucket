@@ -24,8 +24,10 @@ class MainTopBar(QWidget):
             self,
             "이미지 선택",
             "",
-            "Image files (*.png, *.jpg, *.jpeg, *.webp)"
+            "Image files (*.png *.jpg *.jpeg *.webp);;All Files (*)"
         )
         
         if file_paths:
             logger.info(f"선택된 파일: {file_paths}")
+        
+        return file_paths
