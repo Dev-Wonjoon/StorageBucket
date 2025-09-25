@@ -25,6 +25,7 @@ class MainWindow(QMainWindow):
         
         self.left_panel = MainLeftPanel()
         self.top_bar = MainTopBar()
+        self.top_bar.files_selected.connect(self.vm.add_local_list)
         self.toggle_theme_button = self.top_bar.theme_toggle_button
         self.gallery_list = GalleryListWidget()
         self.download_bar = DownloadBar(self._on_download_clicked)

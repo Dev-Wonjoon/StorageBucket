@@ -1,12 +1,14 @@
 import logging
 
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QSpacerItem, QSizePolicy, QLineEdit, QFileDialog
+from PySide6.QtCore import Signal
 from common.components.styled_button.widget import StyledButton
 from database.repository.media_repository import MediaRepository
 
 logger = logging.getLogger(__name__)
 
 class MainTopBar(QWidget):
+    files_selected = Signal(list)
     def __init__(self, parent=None):
         super().__init__(parent)
         
@@ -24,10 +26,11 @@ class MainTopBar(QWidget):
             self,
             "이미지 선택",
             "",
-            "Image files (*.png *.jpg *.jpeg *.webp);;All Files (*)"
+            "Media files (*.png *.jpg *.jpeg *.webp *.mp4 *.avi *.mkv *.mov);;All Files (*)"
         )
         
         if file_paths:
             logger.info(f"선택된 파일: {file_paths}")
+            self.files_selected.emit(file_paths)
         
         return file_paths

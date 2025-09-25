@@ -233,3 +233,4 @@ thumbnails/
 *.png
 !resource/assets/light/*.png
 !resource/assets/dark/*.png
+test.py

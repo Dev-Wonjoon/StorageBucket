@@ -44,10 +44,12 @@ class MediaService(QObject):
     def add_media_from_local(self, filepath: str):
         logger.info(f"[MediaService] 로컬 파일 저장 시도: {filepath}")
         try:
+            platform = self.platform_repo.get_or_create("local")
             media = Media(
                 title = Path(filepath).stem,
                 filepath=filepath,
-                thumbnail_path=None
+                thumbnail_path=None,
+                platform_id=platform.id
             )
             ui_item = self.media_repo.create_and_get_item(media)
             self._add_items_to_cache_and_emit([ui_item])

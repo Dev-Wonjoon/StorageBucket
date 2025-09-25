@@ -38,3 +38,8 @@ class MainWindowViewModel(QObject):
     def download_media(self, url: str):
         
         self.media_service.download_media(url)
+    
+    @Slot(list)
+    def add_local_list(self, filepaths: list[str]):
+        for path in filepaths:
+            self.media_service.add_media_from_local(path)
