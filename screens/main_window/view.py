@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout
 from screens.main_window.viewmodel import MainWindowViewModel
 from common.components.main_window import MainLeftPanel, DownloadBar, MainTopBar, GalleryListWidget
+from database.repository.media_search_repository import MediaSearchRepository
 
 class MainWindow(QMainWindow):
     def __init__(self, view_model: MainWindowViewModel):
@@ -24,7 +25,7 @@ class MainWindow(QMainWindow):
         main_layout.setSpacing(0)
         
         self.left_panel = MainLeftPanel()
-        self.top_bar = MainTopBar()
+        self.top_bar = MainTopBar(self.vm.search_repo)
         self.top_bar.files_selected.connect(self.vm.add_local_list)
         self.toggle_theme_button = self.top_bar.theme_toggle_button
         self.gallery_list = GalleryListWidget()
@@ -38,6 +39,9 @@ class MainWindow(QMainWindow):
         
         main_layout.addWidget(self.left_panel)
         main_layout.addWidget(right_panel)
+        
+        self.top_bar.files_selected.connect(self.vm.add_local_list)
+        self.top_bar.search_requested.connect(self.vm.search_media)
     
     def _connect_signals(self):
         self.vm.media_items_changed.connect(self.gallery_list.update_items)

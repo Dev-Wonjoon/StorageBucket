@@ -3,13 +3,14 @@ import logging
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QSpacerItem, QSizePolicy, QLineEdit, QFileDialog
 from PySide6.QtCore import Signal
 from common.components.styled_button.widget import StyledButton
-from database.repository.media_repository import MediaRepository
+from common.components.searchbox import SearchWidget
 
 logger = logging.getLogger(__name__)
 
 class MainTopBar(QWidget):
     files_selected = Signal(list)
-    def __init__(self, parent=None):
+    search_requested = Signal(list)
+    def __init__(self, search_repo, parent=None):
         super().__init__(parent)
         
         layout = QHBoxLayout(self)
@@ -18,8 +19,11 @@ class MainTopBar(QWidget):
         layout.addWidget(self.add_media_button)
         layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
         self.theme_toggle_button = StyledButton(icon_path="sun-icon.png")
+        
+        self.search_widget = SearchWidget(search_repo)
+        self.search_widget.search_requested.connect(self.search_requested)
         layout.addWidget(self.theme_toggle_button)
-        layout.addWidget(QLineEdit(placeholderText="Search..."))
+        layout.addWidget(self.search_widget)
     
     def open_file_dialog(self):
         file_paths, _ = QFileDialog.getOpenFileNames(

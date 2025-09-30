@@ -1,49 +1,80 @@
 import yt_dlp, requests, logging
 from pathlib import Path
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, Signal
+from typing import Optional
 from urllib.parse import urlparse
 from .base_worker import BaseDownloadWorker
-from .data_model import DownloadMediaInfo, FileInfo
+from .data_model import DownloadMediaInfo, FileInfo, DownloadTask, DownloadStatus
 from core.config import ConfigManager
 
 
 class YtdlpWorker(BaseDownloadWorker):
+    success = Signal(object)
+    failed = Signal(str)
     
-    def __init__(self, url: str):
+    def __init__(self, url: str, task: Optional[DownloadTask] = None):
         super().__init__(url)
         self.config = ConfigManager()
+        self.task = task
     
     @Slot()
     def run(self):
         try:
+            self._update_task_status(DownloadStatus.RUNNING)
+            
             domain = self._get_domain_name(self.url)
             download_dir = Path(self.config.get_download_directory()) / domain
             download_dir.mkdir(parents=True, exist_ok=True)
-            ydl_ops = self._get_ydl_opts(download_dir)
             
-            logging.info(f"[Worker] yt-dlp 인스턴스 실행 중...")
+            ydl_ops = self._get_ydl_opts(download_dir)
             with yt_dlp.YoutubeDL(ydl_ops) as ydl:
-                logging.info(f"[Worker] extract_info 호출 시작")
                 info = ydl.extract_info(self.url, download=True)
                 media_info = self._process_download_info(info, domain, ydl)
-                
-            logging.info(f"[Worker] success 발행")
+            
+            self._update_task_status(DownloadStatus.SUCCESS)
             self.success.emit(media_info)
         except Exception as e:
             logging.error("[Worker] 실행 중 심각한 오류 발생", exc_info=True)
+            self._update_task_status(DownloadStatus.FAILED)
             self.failed.emit(str(e))
         finally:
             self.finished.emit()
     
     def _get_ydl_opts(self, download_path: Path) -> dict:
         outout_template = download_path / "%(title)s_%(id)s.%(ext)s"
+        
+        def progress_hook(d):
+            if not self.task:
+                return
+            if d["status"] == "downloading":
+                percent = self._parse_percent(d.get('_percent_str'))
+                self._update_task_progress(percent)
+            elif d['status'] == 'finished':
+                self._update_task_progress(100)
         return {
             'format': 'bestvideo/bestaudio/best',
             'outtmpl': str(outout_template),
             'quiet': True,
             'noplaylist': True,
             'merge_output_format': 'mp4',
+            'progress_hooks': [progress_hook],
         }
+    
+    def _parse_percent(self, percent_str: str | None) -> int:
+        if not percent_str:
+            return 0
+        try:
+            return int(float(percent_str.replace('%', '').strip()))
+        except ValueError:
+            return 0
+    
+    def _update_task_status(self, status: DownloadStatus):
+        if self.task:
+            self.task.status = status
+    
+    def _update_task_progress(self, value: int):
+        if self.task:
+            self.task.progress = value
     
     def _get_domain_name(self, url: str) -> str:
         parsed = urlparse(url)

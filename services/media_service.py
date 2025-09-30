@@ -12,13 +12,14 @@ from database.models.platform import Platform
 from screens.main_window.model import MediaItem
 from workers.instaloader_worker import InstaloaderWorker
 from workers.ytdlp_worker import YtdlpWorker
-from workers.data_model import DownloadMediaInfo
+from workers.data_model import DownloadMediaInfo, DownloadStatus
 
 logger = logging.getLogger(__name__)
 
 class MediaService(QObject):
     media_added = Signal(list)
     error_occurred = Signal(str)
+    task_created = Signal(DownloadStatus)
 
     def __init__(self, media_repo: MediaRepository, tag_repo: TagRepository, platform_repo: PlatformRepository, config: ConfigManager):
         super().__init__()
@@ -61,8 +62,11 @@ class MediaService(QObject):
     def download_media(self, url: str):
         logger.info(f"[MediaService] 다운로드 시작: {url}")
         try:
-            domain = self._extract_domain(url)
+            task = DownloadStatus(url=url, title="다운로드 준비중")
+            task.status = DownloadStatus.PENDING
+            self.task_created.emit(task)
             
+            domain = self._extract_domain(url)
             worker_cls = self._get_worker_for_domain(domain)
             worker = worker_cls(url)
             
@@ -70,8 +74,8 @@ class MediaService(QObject):
             worker.failed.connect(self._on_download_failed)
             worker.setAutoDelete(True)
             
-            QThreadPool.globalInstance().start(worker)
             logger.info(f"[MediaService] {worker_cls.__name__} 실행됨 ({domain})")
+            QThreadPool.globalInstance().start(worker)
         except Exception as e:
             logger.exception(f"다운로드 작업 생성 실패: {url}")
             self.error_occurred.emit(f"다운로드 실패: {e}")

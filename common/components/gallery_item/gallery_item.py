@@ -60,7 +60,7 @@ class GalleryItemWidget(QWidget):
         
         if pixmap and not pixmap.isNull():
             self.thumbnail_label.setVisible(True)
-            scaled_pixmap = pixmap.scaledToHeight(300, Qt.TransformationMode.SmoothTransformation)
+            scaled_pixmap = pixmap.scaledToHeight(120, Qt.TransformationMode.SmoothTransformation)
             self.thumbnail_label.setPixmap(scaled_pixmap)
         else:
             self.thumbnail_label.clear()

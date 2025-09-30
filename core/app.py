@@ -6,6 +6,7 @@ from PySide6.QtGui import QFont
 from .config import ConfigManager
 from .database import init_db
 from database.repository.media_repository import MediaRepository
+from database.repository.media_search_repository import MediaSearchRepository
 from database.repository.tag_repository import TagRepository
 from database.repository.platform_repository import PlatformRepository
 from services.media_service import MediaService
@@ -30,9 +31,10 @@ class App:
         
         tag_repo = TagRepository()
         media_repo = MediaRepository()
+        search_repo = MediaSearchRepository(media_repo._to_media_item)
         platform_repo = PlatformRepository()
         media_service = MediaService(media_repo, tag_repo, platform_repo, self.config)
-        main_vm = MainWindowViewModel(media_service)
+        main_vm = MainWindowViewModel(media_service, search_repo)
         
         self.main_window = MainWindow(main_vm)
         self.main_window.toggle_theme_button.clicked.connect(self.toggle_theme)

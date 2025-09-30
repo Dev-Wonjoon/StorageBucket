@@ -1,3 +1,5 @@
+# Deprecated
+
 import instaloader, logging, requests
 from pathlib import Path
 from PySide6.QtCore import Slot

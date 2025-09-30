@@ -14,6 +14,31 @@ class MediaRepository(GenericRepository[Media]):
     def __init__(self):
         super().__init__(Media)
     
+    def _to_media_item(self, media: Media) -> MediaItem:
+        return MediaItem(
+            id=media.id,
+            title=media.title,
+            filepath=media.filepath,
+            thumbnail_path=media.thumbnail_path or media.filepath,
+            profile_name=media.profile.owner_name if media.profile else "Unknown",
+            platform_name=media.platform.name if media.platform else "Unknown",
+            tags=[tag.name for tag in media.tags] if media.tags else [],
+        )
+    
+    def _to_media_detail_item(self, media: Media) -> MediaDetailItem:
+        filesize_str = f"{round(media.filesize) / (1024*1024), 2}MB" if media.filesize else "N/A"
+        created_at_str = media.created_at.strftime("%Y년 %m월 %d일 %H:%M")
+        return MediaDetailItem(
+            title=media.title,
+            filepath=media.filepath,
+            filesize_str=filesize_str,
+            created_at_str=created_at_str,
+            platform_name=media.platform.name if media.platform else "Unknown",
+            profile_owner=media.profile.owner_name if media.profile else "Unkown",
+            tags=[f"#{tag.name}" for tag in media.tags],
+        )
+        
+    
     def create_and_get_item(self, obj_in: Media):
         with SessionLocal() as session:
             session.add(obj_in)

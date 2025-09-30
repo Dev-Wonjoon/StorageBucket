@@ -1,5 +1,6 @@
 import logging
 from PySide6.QtCore import QObject, Signal, Slot
+from database.repository.media_search_repository import MediaSearchRepository
 from services.media_service import MediaService
 
 logger = logging.getLogger(__name__)
@@ -10,9 +11,10 @@ class MainWindowViewModel(QObject):
     available_tags_changed = Signal(list)
     new_media_items_added = Signal(list)
     
-    def __init__(self,  media_service: MediaService):
+    def __init__(self,  media_service: MediaService, search_repo: MediaSearchRepository):
         super().__init__()
         self.media_service = media_service
+        self.search_repo = search_repo
         self.media_service.media_added.connect(self.new_media_items_added)
         self.new_media_items_added.connect(self.refresh_gallery)
         
@@ -43,3 +45,8 @@ class MainWindowViewModel(QObject):
     def add_local_list(self, filepaths: list[str]):
         for path in filepaths:
             self.media_service.add_media_from_local(path)
+    
+    @Slot(list)
+    def search_media(self, filters):
+        results = self.search_repo.search(filters)
+        self.media_items_changed.emit(results)
