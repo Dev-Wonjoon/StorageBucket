@@ -7,6 +7,7 @@ export interface Media {
     url?: string | null;
     filesize?: number | null;
     thumbnailPath?: string | null;
+    duration?: number | null;
 
     platformId: number | null;
     profileId: number | null;

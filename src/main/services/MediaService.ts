@@ -1,144 +1,83 @@
 import { db } from '../../database';
 import { medias, mediaTags, tags, profiles, platforms } from '../../database/schema';
-import { desc, like, sql, and, gte, lte, or, type SQL, type Column, eq, inArray, count } from 'drizzle-orm';
-import { Media, MediaSearchRequest, MediaSearchResult } from '../../shared/types';
-
-
-type SearchConfigType = {
-    [key: string]: {
-        column?: Column;
-        type: 'text' | 'multi-or' | 'relation-and';
-        table?: any;
-    }
-}
-
-const SEARCH_CONFIG: SearchConfigType = {
-    title: {
-        column: medias.title,
-        type: 'text'
-    },
-
-    author: {
-        column: profiles.ownerName,
-        type: 'multi-or'
-    },
-    platform: {
-        column: platforms.name,
-        type: 'multi-or'
-    },
-    tags: {
-        type: 'relation-and'
-    }
-}
+import { eq, and, desc, inArray } from 'drizzle-orm';
+import { Media } from '../../shared/types';
 
 export const MediaService = {
-    async search(request: MediaSearchRequest): Promise<MediaSearchResult> {
-        const { page = 1, limit = 50, startDate, endDate, ...filters } = request;
-        const offset = (page - 1) * limit;
 
-        const conditions: SQL[] = [];
+    async getAll() {
+        return await db.select().from(medias).orderBy(desc(medias.createdAt));
+    },
 
-        Object.entries(filters).forEach(([key, rawValue]) => {
-            const config = SEARCH_CONFIG[key];
-            if (!config || rawValue === undefined || rawValue === null || rawValue === '') return;
 
-            const values = Array.isArray(rawValue) ? rawValue : [rawValue];
-            if (values.length === 0) return;
+    async findByUrl(url: string): Promise<Media | undefined> {
+        const result = await db
+            .select()
+            .from(medias)
+            .where(eq(medias.url, url))
+            .limit(1);
+        return result[0] as Media;
+    },
 
-            if(config.type === 'text' && config.column) { 
-                // A. 단순 텍스트 포함 검색
-                conditions.push(like(config.column, `%${values[0]}%`));
+    async deleteBatch(ids: number[]) {
+        return await db.delete(medias).where(inArray(medias.id, ids));
+    },
 
-            } else if(config.type === 'multi-or' && config.column) { 
-                // B. 다중 OR 검색
-                const orConditions = values.map(v => like(config.column!, `%${v}%`));
-                conditions.push(or(...orConditions));
+    async registerMediaFromYtdlp(metadata: any, localFilepath: string): Promise<Media> {
+        return await db.transaction(async (tx) => {
+            const platformName = metadata.extractor_key || metadata.extractor || 'unknown';
+            let platformId: number;
 
-            } else if (config.type === 'relation-and' && key === 'tags') { 
-                // C. 태그 AND 검색
-                const subQuery = db
-                    .select({ mediaId: mediaTags.mediaId })
-                    .from(mediaTags)
-                    .innerJoin(tags, eq(mediaTags.tagId, tags.id))
-                    .where(inArray(tags.name, values))
-                    .groupBy(mediaTags.mediaId)
-                    .having(eq(count(tags.id), values.length));
-                conditions.push(inArray(medias.id, subQuery));
+            const existingPlatform = await tx.query.platforms.findFirst({
+                where: eq(platforms.name, platformName)
+            });
+
+            if(existingPlatform) {
+                platformId = existingPlatform.id;
+            } else {
+                const [newPlatform] = await tx.insert(platforms).values({ name: platformName }).returning();
+                platformId = newPlatform.id;
             }
+
+            const uploaderId = metadata.uploader_id || 'unknown';
+            const uploaderName = metadata.uploader || 'unknown';
+            let profileId: number;
+
+            const existingProfile = await tx.query.profiles.findFirst({
+                where: and(
+                    eq(profiles.ownerId, uploaderId),
+                    eq(profiles.platformId, platformId)
+                )
+            });
+
+            if(existingProfile) {
+                profileId = existingProfile.id;
+                if(existingProfile.ownerName !== uploaderName) {
+                    await tx.update(profiles)
+                        .set({ ownerName: uploaderName, updatedAt: new Date() })
+                        .where(eq(profiles.id, profileId));
+                }
+            } else {
+                const [newProfile] = await tx.insert(profiles).values({
+                    ownerId: uploaderId,
+                    ownerName: uploaderName,
+                    platformId: platformId
+                }).returning();
+                profileId = newProfile.id;
+            }
+            const [newMedia] = await tx.insert(medias).values({
+                title: metadata.title || 'Untitled',
+                filepath: localFilepath,
+                url: metadata.webpage_url || metadata.original_url,
+                filesize: metadata.filesize || null,
+                thumbnailPath: localThumbnailPath || null,
+                platformId: platformId,
+                profileId: profileId,
+
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }).returning();
+            return newMedia as Media;
         });
-
-        if (startDate) conditions.push(gte(medias.createdAt, new Date(startDate)));
-        if (endDate) conditions.push(lte(medias.updatedAt, new Date(endDate)));
-
-        const baseJoin = (qb: any) => qb
-            .leftJoin(profiles, eq(medias.profileId, profiles.id))
-            .leftJoin(platforms, eq(medias.platformId, platforms.id));
-
-        const dataQuery = baseJoin(
-            db.select({
-                id: medias.id,
-                title: medias.title,
-                filepath: medias.filepath,
-                url: medias.url,
-                thumbnailPath: medias.thumbnailPath,
-                createdAt: medias.createdAt,
-                author: profiles.ownerName,
-                platform: platforms.name,
-
-                platformId: medias.platformId,
-                profileId: medias.profileId,
-            }).from(medias).$dynamic()
-        );
-
-        const countQuery = baseJoin(
-            db.select({ count: count(medias.id) }).from(medias).$dynamic()
-        );
-
-        const [totalResult, data] = await Promise.all([
-            countQuery.where(and(...conditions)).then(res => res[0]),
-            dataQuery
-                .where(and(...conditions))
-                .limit(limit)
-                .offset(offset)
-                .orderBy(desc(medias.createdAt))
-        ]);
-
-        const total = totalResult ? totalResult.count : 0;
-
-        return {
-            data: data as Media[],
-            total,
-            hasNextPage: total > (page * limit)
-        };
-    },
-
-    async suggestPlatforms(keyword: string): Promise<string[]> {
-        if(!keyword) return [];
-        const results = await db
-            .selectDistinct({ name: platforms.name })
-            .from(platforms)
-            .where(like(platforms.name, `%${keyword}%`))
-            .limit(10);
-        return results.map(r => r.name || '').filter(Boolean);
-    },
-
-    async suggestAuthors(keyword: string): Promise<string[]> {
-        if(!keyword) return [];
-        const results = await db
-            .selectDistinct({ name: profiles.ownerName })
-            .from(profiles)
-            .where(like(profiles.ownerName, `%${keyword}%`))
-            .limit(10);
-        return results.map(r => r.name || '').filter(Boolean);
-    },
-
-    async suggestTags(keyword: string): Promise<string[]> {
-        if(!keyword) return [];
-        const results = await db
-            .selectDistinct({ name: tags.name })
-            .from(tags)
-            .where(like(tags.name, `%${keyword}%`))
-            .limit(10);
-        return results.map(r => r.name);
     }
-};
+}

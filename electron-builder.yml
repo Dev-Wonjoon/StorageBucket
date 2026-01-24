@@ -17,7 +17,11 @@ extraResources:
 asarUnpack:
   - resources/**
 win:
+  target: portable
   executableName: storagebucket
+portable:
+  artifactName: "${productName}-${version}-portable.${ext}"
+  requestExecutionLevel: "user"
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
