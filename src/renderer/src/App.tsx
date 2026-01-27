@@ -1,22 +1,49 @@
-function App() {
-  return (
-    <div className="h-screen w-full bg-slate-900 flex flex-col items-center justify-center text-white">
-      
-      <div className="p-10 border border-slate-700 rounded-2xl bg-slate-800 shadow-xl text-center">
-        <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-4">
-          Electron + Tailwind v4
-        </h1>
-        <p className="text-slate-400 text-lg mb-6">
-          성공적으로 실행되었습니다! 🚀
-        </p>
-        
-        <button className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold transition-all active:scale-95">
-          클릭 테스트
-        </button>
-      </div>
+import { useState } from "react"
+import { Sidebar } from "./components/layouts/Sidebar"
+import { DownloadBar } from "./components/layouts/DownloadBar";
+import { GalleryPage } from "./features/gallery/GalleryPage";
 
-    </div>
-  )
+function App() {
+	const [activeMenu, setActiveMenu] = useState('gallery');
+	return (
+		<div className="flex h-screen w-full bg-[--bg-app] text-[--text-main] overflow-hidden font-sans transition-colors duration-200">
+			{/* 좌측 사이드 바 */}
+			<div className="w-64 flex-none h-full border-r border-[--border-line]">
+				<Sidebar activeMenu={activeMenu} onMenuClick={setActiveMenu}/>
+			</div>
+
+			{/* 메인 갤러리 영역 */}
+			<div className="flex-1 flex flex-col h-full min-w-0">
+			{/* 상단 다운로드 바 */}
+				<div className="flex-none p-4 border-b border-[border-line] bg-[--bg-app]/95 backdrop-blur-sm z-10">
+					<DownloadBar onStartDownload={(url) => console.log('Download:', url)}/>
+				</div>		
+
+				{/* 갤러리 영역 */}
+				<div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-[--bg-active] scrollbar-track-transparent">
+					{activeMenu === 'gallery' && <GalleryPage />}
+
+					{activeMenu === 'search' && (
+						<div className="flex items-center justify-center h-full text-[--text-muted]">
+							검색기능 준비 중...
+						
+						</div>
+					)}
+
+					{activeMenu === 'favorites' && (
+						<div className="flex items-center justify-center h-full text-[--text-muted]">
+							즐겨찾기 준비 중...
+						</div>
+					)}
+					{activeMenu === 'settings' && (
+						<div className="flex items-center justify-center h-full text-[--text-muted]">
+							설정 준비 중...
+						</div>
+					)}
+				</div>
+			</div>
+		</div>
+	)
 }
 
 export default App

@@ -15,7 +15,7 @@ export const SidebarItem = ({ icon, label, isActive, onClick }: SidebarItemProps
                 w-full flex items-center gap-3 px-4 py-3 mb-1 rounded-xl transition-all duration-200
                 text-sm font-medium
                 ${isActive 
-                    ? 'bg-[--color-primary] text-white shadow-lg shadow-[color-primary]/30' 
+                    ? 'bg-[--color-primary] text-[--text-main] shadow-lg shadow-[color-primary]/30' 
                     : 'text-[--text-muted] hover:bg-[--bg-hover] hover:text-[--text-main]'
                 }
             `}

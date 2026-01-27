@@ -19,7 +19,9 @@ export class ConfigManager {
             || path.dirname(app.getPath('exe'))
             || (isDev ? process.cwd() : '');
         
-        this.store = new Store<AppConfig> ({
+        const AppStore = (Store as any).default || Store;
+        
+        this.store = new AppStore({
             defaults: {
                 basePath: defaultBasePath,
                 downloadPath: path.join(defaultBasePath, 'downloads'),
@@ -58,7 +60,7 @@ export class ConfigManager {
         return this.store.get('thumbnailPath');
     }
 
-    public setThumbnailPath(): void {
+    public setThumbnailPath(path: string): void {
         this.store.set('thumbnailPath', path);
         console.log(`[Config] Thumbnail path changed: ${path}`);
     }
