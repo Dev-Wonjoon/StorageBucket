@@ -54,3 +54,7 @@ Thumbs.db
 *.deb
 *.rpm
 *.zip
+
+
+## local
+*.txt
