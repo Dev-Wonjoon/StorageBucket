@@ -22,19 +22,22 @@ interface PhotoCardProps {
 }
 
 export const PhotoCard = ({ data, isSelected, onClick }: PhotoCardProps) => {
+    const hasThumbnail = Boolean(data.thumbnailPath);
     const imageUrl = useMemo(() => {
+        if(!data.thumbnailPath) return null;
         const cleanPath = data.thumbnailPath.replace(/\\/g, '/');
         return `media://${cleanPath}`;
     }, [data.thumbnailPath]);
 
     const formatTime = (seconds: number) => {
         if(!seconds || seconds <= 0 || isNaN(seconds)) {
-            return '--:--';
+            return null;
         }
         const m = Math.floor(seconds / 60);
         const s = Math.floor(seconds % 60);
         return `${m}:${s.toString().padStart(2, '0')}`;
     }
+    const disPlaytime = useMemo(() => formatTime(data.duration), [data.duration]);
     return (
         <div
             onClick={() => onClick(data.id)}
@@ -46,16 +49,25 @@ export const PhotoCard = ({ data, isSelected, onClick }: PhotoCardProps) => {
         `}>
                 {/* 썸네일 영역 */}
                 <div className="aspect-video bg-gray-800 relative">
-                    <img 
-                        src={imageUrl}
-                        alt={data.title}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                    />
+                    {hasThumbnail && imageUrl ? (
+                        <img
+                            src={imageUrl}
+                            alt={data.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                        />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center text-gray-500 bg-gray-800 w-full h-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-file-exclamation-point-icon lucide-file-exclamation-point"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                            <span className="text-[10px] mt-2 opacity-40 font-medium">No Preview</span>
+                        </div>
+                    )}
                     {/* 영상 길이 배지 */}
-                    <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                        {formatTime(data.duration)}
-                    </div>
+                    {disPlaytime && (
+                        <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                            {formatTime(data.duration)}
+                        </div>
+                    )}
                 </div>
 
                 {/* 정보 영역 */}

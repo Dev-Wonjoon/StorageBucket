@@ -28,6 +28,7 @@
     "drizzle-orm": "^0.45.1",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.3.9",
+    "lucide-react": "^0.563.0",
     "tailwindcss": "^4.1.18",
     "yt-dlp-wrap": "^2.3.12"
   },
