@@ -14,6 +14,8 @@ extraResources:
     to: "bin"
     filter:
       - "**/*"
+  - from: drizzle
+    to: drizzle
 asarUnpack:
   - resources/**
 win:

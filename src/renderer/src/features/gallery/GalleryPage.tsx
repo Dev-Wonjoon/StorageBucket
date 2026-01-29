@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PhotoCard } from "../../components/ui/PhotoCard";
 import { Media } from "src/shared/types";
 
@@ -20,7 +20,46 @@ const generateDummyData = (): Media[] => Array.from({ length: 200 }).map((_, i) 
 
 export const GalleryPage = () => {
     const [selectedId, setSelectedId] = useState<number | null>(null);
-    const [medias, setMedias] = useState<Media[]>(generateDummyData());
+    const [medias, setMedias] = useState<Media[]>([]);
+
+    const [isLoading, setIsLoading] = useState(true);
+
+    const loadMedia = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const items = await window.electron.ipcRenderer.invoke('media:get-all');
+            setMedias(items);
+        } catch(error) {
+            console.error("Failed to load media:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadMedia();
+
+        const handleRefresh = () => {
+            console.log("[GalleryPage] Refresh signal received.");
+            loadMedia();
+        };
+
+        window.addEventListener('gallery-refresh', handleRefresh);
+
+        return () => {
+            window.removeEventListener('gallery-refresh', handleRefresh);
+        }
+    }, [loadMedia]);
+
+    if(isLoading && medias.length === 0) {
+        return (
+            <div className="flex h-full items-center justify-center text-[--text-muted]">
+                <div className="flex flex-col items-center gap-2">
+                    <p>미디어를 불러오는 중...</p>
+                </div>
+            </div>
+        )
+    }
 
     const handleCardClick = (id: number) => {
         setSelectedId(id === selectedId ? null : id);

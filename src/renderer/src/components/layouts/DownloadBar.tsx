@@ -38,15 +38,15 @@ export const DownloadBar = ({ onStartDownload }: DownloadBarProps) => {
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder="다운로드할 링크를 붙여넣으세요..."
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border transition-all shadow-sm outline-none
-                            bg-[--bg-sidebar] border-[--border-line] text-[--text-main] 
-                            placeholder:text-[--text-muted]
+                            bg-[--bg-sidebar] border-[--border-line] text-[--text-placeholder] 
+                            placeholder:text-[--text-placeholder]
                             focus:border-[--color-primary] focus:ring-2 focus:ring-[--color-primary]/20"
                 />
             </div>
             <button
                 type="submit"
                 disabled={isChecking || !url.trim()}
-                className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all flex items-center gap-2 shadow-lg text-white
+                className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all flex items-center gap-2 shadow-lg text-[--text-muted]
                     ${isChecking || !url.trim()
                         ? 'bg-[--bg-active] text-[--text-muted] cursor-not-allowed shadow-none'
                         : 'bg-[--color-primary] hover:bg-[--color-primary-hover] active:scale-95 shadow-[--color-primary]/25'

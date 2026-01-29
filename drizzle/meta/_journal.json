@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1769675402646,
+      "tag": "0000_productive_fantastic_four",
+      "breakpoints": true
+    }
+  ]
+}

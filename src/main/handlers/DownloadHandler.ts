@@ -5,10 +5,16 @@ import { pipeline } from 'stream/promises';
 import { app } from 'electron';
 
 const isDev = !app.isPackaged;
-const BIN_PATH = isDev
-    ? path.join(__dirname, '../../resources/bin')
-    : path.join(process.resourcesPath, 'bin');
 
+const getBinPath = () => {
+    const paths = isDev
+        ? path.join(__dirname, '../../resources/bin')
+        : path.join(process.resourcesPath, 'bin');
+
+    console.log(`[DownloadHandler] Bin path detected: ${paths}`);
+    return paths
+}
+const BIN_PATH = getBinPath();
 const YTDLP_PATH = path.join(BIN_PATH, process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
 const FFMPEG_PATH = path.join(BIN_PATH, 'ffmpeg.exe');
 
@@ -30,6 +36,7 @@ async function downloadThumbnail(url: string, videoId: string, videoName: string
         const response = await fetch(url);
         if(!response.ok || !response.body) return null;
 
+        // @ts-ignore pipeline types mismatch workaround
         await pipeline(response.body, fs.createWriteStream(filepath));
         return filepath;
     } catch(error) {
@@ -55,27 +62,38 @@ export const downloadVideoTask = (url: string, basePath: string): Promise<any> =
 
         if(fs.existsSync(FFMPEG_PATH)) {
             args.push('--ffmpeg-location', FFMPEG_PATH);
+        } else {
+            console.warn('[DownloadHandler] FFMPEG not found. Format merging might fall.');
         }
+
+        console.log(`[DownloadHandler] Spawning: ${YTDLP_PATH} ${args.join(' ')}`);
 
         const ytdlpProcess = spawn(YTDLP_PATH, args);
         let jsonOutput = '';
+        let errorOutput = '';
 
         ytdlpProcess.stdout.on('data', (data) => {
             jsonOutput += data.toString();
         });
 
+        ytdlpProcess.stderr.on('data', (data) => {
+            jsonOutput += data.toString();
+            console.log(`[yt-dlp stderr] ${data}`);
+        })
+
+        ytdlpProcess.on('error', (error) => {
+            console.error('[DownloadHandler] Process spawn error: ', error);
+            reject(new Error(`Failed to start yt-dlp: ${error.message}`));
+        })
+
         ytdlpProcess.on('close', async (code) => {
             if(code === 0) {
                 try{
-                    const metadata = JSON.parse(jsonOutput);
+                    const metadata = JSON.parse(jsonOutput.trim());
                     const videoId = metadata.id || 'Unknown';
                     const videoTitle = metadata.title || 'Untitled';
 
-                    const videoPath = metadata._filename || path.join(
-                        basePath,
-                        metadata.extractor,
-                        `${metadata.title}_${metadata.id}.mp4`
-                    )
+                    const videoPath = metadata._filename;
 
                     const thumbnailPath = await downloadThumbnail(metadata.thumbnail, videoId, videoTitle, basePath);
 
@@ -86,11 +104,12 @@ export const downloadVideoTask = (url: string, basePath: string): Promise<any> =
                     });
                 } catch(error) {
                     console.error('JSON parse Error:', error);
+                    console.error('Raw Output:', jsonOutput);
                     reject(new Error("Failed to parse download metadata"));
                 }
             } else {
                 reject(new Error(`Download failed with exit code: ${code}`));
             }
-        })
-    })
+        });
+    });
 }

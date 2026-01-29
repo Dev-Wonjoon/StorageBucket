@@ -5,6 +5,27 @@ import { GalleryPage } from "./features/gallery/GalleryPage";
 
 function App() {
 	const [activeMenu, setActiveMenu] = useState('gallery');
+
+	const handleDownload = async (url: string) => {
+		console.log('[App] Download started for:', url);
+
+		try{
+			const result = await window.api.downloadVideo(url);
+
+			if(result.success) {
+				console.log('[App] Download Complete: ', result.data);
+				window.dispatchEvent(new Event('gallery-refresh'));
+				console.log('Download and DB storage complete')
+				alert('다운로드가 완료되었습니다');
+			} else {
+				console.error('[App] Download Failed:', result.error);
+				alert(`다운로드 실패: ${result.error}`);
+			}
+		} catch(error) {
+			console.error('[App] Communication Error:', error);
+		}
+	}
+
 	return (
 		<div className="flex h-screen w-full bg-[--bg-app] text-[--text-main] overflow-hidden font-sans transition-colors duration-200">
 			{/* 좌측 사이드 바 */}

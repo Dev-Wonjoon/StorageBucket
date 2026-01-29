@@ -3,27 +3,28 @@ import { medias, platforms, profiles } from '../../database/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { Media } from '../../shared/types';
 import { ConfigManager } from '../managers/ConfigManager';
-import { downloadVideoTask } from '../hadlers/DownloadHandler';
+import { downloadVideoTask } from '../handlers/DownloadHandler';
 
 export const MediaService = {
 
     async processMediaFromUrl(url: string) {
-        const config = ConfigManager.getInstance();
-        const savePath = config.getDownloadPath();
-
         console.log(`[MediaService] Processing URL: ${url}`);
-        console.log(`[MediaService] Target Directory: ${savePath}`);
+        
+        const downloadPath = ConfigManager.getInstance().getDownloadPath();
 
-        const result = await downloadVideoTask(url, savePath);
+        const result = await downloadVideoTask(url, downloadPath);
+        if(!result) {
+            throw new Error("Download failed: No result returned");
+        }
 
-        return await this.resisterMedia(result.metadata, result.videoPath, result.thumbnailPath);
+        return await this.registerMedia(result.metadata, result.videoPath, result.thumbnailPath);
     },
     
     async getAll() {
         return await db.select().from(medias).orderBy(desc(medias.createdAt));
     },
 
-    async resisterMedia(metadata: any, localFilepath: string, thumbnailPath: string | null): Promise<Media> {
+    async registerMedia(metadata: any, localFilepath: string, thumbnailPath: string | null): Promise<Media> {
         return await db.transaction(async (tx) => {
             const platformName = metadata.extractor_key || metadata.extractor || 'unknown';
             let platformId: number;

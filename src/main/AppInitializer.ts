@@ -3,16 +3,24 @@ import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { join, dirname } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
+import { initDB } from '../database/index';
 import { BinManager } from './managers/BinManager';
 import { ConfigManager } from './managers/ConfigManager';
 import { MediaService } from './services/MediaService';
 import { setupMediaProtocol } from './utils/protocol';
+import { downloadVideoTask } from './handlers/DownloadHandler';
 
 export class AppInitializer {
     private mainWindow: BrowserWindow | null = null;
 
     public async initialize(): Promise<void> {
         this.setupDataPaths();
+
+        try {
+            initDB();
+        } catch(error) {
+            console.error('DB Initialization Failed:', error);
+        }
 
         electronApp.setAppUserModelId('com.storagebucket');
         
@@ -103,5 +111,17 @@ export class AppInitializer {
         ipcMain.handle('system:download-engine', async (_, version: string) => {
             return await BinManager.getInstance().downloadYtdlp(version);
         });
+
+        ipcMain.handle('video:download', async (_, url: string) => {
+            try {
+                const downloadPath = ConfigManager.getInstance().getDownloadPath();
+
+                const result = await MediaService.processMediaFromUrl(url);
+                return { success: true, data: result };
+            } catch(error) {
+                console.error("[IPC] Download Error:", error);
+                return { success: false, error: (error as Error).message };
+            }
+        })
     }
 }
