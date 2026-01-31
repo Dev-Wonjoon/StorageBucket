@@ -2,21 +2,8 @@ import path from 'path';
 import fs from 'fs';
 import { spawn } from 'child_process';
 import { pipeline } from 'stream/promises';
-import { app } from 'electron';
+import { BinManager } from '../managers/BinManager';
 
-const isDev = !app.isPackaged;
-
-const getBinPath = () => {
-    const paths = isDev
-        ? path.join(__dirname, '../../resources/bin')
-        : path.join(process.resourcesPath, 'bin');
-
-    console.log(`[DownloadHandler] Bin path detected: ${paths}`);
-    return paths
-}
-const BIN_PATH = getBinPath();
-const YTDLP_PATH = path.join(BIN_PATH, process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
-const FFMPEG_PATH = path.join(BIN_PATH, 'ffmpeg.exe');
 
 async function downloadThumbnail(url: string, videoId: string, videoName: string, baseDir: string) {
     if(!url) return null;
@@ -46,6 +33,9 @@ async function downloadThumbnail(url: string, videoId: string, videoName: string
 }
 
 export const downloadVideoTask = (url: string, basePath: string): Promise<any> => {
+    const binManager = BinManager.getInstance();
+    const ytdlpPath = binManager.getBinaryPath('yt-dlp');
+    const ffmpegPath = binManager.getBinaryPath('ffmpeg');
     return new Promise((resolve, reject) => {
         if(!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
 
@@ -53,24 +43,23 @@ export const downloadVideoTask = (url: string, basePath: string): Promise<any> =
             url,
             '-o', path.join(basePath, '%(extractor)s', '%(title)s_%(id)s.$(ext)s'),
             '--no-check-certificates',
-            'no-warnings',
+            '--no-warnings',
             '--format', 'bestvideo+bestaudio/best',
             '--merge-output-format', 'mp4',
             '--print-json',
             '--no-write-thumbnail'
         ];
 
-        if(fs.existsSync(FFMPEG_PATH)) {
-            args.push('--ffmpeg-location', FFMPEG_PATH);
+        if(fs.existsSync(ffmpegPath)) {
+            args.push('--ffmpeg-location', ffmpegPath);
         } else {
             console.warn('[DownloadHandler] FFMPEG not found. Format merging might fall.');
         }
 
-        console.log(`[DownloadHandler] Spawning: ${YTDLP_PATH} ${args.join(' ')}`);
+        console.log(`[DownloadHandler] Spawning: ${ytdlpPath} ${args.join(' ')}`);
 
-        const ytdlpProcess = spawn(YTDLP_PATH, args);
+        const ytdlpProcess = spawn(ytdlpPath, args);
         let jsonOutput = '';
-        let errorOutput = '';
 
         ytdlpProcess.stdout.on('data', (data) => {
             jsonOutput += data.toString();

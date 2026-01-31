@@ -14,7 +14,7 @@ export class BinManager {
 
     private constructor() {
         this.bundledBinPath = isDev
-            ? path.join(__dirname, '../../../resources/bin')
+            ? path.join(__dirname, '../../resources/bin')
             : path.join(process.resourcesPath, 'bin');
     }
     public static getInstance(): BinManager {
@@ -68,7 +68,8 @@ export class BinManager {
 
     public async downloadYtdlp(versionsTag: string = 'latest'): Promise<boolean> {
         try{
-            const filename = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+            const isWin = process.platform === 'win32';
+            const filename = isWin ? 'yt-dlp.exe' : 'yt-dlp';
             const destDir = path.join(config.getBasePath(), 'bin')
             const destPath = path.join(destDir, filename);
 
@@ -76,12 +77,18 @@ export class BinManager {
                 fs.mkdirSync(destDir, { recursive: true });
             }
 
+            let downloadUrl = ''
             const baseUrl = 'https://github.com/yt-dlp/yt-dlp/releases';
-            const downloadUrl = versionsTag === 'latest'
-                ? `${baseUrl}/latest/download/yt-dlp.exe`
-                : `${baseUrl}/download/${versionsTag}/yt-dlp.exe`;
-            
-            console.log(`[BinManager] Downloading update to: ${destPath}`);
+
+            if (versionsTag === 'latest') {
+                const remoteFileName = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+                downloadUrl = `${baseUrl}/download/${versionsTag}/${remoteFileName}`;
+            } else {
+                const remoteFileName = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+                downloadUrl = `${baseUrl}/download/${versionsTag}/${remoteFileName}`
+            }
+
+            console.log(`[BinManager] Downloading yt-dlp (${versionsTag}) to : ${destPath}`);
 
             const response = await fetch(downloadUrl);
             
@@ -91,6 +98,7 @@ export class BinManager {
 
             const fileStream = fs.createWriteStream(destPath);
             await pipeline(response.body, fileStream);
+            
             console.log(`[BinManager] Update complete.`);
             return true
         } catch(error) {

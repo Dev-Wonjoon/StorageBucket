@@ -15,7 +15,7 @@ function App() {
 			if(result.success) {
 				console.log('[App] Download Complete: ', result.data);
 				window.dispatchEvent(new Event('gallery-refresh'));
-				console.log('Download and DB storage complete')
+				console.log('Download and DB storage complete');
 				alert('다운로드가 완료되었습니다');
 			} else {
 				console.error('[App] Download Failed:', result.error);
@@ -37,7 +37,7 @@ function App() {
 			<div className="flex-1 flex flex-col h-full min-w-0">
 			{/* 상단 다운로드 바 */}
 				<div className="flex-none p-4 border-b border-[border-line] bg-[--bg-app]/95 backdrop-blur-sm z-10">
-					<DownloadBar onStartDownload={(url) => console.log('Download:', url)}/>
+					<DownloadBar onStartDownload={handleDownload}/>
 				</div>		
 
 				{/* 갤러리 영역 */}
@@ -47,7 +47,6 @@ function App() {
 					{activeMenu === 'search' && (
 						<div className="flex items-center justify-center h-full text-[--text-muted]">
 							검색기능 준비 중...
-						
 						</div>
 					)}
 

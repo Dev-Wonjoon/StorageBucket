@@ -9,66 +9,74 @@ export const MediaService = {
 
     async processMediaFromUrl(url: string) {
         console.log(`[MediaService] Processing URL: ${url}`);
-        
+
         const downloadPath = ConfigManager.getInstance().getDownloadPath();
 
         const result = await downloadVideoTask(url, downloadPath);
         if(!result) {
-            throw new Error("Download failed: No result returned");
+            throw new Error('Download failed: No result returned');
         }
 
-        return await this.registerMedia(result.metadata, result.videoPath, result.thumbnailPath);
+        return this.registerMedia(result.metadata, result.videoPath, result.thumbnailPath);
     },
     
     async getAll() {
         return await db.select().from(medias).orderBy(desc(medias.createdAt));
     },
-
-    async registerMedia(metadata: any, localFilepath: string, thumbnailPath: string | null): Promise<Media> {
-        return await db.transaction(async (tx) => {
+    
+    registerMedia(metadata: any, localFilepath: string, thumbnailPath: string | null): Media {
+        return db.transaction((tx) => {
             const platformName = metadata.extractor_key || metadata.extractor || 'unknown';
             let platformId: number;
 
-            const existingPlatform = await tx.query.platforms.findFirst({
-                where: eq(platforms.name, platformName)
-            });
-
+            const existingPlatform = tx.select()
+                .from(platforms)
+                .where(eq(platforms.name, platformName))
+                .get();
+            
             if(existingPlatform) {
                 platformId = existingPlatform.id;
             } else {
-                const [newPlatform] = await tx.insert(platforms).values({ name: platformName }).returning();
+                const newPlatform = tx.insert(platforms)
+                    .values({ name: platformName })
+                    .returning()
+                    .get();
                 platformId = newPlatform.id;
             }
 
-            const uploaderId = metadata.uploaderId || 'unknown';
+            const uploaderId = metadata.uploader_id || metadata.uploader_url || 'unknown';
             const uploaderName = metadata.uploader || 'unknown';
-            let profileId: number = 0;
+            let profileId: number;
 
-            const existingProfile = await tx.query.profiles.findFirst({
-                where: and(
+            const exsitingProfile = tx.select()
+                .from(profiles)
+                .where(and(
                     eq(profiles.ownerId, uploaderId),
-                    eq(profiles.ownerName, uploaderName)
-                )
-            });
+                    eq(profiles.platformId, platformId)
+                ))
+                .get();
+            if(exsitingProfile) {
+                profileId = exsitingProfile.id;
 
-            if(existingProfile) {
-                profileId = existingProfile.id;
-
-                if(existingProfile.ownerName !== uploaderName) {
-                    await tx.update(profiles)
+                if(exsitingProfile.ownerName !== uploaderName) {
+                    tx.update(profiles)
                         .set({ ownerName: uploaderName, updatedAt: new Date() })
-                        .where(eq(profiles.id, profileId));
+                        .where(eq(profiles.id, profileId))
+                        .run();
                 }
             } else {
-                const [newProfile] = await tx.insert(profiles).values({
-                    ownerId: uploaderId,
-                    ownerName: uploaderName,
-                    platformId: platformId
-                }).returning();
+                const newProfile = tx.insert(profiles)
+                    .values({
+                        ownerId: uploaderId,
+                        ownerName: uploaderName,
+                        platformId: platformId
+                    })
+                    .returning()
+                    .get();
                 profileId = newProfile.id;
             }
 
-            const [newMedia] = await tx.insert(medias).values({
+            const newMedia = tx.insert(medias).values({
                 title: metadata.title || 'Untitled',
                 filepath: localFilepath,
                 url: metadata.webpage_url || metadata.original_url,
@@ -77,8 +85,8 @@ export const MediaService = {
                 platformId: platformId,
                 profileId: profileId,
                 createdAt: new Date(),
-                updatedAt: new Date()
-            }).returning();
+                updatedAt: new Date(),
+            }).returning().get();
 
             console.log(`[MediaService] Registered media: ${newMedia.title} (ID: ${newMedia.id})`);
 
