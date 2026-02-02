@@ -4,7 +4,7 @@ import { pathToFileURL } from 'url';
 
 export function setupMediaProtocol() {
     protocol.handle('media', (request) => {
-        const rawUrl = request.url.replace('media://', '');
+        const rawUrl = request.url.replace('media:///', '');
 
         const decodedPath = decodeURIComponent(rawUrl);
 

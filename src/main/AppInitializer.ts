@@ -70,7 +70,7 @@ export class AppInitializer {
     }
 
     private setupDataPaths(): void {
-        const basePath = process.env.PORTABLE_EXECUTABLE_DIR || dirname(app.getPath('exe'));
+        const basePath = app.getAppPath()
         const rootPath = app.isPackaged ? basePath : process.cwd();
 
         const portableDataPath = join(rootPath, 'data');

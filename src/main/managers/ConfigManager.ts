@@ -13,11 +13,8 @@ export class ConfigManager {
     private store: Store<AppConfig>;
 
     private constructor() {
-        const isDev = !app.isPackaged;
 
-        const defaultBasePath = process.env.PORTABLE_EXECUTABLE_DIR
-            || path.dirname(app.getPath('exe'))
-            || (isDev ? process.cwd() : '');
+        const defaultBasePath = app.getAppPath();
         
         const AppStore = (Store as any).default || Store;
         
