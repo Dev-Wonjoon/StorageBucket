@@ -8,7 +8,6 @@ import { BinManager } from './managers/BinManager';
 import { ConfigManager } from './managers/ConfigManager';
 import { MediaService } from './services/MediaService';
 import { setupMediaProtocol } from './utils/protocol';
-import { downloadVideoTask } from './handlers/DownloadHandler';
 
 export class AppInitializer {
     private mainWindow: BrowserWindow | null = null;
@@ -70,7 +69,7 @@ export class AppInitializer {
     }
 
     private setupDataPaths(): void {
-        const basePath = app.getAppPath()
+        const basePath = app.getAppPath();
         const rootPath = app.isPackaged ? basePath : process.cwd();
 
         const portableDataPath = join(rootPath, 'data');
