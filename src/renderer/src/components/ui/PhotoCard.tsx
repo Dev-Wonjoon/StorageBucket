@@ -26,7 +26,7 @@ export const PhotoCard = ({ data, isSelected, onClick }: PhotoCardProps) => {
     const imageUrl = useMemo(() => {
         if(!data.thumbnailPath) return null;
         const cleanPath = data.thumbnailPath.replace(/\\/g, '/');
-        return `media://${cleanPath}`;
+        return `media:///${cleanPath}`;
     }, [data.thumbnailPath]);
 
     const formatTime = (seconds: number) => {
