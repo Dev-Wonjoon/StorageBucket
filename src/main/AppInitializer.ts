@@ -8,6 +8,7 @@ import { BinManager } from './managers/BinManager';
 import { ConfigManager } from './managers/ConfigManager';
 import { MediaService } from './services/MediaService';
 import { setupMediaProtocol } from './utils/protocol';
+import { DownloadManager } from './managers/DownloadManager';
 
 export class AppInitializer {
     private mainWindow: BrowserWindow | null = null;
@@ -111,14 +112,15 @@ export class AppInitializer {
             return await BinManager.getInstance().downloadYtdlp(version);
         });
 
-        ipcMain.handle('video:download', async (_, url: string) => {
+        ipcMain.handle('video:download', async (_event, url: string, options: any) => {
             try {
-                const downloadPath = ConfigManager.getInstance().getDownloadPath();
+                console.log(`[IPC] Received download request: ${url}`);
 
-                const result = await MediaService.processMediaFromUrl(url);
-                return { success: true, data: result };
+                await DownloadManager.getInstance().addJob(url, options || {});
+
+                return { success: true, message: "Download added to queue" };
             } catch(error) {
-                console.error("[IPC] Download Error:", error);
+                console.error('[IPC] Download Error:', error);
                 return { success: false, error: (error as Error).message };
             }
         })

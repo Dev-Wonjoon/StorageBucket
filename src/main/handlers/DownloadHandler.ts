@@ -1,21 +1,26 @@
 import path from 'path';
 import fs from 'fs';
-import { spawn } from 'child_process';
 import { pipeline } from 'stream/promises';
+import { WebContents } from 'electron';
+import { DownloadOptions } from '../../shared/types';
 import { BinManager } from '../managers/BinManager';
+import { buildYtdlpArgs } from '../utils/YtdlpArgs';
+import { spawn } from 'child_process';
 
 
-async function downloadThumbnail(url: string, videoId: string, videoName: string, baseDir: string) {
+async function downloadThumbnail(url: string, videoId: string, videoName: string, thumbnailDir: string) {
     if(!url) return null;
+
     try {
-        const thumbDir = path.join(baseDir, 'thumbnails');
+        const thumbDir = path.join(thumbnailDir);
         if(!fs.existsSync(thumbDir)) fs.mkdirSync(thumbDir, { recursive: true });
 
         const urlObj = new URL(url);
-        let extension = path.extname(urlObj.pathname) || '.jpg';
+        const extension = path.extname(urlObj.pathname) || '.jpg';
 
-        const safeId = videoId.replace(/[\/\\:*?"<>|]g/, "");
-        const filename = `${videoName}_${safeId}${extension}`;
+        const safeId = videoId.replace(/[\/\\:*?"<>\|]/g, "");
+        const safeName = videoName.replace(/[\/\\:*?"<>\|]/g, "");
+        const filename = `${safeName}_${safeId}${extension}`;
         const filepath = path.join(thumbDir, filename);
 
         if(fs.existsSync(filepath)) return filepath;
@@ -23,7 +28,7 @@ async function downloadThumbnail(url: string, videoId: string, videoName: string
         const response = await fetch(url);
         if(!response.ok || !response.body) return null;
 
-        // @ts-ignore pipeline types mismatch workaround
+        // @ts-ignore
         await pipeline(response.body, fs.createWriteStream(filepath));
         return filepath;
     } catch(error) {
@@ -32,73 +37,89 @@ async function downloadThumbnail(url: string, videoId: string, videoName: string
     }
 }
 
-export const downloadVideoTask = (url: string, basePath: string): Promise<any> => {
+export const downloadVideoTask = (
+    sender: WebContents,
+    url: string,
+    basePath: string,
+    options: DownloadOptions = {}
+): Promise<any> => {
     const binManager = BinManager.getInstance();
     const ytdlpPath = binManager.getBinaryPath('yt-dlp');
     const ffmpegPath = binManager.getBinaryPath('ffmpeg');
+
     return new Promise((resolve, reject) => {
         if(!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
 
-        const args = [
-            url,
-            '-o', path.join(basePath, '%(extractor)s', '%(title)s_%(id)s.$(ext)s'),
-            '--no-check-certificates',
-            '--no-warnings',
-            '--format', 'bestvideo+bestaudio/best',
-            '--merge-output-format', 'mp4',
-            '--print-json',
-            '--no-write-thumbnail'
-        ];
+        const args = buildYtdlpArgs(url, basePath, options);
 
         if(fs.existsSync(ffmpegPath)) {
             args.push('--ffmpeg-location', ffmpegPath);
-        } else {
-            console.warn('[DownloadHandler] FFMPEG not found. Format merging might fall.');
         }
 
-        console.log(`[DownloadHandler] Spawning: ${ytdlpPath} ${args.join(' ')}`);
+        console.log(`[DownloadHandler] command: ${ytdlpPath} ${args.join(' ')}`);
 
         const ytdlpProcess = spawn(ytdlpPath, args);
-        let jsonOutput = '';
+        let currentMetaData: any = null;
 
         ytdlpProcess.stdout.on('data', (data) => {
-            jsonOutput += data.toString();
+            const lines = data.toString().split('\n');
+            lines.forEach((line) => {
+                const trimmed = line.trim();
+                if(!trimmed) return;
+
+                if(trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                    try {
+                        const parsed = JSON.parse(trimmed);
+                        currentMetaData = parsed;
+
+                        sender.send('download:progress', {
+                            status: 'start',
+                            title: parsed.title,
+                            platform: parsed.extractor_key || parsed.extractor,
+                            thumbnail: parsed.thumbnail
+                        });
+                    } catch(error) { /* ignore */ }
+                }
+
+                const progressMatch = trimmed.match(/\[download\]\s+(\d+\.\d+)%/);
+                if(progressMatch) {
+                    sender.send('download:progress', {
+                        status: 'downloading',
+                        progress: parseFloat(progressMatch[1])
+                    });
+                }
+            });
         });
 
-        ytdlpProcess.stderr.on('data', (data) => {
-            jsonOutput += data.toString();
-            console.log(`[yt-dlp stderr] ${data}`);
-        })
-
-        ytdlpProcess.on('error', (error) => {
-            console.error('[DownloadHandler] Process spawn error: ', error);
-            reject(new Error(`Failed to start yt-dlp: ${error.message}`));
-        })
+        ytdlpProcess.stderr.on('data', (d) => console.log(`[yt-dlp stderr] ${d}`));
 
         ytdlpProcess.on('close', async (code) => {
             if(code === 0) {
-                try{
-                    const metadata = JSON.parse(jsonOutput.trim());
-                    const videoId = metadata.id || 'Unknown';
-                    const videoTitle = metadata.title || 'Untitled';
+                let thumbnailPath: string | null = null;
 
-                    const videoPath = metadata._filename;
-
-                    const thumbnailPath = await downloadThumbnail(metadata.thumbnail, videoId, videoTitle, basePath);
-
-                    resolve({
-                        metadata,
-                        videoPath,
-                        thumbnailPath
-                    });
-                } catch(error) {
-                    console.error('JSON parse Error:', error);
-                    console.error('Raw Output:', jsonOutput);
-                    reject(new Error("Failed to parse download metadata"));
+                if(currentMetaData) {
+                    thumbnailPath = await downloadThumbnail(
+                        currentMetaData.thumbnail,
+                        currentMetaData.id,
+                        currentMetaData.title,
+                        basePath
+                    );
                 }
+
+                const videoPath = currentMetaData?.filename || currentMetaData?._filename;
+
+                sender.send('download:progress', { status: 'completed', progress: 100 });
+
+                resolve({
+                    success: true,
+                    metadata: currentMetaData,
+                    videoPath,
+                    thumbnailPath
+                });
             } else {
-                reject(new Error(`Download failed with exit code: ${code}`));
+                sender.send('download:progress', { status: 'failed' });
+                reject(new Error(`Exit code: ${code}`));
             }
         });
     });
-}
+};

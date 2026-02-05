@@ -16,12 +16,24 @@ export interface Media {
     updatedAt: Date;
 }
 
-export type MediaType = 'video' | 'audio';
-export type VideoQuality = 'best' | '1080' | '720';
+export type VideoQuality = 'best' | '8k' | '4k' | '2k' | '1080' | '720' | '480' | 'audio';
 
 export interface DownloadOptions {
-    type: MediaType;
-    quality: VideoQuality;
+    type?: 'video' | 'audio';
+    quality?: VideoQuality;
+    playlist?: boolean;
+    extension?: 'mp4' | 'mp3' | 'mkv';
+    skipExisting?: boolean;
+}
+
+export interface DownloadJob {
+    id: string;
+    url: string;
+    options: DownloadOptions;
+    status: 'pending' | 'downloading' | 'completed' | 'failed';
+    progress?: number;
+    title?: string;
+    thumbnail?: string;
 }
 
 export interface VideoInfo {

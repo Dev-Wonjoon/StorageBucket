@@ -2,23 +2,8 @@ import { db } from '../../database';
 import { medias, platforms, profiles } from '../../database/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { Media } from '../../shared/types';
-import { ConfigManager } from '../managers/ConfigManager';
-import { downloadVideoTask } from '../handlers/DownloadHandler';
 
 export const MediaService = {
-
-    async processMediaFromUrl(url: string) {
-        console.log(`[MediaService] Processing URL: ${url}`);
-
-        const downloadPath = ConfigManager.getInstance().getDownloadPath();
-
-        const result = await downloadVideoTask(url, downloadPath);
-        if(!result) {
-            throw new Error('Download failed: No result returned');
-        }
-
-        return this.registerMedia(result.metadata, result.videoPath, result.thumbnailPath);
-    },
     
     async getAll() {
         return await db.select().from(medias).orderBy(desc(medias.createdAt));
