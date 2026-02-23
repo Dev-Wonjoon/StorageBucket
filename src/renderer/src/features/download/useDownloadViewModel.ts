@@ -1,71 +1,65 @@
 import { useState, useEffect, useMemo } from "react";
-import { DownloadItem } from "./types";
+import { DownloadJob } from "src/shared/types";
 
 export const useDownloadViewModel = () => {
-    const [queue, setQueue] = useState<DownloadItem[]>([]);
+    const [queue, setQueue] = useState<DownloadJob[]>([]);
 
-    const activeItems = useMemo(() =>
-        queue.filter(i => i.status === 'downloading' || i.status === 'pending'),
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+    const activeItems = useMemo(() => 
+        queue.filter(j => j.status === 'downloading' || j.status === 'pending'),
     [queue]);
 
-    const totalProgress = useMemo(() => {
-        if(activeItems.length === 0) return 0;
-        return activeItems.reduce((acc, current) => acc + current.progress, 0) / activeItems.length;
-    }, [activeItems]);
+    const activeCount = activeItems.length;
+    const isDownloading = activeCount > 0;
 
-    const isDownloading = activeItems.length > 0;
+    const totalProgress = useMemo(() => {
+        if(activeCount === 0) return 0;
+        const sum = activeItems.reduce((acc, current) => acc + (current.progress || 0), 0);
+        return sum / activeCount;
+    }, [activeItems, activeCount]);
 
     useEffect(() => {
-        const removeListener = window.api.onDownloadProgress((data: any) => {
-            setQueue(prev => prev.map(item => {
-                if(item.id === data.url) {
-                    return {
-                        ...item,
-                        progress: data.progress,
-                        speed: data.speed,
-                        eta: data.eta,
-                        status: 'downloading',
-                    };
-                }
-                return item;
-            }));
+        const removeListener = window.api.onQueueUpdate((updateQueue: DownloadJob[]) => {
+            setQueue(updateQueue);
+
+            const hasActiveJobs = updateQueue.some(
+                job => job.status === 'downloading' || job.status === 'pending'
+            );
+
+            if(hasActiveJobs) {
+                setIsPanelOpen(true);
+            }
         });
+
         return () => removeListener();
     }, []);
 
     const startDownload = async (url: string) => {
-        const newItem: DownloadItem = {
-            id: url,
-            title: url,
-            progress: 0,
-            status: 'pending'
-        };
-        setQueue(prev => [newItem, ...prev]);
+        console.log('[ViewModel] Requesting download:', url);
 
         try {
             const result = await window.api.downloadVideo(url);
-            if(result.success) {
-                setQueue(prev => prev.map(item => 
-                    item.id === url
-                        ? { ...item, progress: 100, status: 'completed', title: result.data.title }
-                        : item
-                ));
-                window.dispatchEvent(new Event('gallery-refresh'));
-            } else {
-                throw new Error(result.error);
+
+            if(!result.success) {
+                console.error('Download Request Failed:', result.error);
+                alert(`Download request failed: ${result.error}`);
             }
         } catch(error) {
-            setQueue(prev => prev.map(item =>
-                item.id === url ? { ...item, status: 'error' } : item
-            ));
+            console.error('IPC Error:', error);
+            alert('통신 중 오류가 발생했습니다.');
         }
     };
 
+    const togglePanel = () => setIsPanelOpen(prev => !prev);
+
     return {
         queue,
-        activeCount: activeItems.length,
+        isPanelOpen,
+        activeCount,
         totalProgress,
         isDownloading,
-        startDownload
-    }
-}
+        startDownload,
+        togglePanel
+    };
+};

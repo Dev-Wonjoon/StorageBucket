@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 
@@ -118,3 +118,18 @@ export const mediaTagRelations = relations(mediaTags, ({ one }) => ({
         references: [tags.id],
     }),
 }));
+
+
+
+// ----------------------------------------------------------------------
+// Download Queue
+// ----------------------------------------------------------------------
+export const downloadQueue = sqliteTable('download_queue', {
+    id: text('id').primaryKey(),
+    url: text('url').notNull(),
+    status: text('status').notNull(),
+    options: text('options', { mode: 'json'}),
+    progress: integer('progress').default(0),
+    createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});

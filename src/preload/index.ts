@@ -3,7 +3,14 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  downloadVideo: (url: string) => ipcRenderer.invoke('video:download', url)
+  downloadVideo: (url: string, options?: any) => ipcRenderer.invoke('video:download', url, options),
+  onQueueUpdate: (callback: (queue: any[]) => void) => {
+    const subscription = (_event: any, value: any[]) => callback(value);
+
+    return () => {
+      ipcRenderer.removeListener('download:queue-update', subscription);
+    }
+  }
 }
 
 

@@ -5,6 +5,9 @@ import { ConfigManager } from "./ConfigManager";
 import { downloadVideoTask } from "../handlers/DownloadHandler";
 import { MediaService } from "../services/MediaService";
 import { calculateJobDelay } from "../utils/DelayStrategy";
+import { downloadQueue } from "../../database/schema";
+import { ne, eq } from "drizzle-orm";
+import { db } from "../../database";
 
 
 
@@ -17,7 +20,46 @@ export class DownloadManager {
 
     private mainWindow: BrowserWindow | null = null;
 
-    private constructor() {};
+    private constructor() {
+        this.restoreQueue();
+    };
+
+    private async restoreQueue() {
+        try {
+            const savedJobs = await db.select().from(downloadQueue).where(ne(downloadQueue.status, 'completed'));
+
+            this.queue = savedJobs.map(job => ({
+                id: job.id,
+                url: job.url,
+                status: job.status as any,
+                progress: job.progress || 0,
+                options: JSON.parse(job.options as string || '{}')
+            }));
+
+            let needsUpdate = false;
+            this.queue.forEach(job => {
+                if(job.status === 'downloading') {
+                    job.status = 'pending';
+                    job.progress = 0;
+
+                    db.update(downloadQueue)
+                        .set({ status: 'pending', progress: 0 })
+                        .where(eq(downloadQueue.id, job.id))
+                        .run();
+                    
+                    needsUpdate = true;
+                }
+            });
+
+            console.log(`[DownloadManager] Restored ${this.queue.length} jobs from DB.`);
+
+            if(this.queue.length > 0) {
+                this.processQueue();
+            }
+        } catch(error) {
+            console.error('[DownloadManager] Failed to restore queue:', error);
+        }
+    }
 
     public static getInstance(): DownloadManager {
         if(!DownloadManager.instance) {
@@ -31,8 +73,9 @@ export class DownloadManager {
     }
 
     public async addJob(url: string, options: DownloadOptions) {
+        const id = randomUUID();
         const job: DownloadJob = {
-            id: randomUUID(),
+            id,
             url,
             options,
             status: 'pending',
@@ -40,8 +83,22 @@ export class DownloadManager {
         };
 
         this.queue.push(job);
-        console.log(`[DownloadManager] Job added: ${job.id}`);
 
+        try {
+            await db.insert(downloadQueue).values({
+                id: job.id,
+                url: job.url,
+                status: 'pending',
+                options: JSON.stringify(options),
+                progress: 0,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+        } catch(error) {
+            console.error('[DownloadManager] DB Insert Failed:', error);
+        }
+
+        console.log(`[DownloadManager] Job added: ${job.id}`);
         this.notifyQueueUpdate();
 
         if(!this.isProcessing) {
@@ -64,9 +121,7 @@ export class DownloadManager {
         this.isProcessing = true;
         const job = this.queue[jobIndex];
 
-        this.queue[jobIndex].status = 'downloading';
-        this.notifyQueueUpdate();
-
+        this.updateJobStatus(job.id, 'downloading');
         const config = ConfigManager.getInstance();
         const basePath = config.getDownloadPath() || process.cwd();
 
@@ -82,24 +137,21 @@ export class DownloadManager {
             
             if(result && result.success) {
                 console.log(`[DownloadManager] Saving metadata to DB...`);
-            }
-            
-            try {
-                MediaService.registerMedia(
-                    result.metadata,
-                    result.videoPath,
-                    result.thumbnailPath
-                );
-            } catch(error) {
-                console.error(`[DownloadManager] Failed to save to DB:`, error);
-            }
+                try {
+                    MediaService.registerMedia(
+                        result.metadata,
+                        result.videoPath,
+                        result.thumbnailPath
+                    );
+                } catch(error) {
+                    console.error(`[DownloadManager] Failed to save to DB:`, error);
+                }
 
-            this.queue[jobIndex].status = 'completed';
-            this.queue[jobIndex].progress = 100;
-            console.log(`[DownloadManager] Job completed: ${job.id}`);
+                this.updateJobStatus(job.id, 'completed', 100);
+            }
         } catch(error) {
             console.error(`[DownloadManager] Job failed: ${job.id}`, error);
-            this.queue[jobIndex].status = 'failed';
+            this.updateJobStatus(job.id, 'failed');
         }
 
         this.notifyQueueUpdate();
@@ -111,6 +163,29 @@ export class DownloadManager {
         }, delay);
     }
 
+    private updateJobStatus(id: string, status: DownloadJob['status'], progress?: number) {
+        const index = this.queue.findIndex(j => j.id === id);
+        if(index === -1) return;
+
+        this.queue[index].status = status;
+        if(progress !== undefined) this.queue[index].progress = progress;
+
+        this.notifyQueueUpdate();
+
+        try {
+            db.update(downloadQueue)
+                .set({
+                    status: status,
+                    progress: progress || this.queue[index].progress,
+                    updatedAt: new Date()
+                })
+                .where(eq(downloadQueue.id, id))
+                .run();
+        } catch(error) {
+            console.error('[DownloadManager] DB Update Failed:', error);
+        }
+    }
+
     private notifyQueueUpdate() {
         if(this.mainWindow && !this.mainWindow.isDestroyed()) {
             this.mainWindow.webContents.send('download:queue-update', this.queue);
@@ -119,6 +194,11 @@ export class DownloadManager {
 
     public removeJob(jobId: string) {
         this.queue = this.queue.filter(j => j.id !== jobId);
+        try {
+            db.delete(downloadQueue).where(eq(downloadQueue.id, jobId)).run();
+        } catch(error) {
+            console.error('[DownloadManager] Failed to delete job from DB:', error);
+        }
         this.notifyQueueUpdate();
     }
 

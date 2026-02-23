@@ -8,7 +8,8 @@ declare global {
         success: boolean;
         data?: any;
         error?: string;
-      }>
+      }>,
+      onQueueUpdate: (callback: (queue: any[]) => void) => () => void;
     }
   }
 }
