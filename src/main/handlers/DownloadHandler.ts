@@ -61,8 +61,14 @@ export const downloadVideoTask = (
         const ytdlpProcess = spawn(ytdlpPath, args);
         let currentMetaData: any = null;
 
+        let stdoutBuffer = '';
+
         ytdlpProcess.stdout.on('data', (data) => {
-            const lines = data.toString().split('\n');
+            stdoutBuffer += data.toString();
+            const lines = stdoutBuffer.toString().split('\n');
+            
+            stdoutBuffer = lines.pop() || '';
+
             lines.forEach((line) => {
                 const trimmed = line.trim();
                 if(!trimmed) return;
@@ -80,6 +86,14 @@ export const downloadVideoTask = (
                         });
                     } catch(error) { /* ignore */ }
                 }
+            });
+        });
+
+        ytdlpProcess.stderr.on('data', (data) => {
+            const lines = data.toString().split('\n');
+            lines.forEach((line) => {
+                const trimmed = line.trim();
+                if(!trimmed) return;
 
                 const progressMatch = trimmed.match(/\[download\]\s+(\d+\.\d+)%/);
                 if(progressMatch) {
@@ -91,9 +105,16 @@ export const downloadVideoTask = (
             });
         });
 
-        ytdlpProcess.stderr.on('data', (d) => console.log(`[yt-dlp stderr] ${d}`));
-
         ytdlpProcess.on('close', async (code) => {
+            if (stdoutBuffer.trim()) {
+                const trimmed = stdoutBuffer.trim();
+                if(trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                    try {
+                        currentMetaData = JSON.parse(trimmed);
+                    } catch(e) {}
+                }
+            }
+
             if(code === 0) {
                 let thumbnailPath: string | null = null;
 

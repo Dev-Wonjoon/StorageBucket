@@ -11,6 +11,8 @@ export const buildYtdlpArgs = (url: string, basePath: string, options: DownloadO
         '--newline',
         '--no-write-thumbnail',
         '--ignore-errors',
+        '--no-simulate',
+        '--progress',
     ];
 
     if(isFastDomain(url)) {

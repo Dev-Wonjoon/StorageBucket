@@ -53,6 +53,8 @@ export class AppInitializer {
             }
         });
 
+        DownloadManager.getInstance().setWindow(this.mainWindow);
+
         this.mainWindow.on('ready-to-show', () => {
             this.mainWindow?.show();
         });

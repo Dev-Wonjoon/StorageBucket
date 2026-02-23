@@ -33,6 +33,10 @@ export const DownloadStatusPanel = ({ items }: DownloadStatusPanelProps) => {
                 onClick={() => setIsExpanded(!isExpanded)}
                 className='bg-[--bg-sidebar] border border-[--border-line] rounded-xl p-4 cursor-pointer hover:border-[--color-primary] transition-colors shadow-sm relative overflow-hidden group'
             >
+                
+                <div>
+
+                </div>
 
             </div>
         </div>
