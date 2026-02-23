@@ -1,14 +1,17 @@
 import fs from 'fs';
-import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
-import { join, dirname } from 'path';
+import { app, BrowserWindow, shell, ipcMain, dialog, IpcMainInvokeEvent } from 'electron';
+import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
 import { initDB } from '../database/index';
-import { BinManager } from './managers/BinManager';
-import { ConfigManager } from './managers/ConfigManager';
-import { MediaService } from './services/MediaService';
 import { setupMediaProtocol } from './utils/protocol';
 import { DownloadManager } from './managers/DownloadManager';
+
+import { downloadHandler } from './handlers/DownloadHandler';
+import { mediaHandler } from './handlers/MediaHandler';
+import { systemHandler } from './handlers/SystemHandler';
+
+type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any>;
 
 export class AppInitializer {
     private mainWindow: BrowserWindow | null = null;
@@ -89,42 +92,30 @@ export class AppInitializer {
     }
 
     private registerIpcHandlers(): void {
-        ipcMain.handle('media:get-all', async () => {
-            return await MediaService.getAll();
-        })
+        const handlers = {
+            ...downloadHandler,
+            ...mediaHandler,
+            ...systemHandler
+        };
 
-        ipcMain.handle('get-download-path', () => {
-            return ConfigManager.getInstance().getDownloadPath();
-        })
+        console.log(`[Main] Found ${Object.keys(handlers).length} handlers to register.`);
 
-        ipcMain.handle('set-download-path', async () => {
-            const result = await dialog.showOpenDialog({
-                properties: ['openDirectory']
+        for(const [channel, listener] of Object.entries(handlers)) {
+            if(ipcMain.eventNames().includes(channel)) {
+                ipcMain.removeHandler(channel);
+            }
+            const typedListener = listener as IpcHandler;
+            ipcMain.handle(channel, async (event, ...args) => {
+                try {
+                    return await typedListener(event, ...args);
+                } catch(error) {
+                    console.error(`[IPC Error] ${channel}:`, error);
+                    throw error;
+                }
             });
 
-            if(!result.canceled && result.filePaths.length > 0) {
-                const newPath = result.filePaths[0];
-                ConfigManager.getInstance().setDownloadPath(newPath);
-                return newPath;
-            }
-            return null;
-        })
+            console.log(`[IPC] Registered: ${channel}`);
+        }
 
-        ipcMain.handle('system:download-engine', async (_, version: string) => {
-            return await BinManager.getInstance().downloadYtdlp(version);
-        });
-
-        ipcMain.handle('video:download', async (_event, url: string, options: any) => {
-            try {
-                console.log(`[IPC] Received download request: ${url}`);
-
-                await DownloadManager.getInstance().addJob(url, options || {});
-
-                return { success: true, message: "Download added to queue" };
-            } catch(error) {
-                console.error('[IPC] Download Error:', error);
-                return { success: false, error: (error as Error).message };
-            }
-        })
     }
 }

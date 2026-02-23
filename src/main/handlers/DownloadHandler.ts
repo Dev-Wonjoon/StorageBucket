@@ -1,11 +1,20 @@
 import path from 'path';
 import fs from 'fs';
 import { pipeline } from 'stream/promises';
-import { WebContents } from 'electron';
+import { IpcMainInvokeEvent, WebContents } from 'electron';
 import { DownloadOptions } from '../../shared/types';
 import { BinManager } from '../managers/BinManager';
 import { buildYtdlpArgs } from '../utils/YtdlpArgs';
 import { spawn } from 'child_process';
+import { DownloadManager } from '../managers/DownloadManager';
+
+export const downloadHandler = {
+    'video:download': async (_: IpcMainInvokeEvent, url: string, options: any) => {
+        console.log(`[IPC] Download Request: ${url}`);
+        await DownloadManager.getInstance().addJob(url, options || {});
+        return { success: true, message: "Download added to queue" };
+    }
+};
 
 
 async function downloadThumbnail(url: string, videoId: string, videoName: string, thumbnailDir: string) {

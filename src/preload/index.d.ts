@@ -9,7 +9,9 @@ declare global {
         data?: any;
         error?: string;
       }>,
-      onQueueUpdate: (callback: (queue: any[]) => void) => () => void;
+      onQueueUpdate: (callback: (queue: any[]) => void) => () => void,
+      getMediaFiles: () => Promise<any[]>,
+      deleteMedia: (id: string) => Promise<{ success: boolean; error?: string}>;
     }
   }
 }
