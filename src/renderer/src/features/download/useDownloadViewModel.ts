@@ -43,6 +43,8 @@ export const useDownloadViewModel = () => {
                 console.error('[Renderer] window.api is undefined.');
                 return;
             }
+
+            
             const result = await window.api.downloadVideo(url);
 
             if(!result.success) {

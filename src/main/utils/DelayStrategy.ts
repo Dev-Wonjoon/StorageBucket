@@ -3,6 +3,15 @@ const FAST_DOMAINS = [
     'youtu.be',
 ];
 
+const INSTAGRAM_DOMAINS = [
+    'instagram.com',
+    'www.instagram.com',
+]
+
+export const isInstagramDomain = (url: string): boolean => {
+    return INSTAGRAM_DOMAINS.some(domain => url.includes(domain));
+}
+
 export const isFastDomain = (url: string): boolean => {
     return FAST_DOMAINS.some(domain => url.includes(domain));
 };

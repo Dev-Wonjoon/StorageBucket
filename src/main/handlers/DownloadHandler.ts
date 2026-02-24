@@ -58,7 +58,7 @@ export const downloadVideoTask = (
 
     return new Promise((resolve, reject) => {
         if(!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
-
+        
         const args = buildYtdlpArgs(url, basePath, options);
 
         if(fs.existsSync(ffmpegPath)) {
@@ -68,14 +68,14 @@ export const downloadVideoTask = (
         console.log(`[DownloadHandler] command: ${ytdlpPath} ${args.join(' ')}`);
 
         const ytdlpProcess = spawn(ytdlpPath, args);
-        let currentMetaData: any = null;
 
+        const allMetadata: any[] = [];
+        let latestMetadata: any = null;
         let stdoutBuffer = '';
 
         ytdlpProcess.stdout.on('data', (data) => {
             stdoutBuffer += data.toString();
-            const lines = stdoutBuffer.toString().split('\n');
-            
+            const lines = stdoutBuffer.split('\n');
             stdoutBuffer = lines.pop() || '';
 
             lines.forEach((line) => {
@@ -85,15 +85,17 @@ export const downloadVideoTask = (
                 if(trimmed.startsWith('{') && trimmed.endsWith('}')) {
                     try {
                         const parsed = JSON.parse(trimmed);
-                        currentMetaData = parsed;
+                        allMetadata.push(parsed);
+                        latestMetadata = parsed;
 
                         sender.send('download:progress', {
                             status: 'start',
                             title: parsed.title,
-                            platform: parsed.extractor_key || parsed.extractor,
-                            thumbnail: parsed.thumbnail
+                            platform: parsed.extractor_key || parsed.extract,
+                            thumbnail: parsed.thumbnail,
+                            itemCount: allMetadata.length,
                         });
-                    } catch(error) { /* ignore */ }
+                    } catch(error) {}
                 }
             });
         });
@@ -115,41 +117,60 @@ export const downloadVideoTask = (
         });
 
         ytdlpProcess.on('close', async (code) => {
-            if (stdoutBuffer.trim()) {
+            if(stdoutBuffer.trim()) {
                 const trimmed = stdoutBuffer.trim();
                 if(trimmed.startsWith('{') && trimmed.endsWith('}')) {
                     try {
-                        currentMetaData = JSON.parse(trimmed);
-                    } catch(e) {}
+                        const parsed = JSON.parse(trimmed);
+                        allMetadata.push(parsed);
+                        latestMetadata = parsed;
+                    } catch(error) {}
                 }
             }
 
             if(code === 0) {
-                let thumbnailPath: string | null = null;
+                const results: Array<{ metadata: any; videoPath: string | null; thumbnailPath: string | null;}> = [];
 
-                if(currentMetaData) {
-                    thumbnailPath = await downloadThumbnail(
-                        currentMetaData.thumbnail,
-                        currentMetaData.id,
-                        currentMetaData.title,
-                        basePath
-                    );
+                for(const meta of allMetadata) {
+                    let thumbnailPath: string | null = null;
+                    if(meta.thumbnail) {
+                        thumbnailPath = await downloadThumbnail(
+                            meta.thumbnail, meta.id, meta.title, basePath
+                        );
+                    }
+                    results.push({
+                        metadata: meta,
+                        videoPath: meta.filename || meta._filename || null,
+                        thumbnailPath
+                    });
                 }
 
-                const videoPath = currentMetaData?.filename || currentMetaData?._filename;
+                sender.send('download:progress', { status: 'completed', progress: 100, itemCount: results.length });
 
-                sender.send('download:progress', { status: 'completed', progress: 100 });
-
-                resolve({
-                    success: true,
-                    metadata: currentMetaData,
-                    videoPath,
-                    thumbnailPath
-                });
+                if(results.length <= 1) {
+                    const single = results[0] || { metadata: latestMetadata, videoPath: null, thumbnailPath: null };
+                    resolve({
+                        success: true,
+                        metadata: single.metadata,
+                        videoPath: single.videoPath,
+                        thumbnailPath: single.thumbnailPath
+                    });
+                } else {
+                    resolve({
+                        success: true,
+                        multiple: true,
+                        items: results,
+                        metadata: results[0].metadata,
+                        videoPath: results[0].videoPath,
+                        thumbnailPath: results[0].thumbnailPath
+                    });
+                }
             } else {
                 sender.send('download:progress', { status: 'failed' });
-                reject(new Error(`Exit code: ${code}`));
+                reject(new Error(`Exit code: ${code}`))
             }
-        });
+        })
     });
-};
+
+
+}
