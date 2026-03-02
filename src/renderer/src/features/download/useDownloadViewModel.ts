@@ -1,12 +1,15 @@
-import { useState, useEffect, useMemo } from "react";
+// src/renderer/src/features/download/useDownloadViewModel.ts
+
+import { useState, useEffect, useMemo, useRef } from "react"; // ✅ useRef 추가
 import { DownloadJob } from "src/shared/types";
 
 export const useDownloadViewModel = () => {
     const [queue, setQueue] = useState<DownloadJob[]>([]);
-
     const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-    const activeItems = useMemo(() => 
+    const prevQueueRef = useRef<DownloadJob[]>([]);
+
+    const activeItems = useMemo(() =>
         queue.filter(j => j.status === 'downloading' || j.status === 'pending'),
     [queue]);
 
@@ -20,10 +23,24 @@ export const useDownloadViewModel = () => {
     }, [activeItems, activeCount]);
 
     useEffect(() => {
-        const removeListener = window.api.onQueueUpdate((updateQueue: DownloadJob[]) => {
-            setQueue(updateQueue);
+        const removeListener = window.api.onQueueUpdate((updatedQueue: DownloadJob[]) => {
+            const prevQueue = prevQueueRef.current;
 
-            const hasActiveJobs = updateQueue.some(
+
+            const hasNewlyCompleted = updatedQueue.some(job =>
+                job.status === 'completed' &&
+                prevQueue.find(prev => prev.id === job.id)?.status !== 'completed'
+            );
+
+            setQueue(updatedQueue);
+            prevQueueRef.current = updatedQueue;
+
+            if (hasNewlyCompleted) {
+                console.log('[DownloadViewModel] Download completed → refreshing gallery');
+                window.dispatchEvent(new CustomEvent('gallery-refresh'));
+            }
+
+            const hasActiveJobs = updatedQueue.some(
                 job => job.status === 'downloading' || job.status === 'pending'
             );
 
@@ -43,8 +60,6 @@ export const useDownloadViewModel = () => {
                 console.error('[Renderer] window.api is undefined.');
                 return;
             }
-
-            
             const result = await window.api.downloadVideo(url);
 
             if(!result.success) {

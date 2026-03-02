@@ -138,11 +138,15 @@ export class DownloadManager {
             if(result && result.success) {
                 console.log(`[DownloadManager] Saving metadata to DB...`);
                 try {
-                    MediaService.registerMedia(
-                        result.metadata,
-                        result.videoPath,
-                        result.thumbnailPath
-                    );
+                    if(result.metadata) {
+                        MediaService.registerMedia(
+                            result.metadata,
+                            result.videoPath,
+                            result.thumbnailPath
+                        );
+                    } else {
+                        console.warn('[DownloadManager] metadata is null, skipping DB.');
+                    }
                 } catch(error) {
                     console.error(`[DownloadManager] Failed to save to DB:`, error);
                 }

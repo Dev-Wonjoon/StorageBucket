@@ -82,6 +82,8 @@ export const downloadVideoTask = (
                 const trimmed = line.trim();
                 if(!trimmed) return;
 
+                console.log(`[yt-dlp stdout] ${trimmed.substring(0, 200)}`);
+
                 if(trimmed.startsWith('{') && trimmed.endsWith('}')) {
                     try {
                         const parsed = JSON.parse(trimmed);
@@ -106,6 +108,8 @@ export const downloadVideoTask = (
                 const trimmed = line.trim();
                 if(!trimmed) return;
 
+                console.log(`[yt-dlp stderr] ${trimmed}`);
+
                 const progressMatch = trimmed.match(/\[download\]\s+(\d+\.\d+)%/);
                 if(progressMatch) {
                     sender.send('download:progress', {
@@ -128,7 +132,7 @@ export const downloadVideoTask = (
                 }
             }
 
-            if(code === 0) {
+            if(code === 0 && allMetadata.length > 0) {
                 const results: Array<{ metadata: any; videoPath: string | null; thumbnailPath: string | null;}> = [];
 
                 for(const meta of allMetadata) {
@@ -167,7 +171,7 @@ export const downloadVideoTask = (
                 }
             } else {
                 sender.send('download:progress', { status: 'failed' });
-                reject(new Error(`Exit code: ${code}`))
+                reject(new Error(`Exit code: ${code}`));
             }
         })
     });
