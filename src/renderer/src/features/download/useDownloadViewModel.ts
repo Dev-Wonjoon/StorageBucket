@@ -1,6 +1,4 @@
-// src/renderer/src/features/download/useDownloadViewModel.ts
-
-import { useState, useEffect, useMemo, useRef } from "react"; // ✅ useRef 추가
+import { useState, useEffect, useMemo, useRef } from "react";
 import { DownloadJob } from "src/shared/types";
 
 export const useDownloadViewModel = () => {

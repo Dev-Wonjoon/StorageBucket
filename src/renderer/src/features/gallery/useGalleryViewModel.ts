@@ -1,8 +1,28 @@
 import { useState, useCallback, useEffect } from "react";
-import { Media } from "src/shared/types";
+import { Media, DownloadItem, GalleryItem } from "src/shared/types";
+
+const hashStringToNumber = (str: string): number => 
+    Math.abs(str.split('').reduce((acc, ch) => acc * 31 + ch.charCodeAt(0), 0)) || Date.now();
+
+const jobToPlaceholder = (item: DownloadItem): Media => ({
+    id: -hashStringToNumber(item.id),
+    title: item.title,
+    filepath: '',
+    thumbnailPath: null,
+    duration: 0,
+    filesize: 0,
+    platformId: null,
+    profileId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    author: '',
+    platform: '',
+    url: null
+});
 
 export const useGalleryViewModel = () => {
     const [medias, setMedias] = useState<Media[]>([]);
+    const [downloadQueue, setDownloadQueue] = useState<DownloadItem[]>([]);
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -34,11 +54,37 @@ export const useGalleryViewModel = () => {
         return () => window.removeEventListener('gallery-refresh', handleRefresh);
     }, [loadMedia]);
 
+    useEffect(() => {
+        const removeListener = window.api.onQueueUpdate((updateQueue: DownloadItem[]) => {
+            setDownloadQueue(updateQueue);
+        });
+
+        return () => removeListener?.();
+    }, []);
+
+    const galleryItems: GalleryItem[] = [
+        ...downloadQueue
+            .filter(item => item.status === 'downloading' || item.status === 'pending')
+            .map(item => ({
+                media: jobToPlaceholder(item),
+                isDownloading: true,
+                progress: item.progress,
+                speed: item.speed,
+                eta: item.eta,
+                downloadId: item.id
+            })),
+        ...medias.map(media => ({
+            media,
+            isDownloading: false,
+        })),
+    ];
+
     return {
+        galleryItems,
         medias,
         selectedId,
         isLoading,
         toggleSelect,
-        refresh: loadMedia
+        refresh: loadMedia,
     };
 };

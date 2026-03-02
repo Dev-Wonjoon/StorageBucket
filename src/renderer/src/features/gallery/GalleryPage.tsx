@@ -1,10 +1,10 @@
 // src/renderer/src/features/gallery/GalleryPage.tsx
 
-import { PhotoCard } from "../../components/ui/PhotoCard";
-import { useGalleryViewModel } from "./useGalleryViewModel"; // ✅ ViewModel import
+import { PhotoCard } from "./PhotoCard";
+import { useGalleryViewModel } from "./useGalleryViewModel";
 
 export const GalleryPage = () => {
-    const { medias, selectedId, isLoading, toggleSelect } = useGalleryViewModel(); // ✅ 변경
+    const { medias, selectedId, isLoading, toggleSelect } = useGalleryViewModel();
 
     if (isLoading && medias.length === 0) {
         return (
