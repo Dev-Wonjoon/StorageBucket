@@ -87,6 +87,7 @@ export interface GalleryItem {
 export interface DownloadItem {
     id: string;
     title: string;
+    url?: string;
     progress: number;
     status: 'pending' | 'downloading' | 'completed' | 'error';
     speed?: string;

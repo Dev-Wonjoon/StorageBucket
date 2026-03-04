@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Sidebar } from "./components/layouts/Sidebar";
 import { DownloadBar } from "./components/layouts/DownloadBar";
-import { DownloadStatusPanel } from "./components/layouts/DownloadStatusPanel";
 import { GalleryPage } from "./features/gallery/GalleryPage";
 
 function App() {
@@ -21,12 +20,6 @@ function App() {
                 return (
                     <div className="flex items-center justify-center h-full text-[--text-muted]">
                         즐겨찾기 준비 중...
-                    </div>
-                );
-            case 'settings':
-                return (
-                    <div className="flex items-center justify-center h-full text-[--text-muted]">
-                        설정 준비 중...
                     </div>
                 );
             default:
@@ -53,10 +46,6 @@ function App() {
                 <main className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-[--bg-active] scrollbar-track-transparent">
                     {renderContent()}
                 </main>
-
-                {/* 2-3. 하단 다운로드 패널 (고정) */}
-                <DownloadStatusPanel />
-                
             </div>
         </div>
 	)

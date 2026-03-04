@@ -34,7 +34,7 @@ export function DownloadBar({ isDarkMode, onToggleTheme }: DownloadBarProps) {
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         {/* 아이콘 색상: 기본 muted -> 포커스 시 primary */}
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" 
-                             className="w-5 h-5 transition-colors text-[var(--text-muted)] group-focus-within:text-[var(--color-primary)]">
+                             className="w-5 h-5 transition-colors text-[--text-muted] group-focus-within:text-[--color-primary]">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
                         </svg>
                     </div>
@@ -46,12 +46,12 @@ export function DownloadBar({ isDarkMode, onToggleTheme }: DownloadBarProps) {
                         onChange={(e) => setUrl(e.target.value)}
                         placeholder="다운로드할 링크를 붙여넣으세요..."
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl border transition-all shadow-sm outline-none
-                                   bg-[var(--bg-sidebar)] 
-                                   border-[var(--border-line)]
-                                   text-[var(--text-main)]
-                                   placeholder-[var(--text-placeholder)]
-                                   focus:border-[var(--color-primary)] 
-                                   focus:ring-2 focus:ring-[var(--color-primary)]/20"
+                                   bg-[--bg-sidebar] 
+                                   border-[--border-line)]
+                                   text-[--text-main]
+                                   placeholder-[--text-placeholder]
+                                   focus:border-[--color-primary] 
+                                   focus:ring-2 focus:ring-[--color-primary]/20"
                     />
                 </div>
 
@@ -61,8 +61,8 @@ export function DownloadBar({ isDarkMode, onToggleTheme }: DownloadBarProps) {
                     disabled={isChecking || !url.trim()}
                     className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all flex items-center gap-2 shadow-lg
                         ${isChecking || !url.trim()
-                            ? 'bg-[var(--bg-active)] text-[var(--text-muted)] cursor-not-allowed shadow-none'
-                            : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white active:scale-95 shadow-[var(--color-primary)]/25'
+                            ? 'bg-[--bg-active] text-[--text-muted] cursor-not-allowed shadow-none'
+                            : 'bg-[--color-primary] hover:bg-[--color-primary-hover] text-white active:scale-95 shadow-[--color-primary]/25'
                         }`}
                 >
                     {isChecking ? (
@@ -89,10 +89,10 @@ export function DownloadBar({ isDarkMode, onToggleTheme }: DownloadBarProps) {
                 <button
                     onClick={onToggleTheme}
                     className="px-3 py-2.5 rounded-xl border transition-all shadow-sm
-                               bg-[var(--bg-sidebar)]
-                               border-[var(--border-line)]
-                               text-[var(--text-muted)]
-                               hover:bg-[var(--bg-hover)]
+                               bg-[--bg-sidebar]
+                               border-[--border-line]
+                               text-[--text-muted]
+                               hover:bg-[--bg-hover]
                                active:scale-95"
                     title={isDarkMode ? "라이트 모드로 전환" : "다크 모드로 전환"}
                 >

@@ -4,9 +4,9 @@ import { PhotoCard } from "./PhotoCard";
 import { useGalleryViewModel } from "./useGalleryViewModel";
 
 export const GalleryPage = () => {
-    const { medias, selectedId, isLoading, toggleSelect } = useGalleryViewModel();
+    const { galleryItems, selectedId, isLoading, toggleSelect } = useGalleryViewModel();
 
-    if (isLoading && medias.length === 0) {
+    if (isLoading && galleryItems.length === 0) {
         return (
             <div className="flex h-full items-center justify-center text-[--text-muted]">
                 <div className="flex flex-col items-center gap-2">
@@ -20,16 +20,20 @@ export const GalleryPage = () => {
         <div className="w-full h-full pb-10">
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-sm text-[--text-main]">갤러리</h2>
-                <span className="text-sm text-[--text-muted]">총 {medias.length}개 항목</span>
+                <span className="text-sm text-[--text-muted]">총 {galleryItems.length}개 항목</span>
             </div>
-            {medias.length > 0 ? (
+            {galleryItems.length > 0 ? (
                 <div className="grid grid-col-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                    {medias.map((media) => (
+                    {galleryItems.map(({media, isDownloading, progress, speed, eta}) => (
                         <PhotoCard
                             key={media.id}
                             data={media}
                             isSelected={selectedId === media.id}
-                            onClick={toggleSelect}  // ✅ 변경
+                            onClick={toggleSelect}
+                            isDownloading={isDownloading}
+                            progress={progress}
+                            speed={speed}
+                            eta={eta}
                         />
                     ))}
                 </div>

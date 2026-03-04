@@ -6,7 +6,7 @@ const hashStringToNumber = (str: string): number =>
 
 const jobToPlaceholder = (item: DownloadItem): Media => ({
     id: -hashStringToNumber(item.id),
-    title: item.title,
+    title: item.title || item.url || item.id || 'Downloading...',
     filepath: '',
     thumbnailPath: null,
     duration: 0,
@@ -17,7 +17,7 @@ const jobToPlaceholder = (item: DownloadItem): Media => ({
     updatedAt: new Date(),
     author: '',
     platform: '',
-    url: null
+    url: item.url || null,
 });
 
 export const useGalleryViewModel = () => {
