@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Sidebar } from "./components/layouts/Sidebar";
 import { DownloadBar } from "./components/layouts/DownloadBar";
 import { GalleryPage } from "./features/gallery/GalleryPage";
+import { SettingsPage } from "./features/settings/SettingsPage";
 
 function App() {
 	const [activeMenu, setActiveMenu] = useState('galley');
@@ -22,6 +23,8 @@ function App() {
                         즐겨찾기 준비 중...
                     </div>
                 );
+            case 'settings':
+                return <SettingsPage />;
             default:
                 return <GalleryPage />;
     	}

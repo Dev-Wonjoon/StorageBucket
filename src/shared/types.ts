@@ -125,3 +125,14 @@ export interface DownloadResultMetadata {
     webpage_url: string;
     thumbnail?: string;
 }
+
+export interface EngineStatus {
+    installed: boolean;
+    version: string | null;
+}
+
+export interface LicenseInfo {
+    name: string;
+    url: string;
+    notice: string;
+}

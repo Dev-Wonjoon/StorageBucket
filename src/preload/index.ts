@@ -1,7 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-// Custom APIs for renderer
 const api = {
   downloadVideo: (url: string, options?: any) => ipcRenderer.invoke('video:download', url, options),
   onQueueUpdate: (callback: (queue: any[]) => void) => {
@@ -13,6 +12,9 @@ const api = {
   },
   getMediaFiles: () => ipcRenderer.invoke('media:get-all'),
   deleteMedia: (id: string) => ipcRenderer.invoke('media:delete', id),
+  getEngineStatus: () => ipcRenderer.invoke('system:engine-status'),
+  installEngine: (engine: string) => ipcRenderer.invoke('system:engine-install', engine),
+  getEngineLicenses: () => ipcRenderer.invoke('system:engine-licenses'),
 }
 
 

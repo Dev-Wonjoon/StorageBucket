@@ -20,7 +20,25 @@ export const systemHandler = {
         return null;
     },
 
-    'system:download-engine': async (_: IpcMainInvokeEvent, version: string) => {
-        return await BinManager.getInstance().downloadYtdlp(version);
-    }
+    'system:engine-install': async (_: IpcMainInvokeEvent, engine: string) => {
+        return await BinManager.getInstance().downloadEngine(engine as any);
+    },
+
+    'system:engine-licenses': async () => {
+        return BinManager.getInstance().getLicenses();
+    },
+
+    'system:engine-status': async () => {
+        const bin = BinManager.getInstance();
+        const engines = Object.keys(bin.getEngineRegistry()) as Array<'yt-dlp' | 'gallery-dl' | 'ffmpeg'>;
+
+        const status: Record<string, { installed: boolean; version: string | null; }> = {};
+        for(const name of engines) {
+            status[name] = {
+                installed: bin.checkExists(name),
+                version: await bin.getInstalledVersion(name),
+            };
+        }
+        return status;
+    },
 };
