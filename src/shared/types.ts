@@ -65,16 +65,6 @@ export interface MediaSearchResult {
     hasNextPage?: boolean;
 }
 
-export const CHANNELS = {
-    GET_ALL_MEDIAS: 'media:get-all',
-    SEARCH_MEDIAS: 'media:search',
-
-    GET_VIDEO_INFO: 'downloader:get-info',
-    START_DOWNLOAD: 'downloader:start',
-    DOWNLOAD_PROGRESS: 'downloader:progress',
-    DOWNLOAD_STATUS: 'downloader:status',
-} as const;
-
 export interface GalleryItem {
     media: Media;
     isDownloading: boolean;
@@ -99,4 +89,39 @@ export interface DownloadState {
     activeCount: number;
     totalProgress: number;
     isDownloading: boolean;
+}
+
+export interface TaskCallbacks {
+    onProgress: (progress: number, extra?: Record<string, any>) => void;
+}
+
+export interface TaskHandle {
+    promise: Promise<DownloadResult>;
+    abort: () => void;
+}
+
+export interface DownloadResult {
+    success: boolean;
+    multiple: boolean;
+    items?: DownloadResultItem[];
+    metadata: DownloadResultMetadata | null;
+    videoPath: string;
+    thumbnailPath: string | null;
+}
+
+export interface DownloadResultItem {
+    metadata: DownloadResultMetadata;
+    videoPath: string;
+    thumbnailPath: string | null;
+}
+
+export interface DownloadResultMetadata {
+    id: string;
+    title: string;
+    extractor_key: string;
+    filename: string;
+    duration?: number;
+    uploader?: string;
+    webpage_url: string;
+    thumbnail?: string;
 }

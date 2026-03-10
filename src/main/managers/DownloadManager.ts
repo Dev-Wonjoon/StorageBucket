@@ -1,13 +1,13 @@
 import { BrowserWindow } from "electron";
 import { randomUUID } from "crypto";
 import { DownloadOptions, DownloadJob} from "../../shared/types";
-import { ConfigManager } from "./ConfigManager";
-import { downloadVideoTask } from "../handlers/DownloadHandler";
-import { MediaService } from "../services/MediaService";
-import { calculateJobDelay } from "../utils/DelayStrategy";
 import { downloadQueue } from "../../database/schema";
 import { ne, eq } from "drizzle-orm";
 import { db } from "../../database";
+import { resolveDownloadTask } from "../utils/TaskRouter";
+import { ConfigManager } from "./ConfigManager";
+import { MediaService } from "../services/MediaService";
+import { calculateJobDelay } from "../utils/DelayStrategy";
 
 
 
@@ -128,13 +128,27 @@ export class DownloadManager {
         console.log(`[DownloadManager] Starting job ${job.id} to ${basePath}`);
 
         try {
-            const result = await downloadVideoTask(
-                this.mainWindow.webContents,
+            const handle = resolveDownloadTask(
                 job.url,
                 basePath,
-                job.options
+                job.options,
+                {
+                    onProgress: (progress, extra) => {
+                        if(this.mainWindow && !this.mainWindow.isDestroyed()) {
+                            this.mainWindow.webContents.send('download:progress', {
+                                jobId: job.id,
+                                progress,
+                                ...extra
+                            });
+                        }
+                        if(progress >= 0) {
+                            this.updateJobStatus(job.id, 'downloading', progress);
+                        }
+                    }
+                }
             );
-            
+            const result = await handle.promise;
+
             if(result && result.success) {
                 console.log(`[DownloadManager] Saving metadata to DB...`);
                 try {
@@ -157,7 +171,7 @@ export class DownloadManager {
             console.error(`[DownloadManager] Job failed: ${job.id}`, error);
             this.updateJobStatus(job.id, 'failed');
         }
-
+        
         this.notifyQueueUpdate();
 
         const delay = calculateJobDelay(job.url);

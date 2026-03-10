@@ -34,7 +34,6 @@ export const profiles = sqliteTable('profiles', {
         .$defaultFn(() => new Date())
         .$onUpdateFn(() => new Date()),
 }, (table) => ({
-    ownerIdx: uniqueIndex('idx_profile_owner_id').on(table.ownerId),
     uqOwnerPlatform: uniqueIndex('uq_owner_platform').on(table.ownerId, table.platformId),
 }));
 

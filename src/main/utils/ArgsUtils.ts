@@ -75,3 +75,24 @@ export const buildYtdlpArgs = (url: string, basePath: string, options: DownloadO
 
     return args;
 }
+
+const SHORT_DOMAIN_MAP: Record<string, string> = {
+    'youtu.be': 'youtube',
+    't.co': 'x',
+    'x.com': 'x',
+    'fxtwitter.com': 'x',
+    'vxtwitter.com': 'x',
+    'vm.tiktok.com': 'x',
+    'pin.it': 'pinterest',
+};
+
+export function extractSiteKey(url: string): string {
+    try {
+        const hostname = new URL(url).hostname.replace('www', '');
+        if(SHORT_DOMAIN_MAP[hostname]) return SHORT_DOMAIN_MAP[hostname];
+        const parts = hostname.split('.');
+        return parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+    } catch {
+        return 'unknown';
+    }
+}
