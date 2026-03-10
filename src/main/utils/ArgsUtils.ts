@@ -96,3 +96,14 @@ export function extractSiteKey(url: string): string {
         return 'unknown';
     }
 }
+
+export function cleanUrl(rawUrl: string): string {
+    try {
+        const url = new URL(rawUrl);
+        const trackingParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'igsh', 'igshid', 'fbclid', 'si', 'feature', 'img_index'];
+        trackingParams.forEach(p => url.searchParams.delete(p));
+        return url.toString();
+    } catch {
+        return rawUrl;
+    }
+}

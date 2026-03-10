@@ -8,6 +8,7 @@ import { resolveDownloadTask } from "../utils/TaskRouter";
 import { ConfigManager } from "./ConfigManager";
 import { MediaService } from "../services/MediaService";
 import { calculateJobDelay } from "../utils/DelayStrategy";
+import { cleanUrl } from "../utils/ArgsUtils";
 
 
 
@@ -76,7 +77,7 @@ export class DownloadManager {
         const id = randomUUID();
         const job: DownloadJob = {
             id,
-            url,
+            url: cleanUrl(url),
             options,
             status: 'pending',
             progress: 0

@@ -154,6 +154,16 @@ export class BinManager {
                 fs.mkdirSync(destDir, { recursive: true });
             }
 
+            if(versionTag === 'latest') {
+                const apiUrl = `https://api.github.com/repos/${engine.repo}/releases/latest`;
+                const apiResponse = await fetch(apiUrl, {
+                    headers: {'User-Agent': 'StorageBucket-App'}
+                });
+                if(!apiResponse.ok) throw new Error(`Failed to fetch latest release: ${apiResponse.statusText}`);
+                const releaseData = await apiResponse.json();
+                versionTag = releaseData.tag_name;
+            }
+
             const downloadUrl = `https://github.com/${engine.repo}/releases/download/${versionTag}/${assetName}`;
             console.log(`[BinManager] Downloading ${name} (${versionTag}): ${downloadUrl}`);
 

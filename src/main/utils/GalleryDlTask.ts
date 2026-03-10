@@ -9,7 +9,7 @@ import {
     TaskCallbacks,
     TaskHandle
 } from '../../shared/types';
-import { extractSiteKey } from "./ArgsUtils";
+import { extractSiteKey, cleanUrl } from "./ArgsUtils";
 
 export function downloadGalleryDl(
     url: string,
@@ -23,7 +23,7 @@ export function downloadGalleryDl(
 
     const promise = new Promise<DownloadResult>((resolve, reject) => {
         const args = [
-            url,
+            cleanUrl(url),
             '-d', basePath,
         ];
 
@@ -32,6 +32,7 @@ export function downloadGalleryDl(
         proc = spawn(galleryDlPath, args);
         const downloadedFiles: string[] = [];
         let stdoutBuffer = '';
+        let stderrBuffer = '';
 
         proc.stdout?.on('data', (data: Buffer) => {
             stdoutBuffer += data.toString();
@@ -55,7 +56,9 @@ export function downloadGalleryDl(
         });
 
         proc.stderr?.on('data', (data: Buffer) => {
-            console.log(`[gallery-dl stderr] ${data.toString()}`);
+            const text = data.toString();
+            stderrBuffer += text;
+            console.log(`[gallery-dl stderr] ${text}`);
         });
 
         proc.on('close', (code) => {
@@ -106,7 +109,7 @@ export function downloadGalleryDl(
                 }
             } else {
                 callbacks.onProgress(0, { status: 'failed' });
-                reject(new Error(`gallery-dl exited with code ${code}`));
+                reject(new Error(`gallery-dl exited with code ${code}\n${stderrBuffer}`));
             }
         });
     });
