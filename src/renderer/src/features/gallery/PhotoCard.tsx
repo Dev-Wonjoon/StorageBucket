@@ -24,7 +24,7 @@ export const PhotoCard = ({ data, isSelected, onClick, isDownloading = false, pr
                 ${isDownloading ? 'opacity-50 cursor-default' : 'cursor-pointer'}
                 ${isSelected
                     ? 'border-[--color-primary] ring-2 ring-[--color-primary]/30 scale-95 shadow-md'
-                    : 'border-transparent hover:border-[--border-line] hover:scale-[1.02] hover:shadow-lg'
+                    : 'hover:border-[--border-line] hover:scale-[1.02] hover:shadow-lg'
                 }
             `}
         >

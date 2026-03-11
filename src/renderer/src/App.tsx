@@ -1,11 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "./components/layouts/Sidebar";
 import { DownloadBar } from "./components/layouts/DownloadBar";
 import { GalleryPage } from "./features/gallery/GalleryPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
+import { useDownloadViewModel } from "./features/download/useDownloadViewModel";
+import { EngineSetupModal } from "./components/EngineSetupModal";
 
 function App() {
 	const [activeMenu, setActiveMenu] = useState('galley');
+    const [showSetup, setShowSetup] = useState(false);
+    const { startDownload } = useDownloadViewModel();
+
+    useEffect(() => {
+        window.api.getEngineStatus().then((status) => {
+            const hasMissing = Object.values(status).some((s: any) => !s.installed);
+            if(hasMissing) setShowSetup(true);
+        })
+    }, []);
+
+    useEffect(() => {
+        const handleGlobalPaste = (e: ClipboardEvent) => {
+            const tag = (e.target as HTMLElement)?.tagName;
+            if(tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+            const text = e.clipboardData?.getData('text')?.trim();
+            if(!text) return;
+
+            try {
+                new URL(text);
+            } catch {
+                return;
+            }
+
+            startDownload(text);
+        };
+
+        window.addEventListener('paste', handleGlobalPaste);
+        return () => window.removeEventListener('paste', handleGlobalPaste);
+    }, [startDownload]);
 
 	const renderContent = () => {
         switch (activeMenu) {
@@ -50,6 +82,7 @@ function App() {
                     {renderContent()}
                 </main>
             </div>
+            {showSetup && <EngineSetupModal onComplete={() => setShowSetup(false)}/>}
         </div>
 	)
 }

@@ -67,7 +67,7 @@ export class BinManager {
 
     private constructor() {
         this.bundledBinPath = isDev
-            ? path.join(__dirname, '../../resources/bin')
+            ? path.join(app.getAppPath(), 'resources', 'bin')
             : path.join(process.resourcesPath, 'bin');
     }
 
@@ -146,7 +146,7 @@ export class BinManager {
     public async downloadEngine(name: EngineName, versionTag: string = 'latest'): Promise<boolean> {
         const engine = ENGINE_REGISTRY[name];
         const assetName = engine.getAssetName(process.platform);
-        const destDir = path.join(config.getBasePath(), 'bin');
+        const destDir = path.join(this.bundledBinPath);
         const isArchive = assetName.endsWith('.zip') || assetName.endsWith('.tar.xz');
 
         try {

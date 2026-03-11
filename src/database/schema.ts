@@ -80,6 +80,7 @@ export const mediaRelations = relations(medias, ({ one, many }) => ({
         references: [profiles.id],
     }),
     mediaTags: many(mediaTags),
+    favorite: one(favorites),
 }));
 // ----------------------------------------------------------------------
 
@@ -118,6 +119,29 @@ export const mediaTagRelations = relations(mediaTags, ({ one }) => ({
     }),
 }));
 
+
+
+// ----------------------------------------------------------------------
+// Favorite
+// ----------------------------------------------------------------------
+export const favorites = sqliteTable('favorite', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    mediaId: integer('media_id')
+        .notNull()
+        .references(() => medias.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+        .notNull()
+        .$defaultFn(() => new Date()),
+}, (table) => ({
+    uqMedia: uniqueIndex('uq_favorite_media').on(table.mediaId),
+}));
+
+export const favoritesRelations = relations(favorites, ({ one }) => ({
+    media: one(medias, {
+        fields: [favorites.mediaId],
+        references: [medias.id],
+    }),
+}));
 
 
 // ----------------------------------------------------------------------

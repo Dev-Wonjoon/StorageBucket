@@ -26,6 +26,28 @@ export function DownloadBar({ isDarkMode, onToggleTheme }: DownloadBarProps) {
         }, 1000);
     }
 
+    const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+        const pastedText = e.clipboardData.getData('text').trim();
+
+        if(!pastedText) return;
+
+        try {
+            new URL(pastedText);
+        } catch {
+            return;
+        }
+
+        e.preventDefault();
+        setUrl(pastedText);
+        setIsChecking(true);
+        startDownload(pastedText);
+
+        setTimeout(() => {
+            setIsChecking(false);
+            setUrl('');
+        }, 1000);
+    }
+
     return (
         <div className="w-full max-w-4xl mx-auto flex gap-3">
             <form onSubmit={handleSubmit} className="flex-1 flex gap-3">
@@ -45,6 +67,7 @@ export function DownloadBar({ isDarkMode, onToggleTheme }: DownloadBarProps) {
                         type="text"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
+                        onPaste={handlePaste}
                         placeholder="다운로드할 링크를 붙여넣으세요..."
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl border transition-all shadow-sm outline-none
                                    bg-[--bg-sidebar] 

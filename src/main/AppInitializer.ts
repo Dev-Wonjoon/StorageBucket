@@ -8,6 +8,7 @@ import { setupMediaProtocol } from './utils/protocol';
 import { DownloadManager } from './managers/DownloadManager';
 
 import { downloadHandler } from './handlers/DownloadHandler';
+import { favoriteHandler } from './handlers/FavoriteHandler';
 import { mediaHandler } from './handlers/MediaHandler';
 import { systemHandler } from './handlers/SystemHandler';
 
@@ -94,8 +95,9 @@ export class AppInitializer {
     private registerIpcHandlers(): void {
         const handlers = {
             ...downloadHandler,
+            ...favoriteHandler,
             ...mediaHandler,
-            ...systemHandler
+            ...systemHandler,
         };
 
         console.log(`[Main] Found ${Object.keys(handlers).length} handlers to register.`);

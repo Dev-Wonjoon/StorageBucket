@@ -26,6 +26,7 @@ export function downloadGalleryDl(
         const args = [
             cleanUrl(url),
             '-d', basePath,
+            '-o', 'directory=["gallery-dl", "{category}", "{uploader_id:?//}{uploader_id}/{subcategory}"]',
         ];
 
         const cookieFile = ConfigManager.getInstance().getCookieFilePath();

@@ -20,6 +20,9 @@ const api = {
   getCookieFilePath: () => ipcRenderer.invoke('system:get-cookie-file'),
   setCookieFilePath: () => ipcRenderer.invoke('system:set-cookie-file'),
   clearCookieFilePath: () => ipcRenderer.invoke('system:clear-cookie-file'),
+  getFavorites: () => ipcRenderer.invoke('favorite:get-all'),
+  toggleFavorite: (mediaId: number) => ipcRenderer.invoke('favorite:toggle', mediaId),
+  checkFavorite: (mediaId: number) => ipcRenderer.invoke('favorite:check', mediaId),
 }
 
 
