@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { app, BrowserWindow, shell, ipcMain, dialog, IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, IpcMainInvokeEvent } from 'electron';
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 

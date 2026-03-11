@@ -1,7 +1,7 @@
 import { BrowserWindow } from "electron";
 import { randomUUID } from "crypto";
 import { DownloadOptions, DownloadJob} from "../../shared/types";
-import { downloadQueue } from "../../database/schema";
+import { downloadQueue, medias } from "../../database/schema";
 import { ne, eq } from "drizzle-orm";
 import { db } from "../../database";
 import { resolveDownloadTask } from "../utils/TaskRouter";
@@ -74,10 +74,23 @@ export class DownloadManager {
     }
 
     public async addJob(url: string, options: DownloadOptions) {
+        const cleanedUrl = cleanUrl(url);
+
+        const existing = db.select().from(medias).where(eq(medias.url, cleanedUrl)).get();
+        if(existing) {
+            return { success: false, message: '이미 다운로드된 미디어입니다.' }
+        }
+
+        const inQueue = this.queue.find(j => j.url === cleanedUrl && (j.status === 'pending' || j.status === 'downloading'));
+        if(inQueue) {
+            console.log(`[DownloadManager] URL already in queue: ${cleanedUrl}`);
+            return { success: false, message: '이미 다운로드 대기 중입니다.' };
+        }
+
         const id = randomUUID();
         const job: DownloadJob = {
             id,
-            url: cleanUrl(url),
+            url: cleanedUrl,
             options,
             status: 'pending',
             progress: 0

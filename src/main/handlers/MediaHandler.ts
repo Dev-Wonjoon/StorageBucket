@@ -1,4 +1,4 @@
-import { BrowserView, BrowserWindow, shell } from 'electron';
+import { BrowserWindow, shell } from 'electron';
 import { MediaService } from "../services/MediaService";
 
 export const mediaHandler = {

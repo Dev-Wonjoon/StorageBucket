@@ -18,8 +18,7 @@ export const GalleryPage = () => {
 
     return (
         <div className="w-full h-full pb-10">
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-sm text-[--text-main]">갤러리</h2>
+            <div className="flex items-center justify-end mb-6">
                 <span className="text-sm text-[--text-muted]">총 {galleryItems.length}개 항목</span>
             </div>
             {galleryItems.length > 0 ? (

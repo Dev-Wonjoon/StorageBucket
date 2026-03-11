@@ -48,7 +48,7 @@ export function EngineSetupModal({ onComplete }: EngineStatusProps) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-[--bg-sidebar] border border-[--border-line] rounded-2xl p-6 w-[420px] shadow-2xl">
+            <div className="bg-[--bg-sidebar] border border-[--border-line] rounded-2xl p-6 shadow-2xl">
                 <h2 className="text-lg font-semibold text-[--text-main] mb-1">엔진 설정</h2>
                 <p className="text-sm text-[--text-muted] mb-5">
                     다운로드에 필요한 엔진이 설치되어 있지 않습니다.

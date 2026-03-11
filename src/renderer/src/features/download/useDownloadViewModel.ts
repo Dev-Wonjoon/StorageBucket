@@ -61,8 +61,8 @@ export const useDownloadViewModel = () => {
             const result = await window.api.downloadVideo(url);
 
             if(!result.success) {
-                console.error('Download Request Failed:', result.error);
-                alert(`Download request failed: ${result.error}`);
+                console.error('Download Request Failed:', result.error || result.message);
+                alert(result.message || '다운로드 요청에 실패했습니다.');
             }
         } catch(error) {
             console.error('IPC Error:', error);

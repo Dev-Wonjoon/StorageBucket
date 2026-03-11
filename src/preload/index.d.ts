@@ -8,6 +8,7 @@ declare global {
         success: boolean;
         data?: any;
         error?: string;
+        message?: string;
       }>,
       onQueueUpdate: (callback: (queue: any[]) => void) => () => void,
       getMedias: () => ipcRen
