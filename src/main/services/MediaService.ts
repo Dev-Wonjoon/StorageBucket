@@ -1,12 +1,37 @@
 import { db } from '../../database';
-import { medias, platforms, profiles } from '../../database/schema';
+import { favorites, medias, platforms, profiles } from '../../database/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { Media } from '../../shared/types';
 
 export const MediaService = {
     
     async getAll() {
-        return await db.select().from(medias).orderBy(desc(medias.createdAt));
+        const rows = db
+            .select()
+            .from(medias)
+            .leftJoin(favorites, eq(favorites.mediaId, medias.id))
+            .orderBy(desc(medias.createdAt))
+            .all();
+        
+        return rows.map(row => ({
+            ...row.media,
+            isFavorite: !!row.favorite,
+        }));
+    },
+
+    async delete(id: number) {
+        const media = db.select().from(medias).where(eq(medias.id, id)).get();
+        if(!media) return
+
+        const fs = await import('fs/promises');
+        try {
+            await fs.unlink(media.filepath);
+            if(media.thumbnailPath) await fs.unlink(media.thumbnailPath);
+        } catch(error) {
+            console.warn('[MediaService] File delete failed:', error);
+        }
+
+        db.delete(medias).where(eq(medias.id, id)).run();
     },
     
     registerMedia(metadata: any, localFilepath: string, thumbnailPath: string | null): Media {

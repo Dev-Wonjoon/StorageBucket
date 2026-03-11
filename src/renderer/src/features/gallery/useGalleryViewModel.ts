@@ -62,6 +62,19 @@ export const useGalleryViewModel = () => {
         return () => removeListener?.();
     }, []);
 
+    const toggleFavorite = useCallback(async (id: number) => {
+        const isFav = await window.electron.ipcRenderer.invoke('favorite:toggle', id);
+        setMedias(prev => prev.map(m => m.id === id ? { ...m, isFavorite: isFav} : m));
+    }, []);
+
+    const deleteMedia = useCallback(async (id: number) => {
+        const confirmed = window.confirm('정말 삭제하시겠습니까?');
+        if(!confirmed) return
+
+        await window.electron.ipcRenderer.invoke('media:delete', id);
+        setMedias(prev => prev.filter(m => m.id !== id));
+    }, []);
+
     const galleryItems: GalleryItem[] = [
         ...downloadQueue
             .filter(item => item.status === 'downloading' || item.status === 'pending')
@@ -85,6 +98,8 @@ export const useGalleryViewModel = () => {
         selectedId,
         isLoading,
         toggleSelect,
+        toggleFavorite,
+        deleteMedia,
         refresh: loadMedia,
     };
 };

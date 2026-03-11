@@ -12,5 +12,5 @@ export const favoriteHandler = {
 
     'favorite:check': async (_: IpcMainInvokeEvent, mediaId: number) => {
         return await FavoriteService.isFavorite(mediaId);
-    }
-}
+    },
+};

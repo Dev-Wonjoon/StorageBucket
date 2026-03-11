@@ -8,6 +8,7 @@ export interface Media {
     filesize?: number | null;
     thumbnailPath?: string | null;
     duration?: number | null;
+    isFavorite?: boolean;
 
     platformId: number | null;
     profileId: number | null;

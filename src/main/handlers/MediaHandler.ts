@@ -6,6 +6,10 @@ export const mediaHandler = {
         return await MediaService.getAll();
     },
 
+    'media:delete': async (_: Electron.IpcMainInvokeEvent, id: number) => {
+        return await MediaService.delete(id);
+    },
+
     'shell:show-item': (_: Electron.IpcMainInvokeEvent, filepath: string) => {
         shell.showItemInFolder(filepath);
 

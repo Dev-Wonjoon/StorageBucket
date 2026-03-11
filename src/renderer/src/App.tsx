@@ -5,6 +5,7 @@ import { GalleryPage } from "./features/gallery/GalleryPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { useDownloadViewModel } from "./features/download/useDownloadViewModel";
 import { EngineSetupModal } from "./components/EngineSetupModal";
+import { FavoritesPage } from "./features/favorites/FavoritesPage";
 
 function App() {
 	const [activeMenu, setActiveMenu] = useState('galley');
@@ -50,11 +51,7 @@ function App() {
                     </div>
                 );
             case 'favorites':
-                return (
-                    <div className="flex items-center justify-center h-full text-[--text-muted]">
-                        즐겨찾기 준비 중...
-                    </div>
-                );
+                return <FavoritesPage />
             case 'settings':
                 return <SettingsPage />;
             default:

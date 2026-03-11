@@ -4,7 +4,7 @@ import { PhotoCard } from "./PhotoCard";
 import { useGalleryViewModel } from "./useGalleryViewModel";
 
 export const GalleryPage = () => {
-    const { galleryItems, selectedId, isLoading, toggleSelect } = useGalleryViewModel();
+    const { galleryItems, selectedId, isLoading, toggleSelect, toggleFavorite, deleteMedia } = useGalleryViewModel();
 
     if (isLoading && galleryItems.length === 0) {
         return (
@@ -30,6 +30,8 @@ export const GalleryPage = () => {
                             data={media}
                             isSelected={selectedId === media.id}
                             onClick={toggleSelect}
+                            onToggleFavorite={toggleFavorite}
+                            onDelete={deleteMedia}
                             isDownloading={isDownloading}
                             progress={progress}
                             speed={speed}
