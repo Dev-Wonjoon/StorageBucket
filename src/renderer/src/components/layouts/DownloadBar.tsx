@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useDownloadViewModel } from '@renderer/features/download/useDownloadViewModel'; 
+import { Button } from '../ui/Button';
 
 interface DownloadBarProps {
     isDarkMode?: boolean;
@@ -56,14 +57,11 @@ export function DownloadBar({ isDarkMode, onToggleTheme }: DownloadBarProps) {
                 </div>
 
                 {/* 다운로드 버튼 */}
-                <button
+                <Button
                     type="submit"
+                    size="md"
                     disabled={isChecking || !url.trim()}
-                    className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all flex items-center gap-2 shadow-lg
-                        ${isChecking || !url.trim()
-                            ? 'bg-[--bg-active] text-[--text-muted] cursor-not-allowed shadow-none'
-                            : 'bg-[--color-primary] hover:bg-[--color-primary-hover] text-white active:scale-95 shadow-[--color-primary]/25'
-                        }`}
+                    className="rounded-xl flex items-center gap-2 shadow-lg active:scale-95"
                 >
                     {isChecking ? (
                         <>
@@ -81,7 +79,7 @@ export function DownloadBar({ isDarkMode, onToggleTheme }: DownloadBarProps) {
                             </svg>
                         </>
                     )}
-                </button>
+                </Button>
             </form>
 
             {/* 테마 토글 버튼 (CSS 변수 적용) */}

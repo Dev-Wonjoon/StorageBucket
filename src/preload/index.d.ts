@@ -16,6 +16,11 @@ declare global {
       getEngineStatus: () => Promise<string, { installed: boolean; error?: string }>,
       installEngine: (engine: string) => Promise<boolean>,
       getEngineLicenses: () => Promise<Array<{ name: string; url: string; notice: string}>>,
+      getCookieBrowser: () => Promise<string>,
+      setCookieBrowser: (browser: string) => Promise<boolean>,
+      getCookieFilePath: () => Promise<string>,
+      setCookieFilePath: () => Promise<string | null>,
+      clearCookieFilePath: () => Promise<boolean>,
     }
   }
 }

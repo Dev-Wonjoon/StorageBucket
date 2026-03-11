@@ -41,4 +41,35 @@ export const systemHandler = {
         }
         return status;
     },
+
+    'system:get-cookie-browser': async () => {
+        return ConfigManager.getInstance().getCookieBrowser();
+    },
+
+    'system:set-cookie-browser': async (_: IpcMainInvokeEvent, browser: string) => {
+        ConfigManager.getInstance().setCookieBrowser(browser);
+        return true;
+    },
+
+    'system:get-cookie-file': async () => {
+        return ConfigManager.getInstance().getCookieFilePath();
+    },
+
+    'system:set-cookie-file': async () => {
+        const result = await dialog.showOpenDialog({
+            properties: ['openFile'],
+            filters: [{ name: 'Cookie File', extensions: ['txt'] }],
+        });
+
+        if(!result.canceled && result.filePaths.length > 0) {
+            ConfigManager.getInstance().setCookieFilePath(result.filePaths[0]);
+            return result.filePaths[0];
+        }
+        return null;
+    },
+
+    'system:clear-cookie-file': async () => {
+        ConfigManager.getInstance().setCookieFilePath('');
+        return true;
+    }
 };

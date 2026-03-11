@@ -6,6 +6,8 @@ interface AppConfig {
     basePath: string;
     downloadPath: string;
     thumbnailPath: string;
+    cookieBrowser: string;
+    cookieFilePath: string;
 }
 
 export class ConfigManager {
@@ -23,6 +25,8 @@ export class ConfigManager {
                 basePath: defaultBasePath,
                 downloadPath: path.join(defaultBasePath, 'downloads'),
                 thumbnailPath: path.join(defaultBasePath, 'thumbnails'),
+                cookieBrowser: '',
+                cookieFilePath: '',
             }
         });
     }
@@ -60,6 +64,24 @@ export class ConfigManager {
     public setThumbnailPath(path: string): void {
         this.store.set('thumbnailPath', path);
         console.log(`[Config] Thumbnail path changed: ${path}`);
+    }
+
+    public getCookieBrowser(): string {
+        return this.store.get('cookieBrowser');
+    }
+
+    public setCookieBrowser(browser: string): void {
+        this.store.set('cookieBrowser', browser);
+        console.log(`[Config] Cookie browser changed: ${browser}`);
+    }
+
+    public getCookieFilePath(): string {
+        return this.store.get('cookieFilePath');
+    }
+
+    public setCookieFilePath(filepath: string): void {
+        this.store.set('cookieFilePath', filepath);
+        console.log(`[Config] Cookie file path changed: ${filepath}`);
     }
 
     public getAll(): AppConfig {

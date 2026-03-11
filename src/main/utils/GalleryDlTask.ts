@@ -2,6 +2,7 @@ import { ChildProcess, spawn } from "child_process";
 import path from 'path';
 import fs from 'fs';
 import { BinManager } from "../managers/BinManager";
+import { ConfigManager } from "../managers/ConfigManager";
 import {
     DownloadResult,
     DownloadResultItem,
@@ -26,6 +27,15 @@ export function downloadGalleryDl(
             cleanUrl(url),
             '-d', basePath,
         ];
+
+        const cookieFile = ConfigManager.getInstance().getCookieFilePath();
+        const cookieBrowser = ConfigManager.getInstance().getCookieBrowser();
+
+        if(cookieFile) {
+            args.push('--cookies', cookieFile);
+        } else if (cookieBrowser) {
+            args.push('--cookie-from-browser', cookieBrowser);
+        }
 
         console.log(`[GalleryDlTask] command: ${galleryDlPath} ${args.join(' ')}`);
 

@@ -15,6 +15,11 @@ const api = {
   getEngineStatus: () => ipcRenderer.invoke('system:engine-status'),
   installEngine: (engine: string) => ipcRenderer.invoke('system:engine-install', engine),
   getEngineLicenses: () => ipcRenderer.invoke('system:engine-licenses'),
+  getCookieBrowser: () => ipcRenderer.invoke('system:get-cookie-browser'),
+  setCookieBrowser: (browser: string) => ipcRenderer.invoke('system:set-cookie-browser', browser),
+  getCookieFilePath: () => ipcRenderer.invoke('system:get-cookie-file'),
+  setCookieFilePath: () => ipcRenderer.invoke('system:set-cookie-file'),
+  clearCookieFilePath: () => ipcRenderer.invoke('system:clear-cookie-file'),
 }
 
 
