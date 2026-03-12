@@ -1,5 +1,4 @@
 import { protocol, net } from 'electron';
-import path from 'path';
 import { pathToFileURL } from 'url';
 
 export function setupMediaProtocol() {

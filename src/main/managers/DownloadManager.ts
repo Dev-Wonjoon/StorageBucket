@@ -1,7 +1,7 @@
 import { BrowserWindow } from "electron";
 import { randomUUID } from "crypto";
 import { DownloadOptions, DownloadJob} from "../../shared/types";
-import { downloadQueue, medias } from "../../database/schema";
+import { downloadQueue } from "../../database/schema";
 import { ne, eq } from "drizzle-orm";
 import { db } from "../../database";
 import { resolveDownloadTask } from "../utils/TaskRouter";
@@ -9,6 +9,7 @@ import { ConfigManager } from "./ConfigManager";
 import { MediaService } from "../services/MediaService";
 import { calculateJobDelay } from "../utils/DelayStrategy";
 import { cleanUrl } from "../utils/ArgsUtils";
+import { checkDuplicate } from "../utils/DuplicateChecker";
 
 
 
@@ -36,8 +37,6 @@ export class DownloadManager {
                 progress: job.progress || 0,
                 options: JSON.parse(job.options as string || '{}')
             }));
-
-            let needsUpdate = false;
             this.queue.forEach(job => {
                 if(job.status === 'downloading') {
                     job.status = 'pending';
@@ -47,8 +46,6 @@ export class DownloadManager {
                         .set({ status: 'pending', progress: 0 })
                         .where(eq(downloadQueue.id, job.id))
                         .run();
-                    
-                    needsUpdate = true;
                 }
             });
 
@@ -75,16 +72,20 @@ export class DownloadManager {
 
     public async addJob(url: string, options: DownloadOptions) {
         const cleanedUrl = cleanUrl(url);
-
-        const existing = db.select().from(medias).where(eq(medias.url, cleanedUrl)).get();
-        if(existing) {
-            return { success: false, message: '이미 다운로드된 미디어입니다.' }
-        }
-
+        
         const inQueue = this.queue.find(j => j.url === cleanedUrl && (j.status === 'pending' || j.status === 'downloading'));
         if(inQueue) {
             console.log(`[DownloadManager] URL already in queue: ${cleanedUrl}`);
-            return { success: false, message: '이미 다운로드 대기 중입니다.' };
+            return { success: false, message: '이미 다운로드가 대기 중입니다.' };
+        }
+
+        const dupResult = await checkDuplicate(cleanedUrl);
+        if(dupResult.isDuplicate) {
+            return { success: false, message: '이미 다운로드된 미디어입니다.' };
+        }
+
+        if(dupResult.matchedIds && dupResult.matchedIds.length > 0) {
+            options = { ...options, excludeIds: dupResult.matchedIds };
         }
 
         const id = randomUUID();
@@ -118,6 +119,12 @@ export class DownloadManager {
         if(!this.isProcessing) {
             this.processQueue();
         }
+
+        const message = dupResult.duplicateCount > 0
+            ? `${dupResult.totalCount}개 중 ${dupResult.duplicateCount}개는 이미 다운로드 됨. 새 항목만 다운로드합니다.`
+            : undefined;
+
+        return { success: true, message };
     }
 
     private async processQueue() {

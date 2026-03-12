@@ -1,9 +1,12 @@
+import { useToast } from "@renderer/components/ui/Toast";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { DownloadJob } from "src/shared/types";
+
 
 export const useDownloadViewModel = () => {
     const [queue, setQueue] = useState<DownloadJob[]>([]);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const { showToast } = useToast();
 
     const prevQueueRef = useRef<DownloadJob[]>([]);
 
@@ -47,7 +50,9 @@ export const useDownloadViewModel = () => {
             }
         });
 
-        return () => removeListener();
+        return () => {
+            removeListener();
+        };
     }, []);
 
     const startDownload = async (url: string) => {
@@ -62,11 +67,13 @@ export const useDownloadViewModel = () => {
 
             if(!result.success) {
                 console.error('Download Request Failed:', result.error || result.message);
-                alert(result.message || '다운로드 요청에 실패했습니다.');
+                showToast(result.message || '다운로드 요청에 실패했습니다.');
+            } else if(result.message) {
+                showToast(result.message);
             }
         } catch(error) {
             console.error('IPC Error:', error);
-            alert('통신 중 오류가 발생했습니다.');
+            showToast('통신 중 오류가 발생했습니다.');
         }
     };
 

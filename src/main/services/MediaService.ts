@@ -2,6 +2,7 @@ import { db } from '../../database';
 import { favorites, medias, platforms, profiles } from '../../database/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { Media } from '../../shared/types';
+import { cleanUrl } from '../utils/ArgsUtils';
 
 export const MediaService = {
     
@@ -89,7 +90,8 @@ export const MediaService = {
             const newMedia = tx.insert(medias).values({
                 title: metadata.title || 'Untitled',
                 filepath: localFilepath,
-                url: metadata.webpage_url || metadata.original_url,
+                url: cleanUrl(metadata.webpage_url || metadata.original_url),
+                videoId: metadata.id || null,
                 filesize: metadata.filesize || null,
                 thumbnailPath: thumbnailPath,
                 platformId: platformId,

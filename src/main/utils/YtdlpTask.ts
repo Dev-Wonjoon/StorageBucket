@@ -12,7 +12,6 @@ import {
     TaskHandle
  } from "../../shared/types";
 import { buildYtdlpArgs } from "./ArgsUtils";
-import { platform } from "os";
 import { ConfigManager } from "../managers/ConfigManager";
 
 async function downloadThumbnail(url: string, videoId: string, videoName: string, basePath: string): Promise<string | null> {
@@ -174,4 +173,36 @@ export function downloadYtdlp(
             proc?.kill();
         }
     };
+}
+
+export function fetchVideoIds(url: string): Promise<string[]> {
+    const binManager = BinManager.getInstance();
+    const ytdlpPath = binManager.getBinaryPath('yt-dlp');
+
+    const args = [
+        url,
+        '--flat-playlist',
+        '--print', 'id',
+        '--no-download',
+        '--no-warning',
+        '--no-check-certificates',
+    ];
+
+    return new Promise((resolve, reject) => {
+        const proc = spawn(ytdlpPath, args);
+        let stdout = '';
+        let stderr = '';
+
+        proc.stdout?.on('data', (data: Buffer) => { stdout += data.toString() });
+        proc.stderr?.on('data', (data: Buffer) => { stderr += data.toString() });
+
+        proc.on('close', (code) => {
+            if(code === 0) {
+                const ids = stdout.split('\n').map(l => l.trim()).filter(Boolean);
+                resolve(ids);
+            } else {
+                reject(new Error(`yt-dlp --print id failed (code ${code}): ${stderr}`));
+            }
+        });
+    });
 }

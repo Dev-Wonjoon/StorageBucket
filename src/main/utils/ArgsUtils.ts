@@ -73,6 +73,11 @@ export const buildYtdlpArgs = (url: string, basePath: string, options: DownloadO
 
     args.push('-o', outputTemplate);
 
+    if(options.excludeIds && options.excludeIds.length > 0) {
+        const pattern = options.excludeIds.join('|');
+        args.push('--match-filter', `id !~= "^(${pattern}$")`);
+    }
+
     return args;
 }
 
@@ -102,6 +107,7 @@ export function cleanUrl(rawUrl: string): string {
         const url = new URL(rawUrl);
         const trackingParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'igsh', 'igshid', 'fbclid', 'si', 'feature', 'img_index'];
         trackingParams.forEach(p => url.searchParams.delete(p));
+
         return url.toString();
     } catch {
         return rawUrl;

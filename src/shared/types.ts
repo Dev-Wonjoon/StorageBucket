@@ -25,6 +25,7 @@ export interface DownloadOptions {
     playlist?: boolean;
     extension?: 'mp4' | 'mp3' | 'mkv';
     skipExisting?: boolean;
+    excludeIds?: string[];
 }
 
 export interface DownloadJob {

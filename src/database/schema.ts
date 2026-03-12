@@ -58,6 +58,7 @@ export const medias = sqliteTable('media', {
     url: text('url'),
     filesize: integer('filesize'),
     thumbnailPath: text('thumbnail_path'),
+    videoId: text('video_id'),
 
     platformId: integer('platform_id').references(() => platforms.id),
     profileId: integer('profile_id').references(() => profiles.id),

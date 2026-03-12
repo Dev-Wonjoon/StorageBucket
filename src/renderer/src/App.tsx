@@ -60,27 +60,27 @@ function App() {
 	};
 
 	return (
-		<div className="flex h-screen w-full bg-[--bg-app] text-[--text-main] overflow-hidden font-sans transition-colors duration-200">
-            {/* 1. 좌측 사이드 바 */}
-            <div className="w-64 flex-none h-full">
-                <Sidebar activeMenu={activeMenu} onMenuClick={setActiveMenu}/>
+            <div className="flex h-screen w-full bg-[--bg-app] text-[--text-main] overflow-hidden font-sans transition-colors duration-200">
+                {/* 1. 좌측 사이드 바 */}
+                <div className="w-64 flex-none h-full">
+                    <Sidebar activeMenu={activeMenu} onMenuClick={setActiveMenu}/>
+                </div>
+
+                {/* 2. 우측 메인 영역 */}
+                <div className="flex-1 flex flex-col h-full min-w-0 relative">
+                    
+
+                    <div className="flex-none p-4 h-20 border-b border-[--border-line] bg-[--bg-app]/95 backdrop-blur-sm z-10">
+                        <DownloadBar />
+                    </div>      
+
+                    {/* 2-2. 중앙 컨텐츠 (스크롤 가능 영역) */}
+                    <main className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-[--bg-active] scrollbar-track-transparent">
+                        {renderContent()}
+                    </main>
+                </div>
+                {showSetup && <EngineSetupModal onComplete={() => setShowSetup(false)}/>}
             </div>
-
-            {/* 2. 우측 메인 영역 */}
-            <div className="flex-1 flex flex-col h-full min-w-0 relative">
-                
-
-                <div className="flex-none p-4 h-20 border-b border-[--border-line] bg-[--bg-app]/95 backdrop-blur-sm z-10">
-                    <DownloadBar />
-                </div>      
-
-                {/* 2-2. 중앙 컨텐츠 (스크롤 가능 영역) */}
-                <main className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-[--bg-active] scrollbar-track-transparent">
-                    {renderContent()}
-                </main>
-            </div>
-            {showSetup && <EngineSetupModal onComplete={() => setShowSetup(false)}/>}
-        </div>
 	)
 }
 

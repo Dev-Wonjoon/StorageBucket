@@ -16,7 +16,10 @@ export class ConfigManager {
 
     private constructor() {
 
-        const defaultBasePath = app.getAppPath();
+        const isDev = !app.isPackaged;
+        const defaultBasePath = isDev
+            ? app.getAppPath()
+            : path.dirname(app.getPath('exe'));
         
         const AppStore = (Store as any).default || Store;
         

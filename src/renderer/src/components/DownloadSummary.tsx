@@ -2,10 +2,9 @@ interface DownloadSummaryProps {
     activeCount: number;
     totalProgress: number;
     onClick: () => void;
-    isExpanded: boolean;
 }
 
-export const DownloadSummary = ({ activeCount, totalProgress, onClick, isExpanded }): DownloadSummaryProps => {
+export const DownloadSummary = ({ activeCount, totalProgress, onClick }: DownloadSummaryProps) => {
     return (
         <div
             onClick={onClick}
