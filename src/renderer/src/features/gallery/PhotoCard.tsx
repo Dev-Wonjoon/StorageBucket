@@ -96,8 +96,9 @@ export const PhotoCard = ({ data, isSelected, onClick, onToggleFavorite, onDelet
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            onToggleFavorite(data.id);
+                            if(!isDownloading) onToggleFavorite(data.id);
                         }}
+                        disabled={isDownloading}
                         className="rounded hover:bg-[--bg-active] text-[--text-muted] hover:text-red-500 transition-colors"
                         title="즐겨찾기"
                     >
@@ -115,8 +116,9 @@ export const PhotoCard = ({ data, isSelected, onClick, onToggleFavorite, onDelet
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            onDelete(data.id);
+                            if(!isDownloading) onDelete(data.id);
                         }}
+                        disabled={isDownloading}
                         className="p-1 rounded hover:bg-[--bg-active] text-[--text-muted] hover:text-red-500 transition-colors"
                         title="삭제"
                     >

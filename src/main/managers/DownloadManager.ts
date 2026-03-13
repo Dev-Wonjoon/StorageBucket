@@ -9,7 +9,7 @@ import { ConfigManager } from "./ConfigManager";
 import { MediaService } from "../services/MediaService";
 import { calculateJobDelay } from "../utils/DelayStrategy";
 import { cleanUrl } from "../utils/ArgsUtils";
-import { checkDuplicate } from "../utils/DuplicateChecker";
+import { checkDuplicate, checkUrlDuplicate } from "../utils/DuplicateChecker";
 
 
 
@@ -73,19 +73,15 @@ export class DownloadManager {
     public async addJob(url: string, options: DownloadOptions) {
         const cleanedUrl = cleanUrl(url);
         
-        const inQueue = this.queue.find(j => j.url === cleanedUrl && (j.status === 'pending' || j.status === 'downloading'));
+        if(checkUrlDuplicate(cleanedUrl)) {
+            return { success: false, message: '이미 다운로드 된 미디어입니다.' };
+        }
+
+        const inQueue = this.queue.find(
+            j => j.url === cleanedUrl && (j.status === 'pending' || j.status === 'downloading')
+        );
         if(inQueue) {
-            console.log(`[DownloadManager] URL already in queue: ${cleanedUrl}`);
-            return { success: false, message: '이미 다운로드가 대기 중입니다.' };
-        }
-
-        const dupResult = await checkDuplicate(cleanedUrl);
-        if(dupResult.isDuplicate) {
-            return { success: false, message: '이미 다운로드된 미디어입니다.' };
-        }
-
-        if(dupResult.matchedIds && dupResult.matchedIds.length > 0) {
-            options = { ...options, excludeIds: dupResult.matchedIds };
+            return { success: false, message: '이미 다운로드 대기열에 있는 URL입니다.' };
         }
 
         const id = randomUUID();
@@ -120,11 +116,7 @@ export class DownloadManager {
             this.processQueue();
         }
 
-        const message = dupResult.duplicateCount > 0
-            ? `${dupResult.totalCount}개 중 ${dupResult.duplicateCount}개는 이미 다운로드 됨. 새 항목만 다운로드합니다.`
-            : undefined;
-
-        return { success: true, message };
+        return { success: true, message: '다운로드가 시작되었습니다.' };
     }
 
     private async processQueue() {
@@ -141,6 +133,30 @@ export class DownloadManager {
 
         this.isProcessing = true;
         const job = this.queue[jobIndex];
+
+        try {
+            const dupResult = await checkDuplicate(job.url);
+            if(dupResult.isDuplicate) {
+                this.removeJob(job.id);
+
+                if(this.mainWindow && !this.mainWindow.isDestroyed()) {
+                    this.mainWindow.webContents.send('download:duplicate', {
+                        jobId: job.id,
+                        message: '이미 다운로드된 미디어입니다.',
+                    });
+                }
+
+                const delay = calculateJobDelay(job.url);
+                setTimeout(() => this.processQueue(), delay);
+                return;
+            }
+
+            if(dupResult.matchedIds && dupResult.matchedIds.length > 0) {
+                job.options = { ...job.options, excludeIds: dupResult.matchedIds };
+            }
+        } catch(error) {
+            console.warn('[DownloadManager] Duplicate check failed:', error);
+        }
 
         this.updateJobStatus(job.id, 'downloading');
         const config = ConfigManager.getInstance();
@@ -165,7 +181,7 @@ export class DownloadManager {
                         if(progress >= 0) {
                             this.updateJobStatus(job.id, 'downloading', progress);
                         }
-                    }
+                    },
                 }
             );
             const result = await handle.promise;
@@ -185,20 +201,18 @@ export class DownloadManager {
                 } catch(error) {
                     console.error(`[DownloadManager] Failed to save to DB:`, error);
                 }
-
                 this.updateJobStatus(job.id, 'completed', 100);
             }
         } catch(error) {
             console.error(`[DownloadManager] Job failed: ${job.id}`, error);
             this.updateJobStatus(job.id, 'failed');
         }
-        
         this.notifyQueueUpdate();
 
         const delay = calculateJobDelay(job.url);
 
         setTimeout(() => {
-            this.processQueue();
+            this.processQueue()
         }, delay);
     }
 

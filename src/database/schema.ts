@@ -55,11 +55,10 @@ export const medias = sqliteTable('media', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     title: text('title').notNull(),
     filepath: text('filepath').notNull(),
-    url: text('url'),
     filesize: integer('filesize'),
     thumbnailPath: text('thumbnail_path'),
-    videoId: text('video_id'),
 
+    urlId: integer('url_id').references(() => downloadUrls.id),
     platformId: integer('platform_id').references(() => platforms.id),
     profileId: integer('profile_id').references(() => profiles.id),
 
@@ -72,6 +71,10 @@ export const medias = sqliteTable('media', {
 });
 
 export const mediaRelations = relations(medias, ({ one, many }) => ({
+    downloadUrl: one(downloadUrls, {
+        fields: [medias.urlId],
+        references: [downloadUrls.id],
+    }),
     platform: one(platforms, {
         fields: [medias.platformId],
         references: [platforms.id],
@@ -84,6 +87,24 @@ export const mediaRelations = relations(medias, ({ one, many }) => ({
     favorite: one(favorites),
 }));
 // ----------------------------------------------------------------------
+
+
+
+// ----------------------------------------------------------------------
+// URL
+// ----------------------------------------------------------------------
+export const downloadUrls = sqliteTable('download_urls', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    url: text('url').notNull().unique(),
+    videoId: text('video_id'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+        .notNull()
+        .$defaultFn(() => new Date()),
+});
+
+export const downloadUrlRelations = relations(downloadUrls, ({ many }) => ({
+    medias: many(medias),
+}))
 
 
 

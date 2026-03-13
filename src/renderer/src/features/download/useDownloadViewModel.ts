@@ -27,7 +27,6 @@ export const useDownloadViewModel = () => {
         const removeListener = window.api.onQueueUpdate((updatedQueue: DownloadJob[]) => {
             const prevQueue = prevQueueRef.current;
 
-
             const hasNewlyCompleted = updatedQueue.some(job =>
                 job.status === 'completed' &&
                 prevQueue.find(prev => prev.id === job.id)?.status !== 'completed'
@@ -49,9 +48,13 @@ export const useDownloadViewModel = () => {
                 setIsPanelOpen(true);
             }
         });
+        const removeDupListener = window.api.onDuplicate((data: { jobId: string; message: string }) => {
+            showToast(data.message);
+        });
 
         return () => {
             removeListener();
+            removeDupListener();
         };
     }, []);
 

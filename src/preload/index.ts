@@ -10,6 +10,13 @@ const api = {
       ipcRenderer.removeListener('download:queue-update', subscription);
     }
   },
+  onDuplicate: (callback: (data: { jobId: string, message: string }) => void) => {
+    const subscription = (_event: any, value: any) => callback(value);
+    ipcRenderer.on('download:duplicate', subscription);
+    return () => {
+      ipcRenderer.removeListener('download:duplicate', subscription);
+    }
+  },
   getMediaFiles: () => ipcRenderer.invoke('media:get-all'),
   deleteMedia: (id: string) => ipcRenderer.invoke('media:delete', id),
   getEngineStatus: () => ipcRenderer.invoke('system:engine-status'),

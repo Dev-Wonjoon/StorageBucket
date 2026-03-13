@@ -1,4 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
+import { ipcRenderer } from 'electron';
 
 declare global {
   interface Window {
@@ -10,7 +11,8 @@ declare global {
         error?: string;
         message?: string;
       }>,
-      onQueueUpdate: (callback: (queue: any[]) => void) => () => void,
+      onDuplicate: (callback: (data: { jobId: string; message: string }) => void) => () => void;
+      onQueueUpdate: (callback: (queue: any[]) => void) => () => void
       getMediaFiles: () => Promise<any[]>,
       deleteMedia: (id: string) => Promise<{ success: boolean; error?: string }>,
       getEngineStatus: () => Promise<Record<string, { installed: boolean; version: string | null }>>,

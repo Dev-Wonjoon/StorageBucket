@@ -1,5 +1,5 @@
 import { db } from '../../database';
-import { favorites, medias, platforms, profiles } from '../../database/schema';
+import { downloadUrls, favorites, medias, platforms, profiles } from '../../database/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { Media } from '../../shared/types';
 import { cleanUrl } from '../utils/ArgsUtils';
@@ -10,12 +10,14 @@ export const MediaService = {
         const rows = db
             .select()
             .from(medias)
+            .leftJoin(downloadUrls, eq(medias.urlId, downloadUrls.id))
             .leftJoin(favorites, eq(favorites.mediaId, medias.id))
             .orderBy(desc(medias.createdAt))
             .all();
         
         return rows.map(row => ({
             ...row.media,
+            url: row.download_urls?.url ?? null,
             isFavorite: !!row.favorite,
         }));
     },
@@ -87,13 +89,39 @@ export const MediaService = {
                 profileId = newProfile.id;
             }
 
+            const mediaUrl = cleanUrl(metadata.webpage_url || metadata.original_url);
+            const videoId = metadata.id || null;
+            let urlId: number | null = null;
+
+            if(mediaUrl) {
+                const existingUrl = tx.select()
+                    .from(downloadUrls)
+                    .where(eq(downloadUrls.url, mediaUrl))
+                    .get();
+                
+                if(existingUrl) {
+                    urlId = existingUrl.id;
+                    if(!existingUrl.videoId && videoId) {
+                        tx.update(downloadUrls)
+                            .set({ videoId })
+                            .where(eq(downloadUrls.id, existingUrl.id))
+                            .run();
+                    }
+                } else {
+                    const newUrl = tx.insert(downloadUrls)
+                        .values({ url: mediaUrl, videoId })
+                        .returning()
+                        .get();
+                    urlId = newUrl.id;
+                }
+            }
+
             const newMedia = tx.insert(medias).values({
                 title: metadata.title || 'Untitled',
                 filepath: localFilepath,
-                url: cleanUrl(metadata.webpage_url || metadata.original_url),
-                videoId: metadata.id || null,
                 filesize: metadata.filesize || null,
                 thumbnailPath: thumbnailPath,
+                urlId: urlId,
                 platformId: platformId,
                 profileId: profileId,
                 createdAt: new Date(),

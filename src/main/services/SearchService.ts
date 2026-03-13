@@ -1,5 +1,5 @@
 import { db } from '../../database';
-import { medias, mediaTags, tags, profiles, platforms } from '../../database/schema';
+import { medias, mediaTags, tags, profiles, platforms, downloadUrls } from '../../database/schema';
 import { desc, like, and, gte, lte, or, type SQL, type Column, eq, inArray, count } from 'drizzle-orm';
 import { Media, MediaSearchRequest, MediaSearchResult } from '../../shared/types';
 
@@ -55,6 +55,7 @@ export const SearchService = {
         if(endDate) conditions.push(lte(medias.updatedAt, new Date(endDate)));
 
         const baseJoin = (qb: any) => qb
+            .leftJoin(downloadUrls, eq(medias.urlId, downloadUrls.id))
             .leftJoin(profiles, eq(medias.profileId, profiles.id))
             .leftJoin(platforms, eq(medias.platformId, platforms.id));
 
@@ -63,11 +64,11 @@ export const SearchService = {
                 id: medias.id,
                 title: medias.title,
                 filepath: medias.filepath,
-                url: medias.url,
                 thumbnailPath: medias.thumbnailPath,
                 createdAt: medias.createdAt,
                 author: profiles.ownerName,
                 platform: platforms.name,
+                url: downloadUrls.url,
                 platformId: medias.platformId,
                 profileId: medias.profileId,
             }).from(medias).$dynamic()
