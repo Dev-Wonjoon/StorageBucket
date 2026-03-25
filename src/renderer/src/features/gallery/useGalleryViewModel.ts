@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Media, DownloadItem, GalleryItem } from "src/shared/types";
 
 const hashStringToNumber = (str: string): number => 
@@ -24,7 +24,38 @@ export const useGalleryViewModel = () => {
     const [medias, setMedias] = useState<Media[]>([]);
     const [downloadQueue, setDownloadQueue] = useState<DownloadItem[]>([]);
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isLoading, setIsLoading] = useState(true);
+    const lastClickedId = useRef<number | null>(null);
+
+    const [contextMenu, setContextMenu] = useState<{
+        x: number;
+        y: number;
+        mediaId: number;
+    } | null>(null);
+
+    const [tagModal, setTagModal] = useState<{
+        mediaIds: number[];
+    } | null>(null);
+
+    
+    const galleryItems: GalleryItem[] = [
+        ...downloadQueue
+            .filter(item => item.status === 'downloading' || item.status === 'pending')
+            .map(item => ({
+                media: jobToPlaceholder(item),
+                isDownloading: true,
+                progress: item.progress,
+                speed: item.speed,
+                eta: item.eta,
+                downloadId: item.id
+            })),
+        ...medias.map(media => ({
+            media,
+            isDownloading: false,
+        })),
+    ];
+
 
     const loadMedia = useCallback(async () => {
         try {
@@ -41,6 +72,38 @@ export const useGalleryViewModel = () => {
     const toggleSelect = useCallback((id: number) => {
         setSelectedId(prev => prev === id ? null : id);
     }, []);
+
+    const handleSelect = useCallback((id: number, e: React.MouseEvent) => {
+        if(e.ctrlKey || e.metaKey) {
+            setSelectedIds(prev => {
+                const next = new Set(prev);
+                if(next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+            });
+            setSelectedId(null);
+        } else if(e.shiftKey && lastClickedId.current !== null) {
+            const ids = galleryItems
+                .filter(item => !item.isDownloading)
+                .map(item => item.media.id);
+            const startIdx = ids.indexOf(lastClickedId.current);
+            const endIdx = ids.indexOf(id);
+            if(startIdx !== -1 && endIdx !== -1) {
+                const [from, to] = [Math.min(startIdx, endIdx), Math.max(startIdx, endIdx)];
+                const rangeIds = ids.slice(from, to + 1);
+                setSelectedIds(prev => {
+                    const next = new Set(prev);
+                    rangeIds.forEach(rid => next.add(rid));
+                    return next;
+                });
+            }
+            setSelectedId(null);
+        } else {
+            setSelectedIds(new Set());
+            toggleSelect(id);
+        }
+        lastClickedId.current = id;
+    }, [galleryItems, toggleSelect]);
 
     useEffect(() => {
         loadMedia();
@@ -75,31 +138,54 @@ export const useGalleryViewModel = () => {
         setMedias(prev => prev.filter(m => m.id !== id));
     }, []);
 
-    const galleryItems: GalleryItem[] = [
-        ...downloadQueue
-            .filter(item => item.status === 'downloading' || item.status === 'pending')
-            .map(item => ({
-                media: jobToPlaceholder(item),
-                isDownloading: true,
-                progress: item.progress,
-                speed: item.speed,
-                eta: item.eta,
-                downloadId: item.id
-            })),
-        ...medias.map(media => ({
-            media,
-            isDownloading: false,
-        })),
-    ];
+    const selectAll = useCallback(() => {
+        const allIds = medias.map(m => m.id);
+        setSelectedIds(new Set(allIds));
+        setSelectedId(null);
+    }, [medias]);
+
+    const clearSelection = useCallback(() => {
+        setSelectedIds(new Set());
+        setSelectedId(null);
+    }, []);
+
+    const handleContextMenu = useCallback((e: React.MouseEvent, mediaId: number) => {
+        e.preventDefault();
+        setContextMenu({ x: e.clientX, y: e.clientY, mediaId});
+    }, []);
+
+    const closeContextMenu = useCallback(() => {
+        setContextMenu(null);
+    }, []);
+
+    const openTagModal = useCallback((mediaIds: number[]) => {
+        setTagModal({ mediaIds });
+    }, []);
+
+    const closeTagModal = useCallback(() => {
+        setTagModal(null);
+    }, []);
+
+    
 
     return {
         galleryItems,
         medias,
         selectedId,
+        selectedIds,
+        contextMenu,
+        tagModal,
         isLoading,
         toggleSelect,
         toggleFavorite,
         deleteMedia,
         refresh: loadMedia,
+        handleSelect,
+        selectAll,
+        clearSelection,
+        handleContextMenu,
+        closeContextMenu,
+        openTagModal,
+        closeTagModal,
     };
 };

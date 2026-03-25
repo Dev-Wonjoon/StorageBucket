@@ -11,6 +11,7 @@ import { downloadHandler } from './handlers/DownloadHandler';
 import { favoriteHandler } from './handlers/FavoriteHandler';
 import { mediaHandler } from './handlers/MediaHandler';
 import { systemHandler } from './handlers/SystemHandler';
+import { tagHandler } from './handlers/TagHandler';
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any>;
 
@@ -98,6 +99,7 @@ export class AppInitializer {
             ...favoriteHandler,
             ...mediaHandler,
             ...systemHandler,
+            ...tagHandler,
         };
 
         console.log(`[Main] Found ${Object.keys(handlers).length} handlers to register.`);

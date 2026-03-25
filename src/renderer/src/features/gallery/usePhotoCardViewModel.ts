@@ -27,7 +27,9 @@ export const usePhotoCardViewModel = (data: Media) => {
         window.electron.ipcRenderer.invoke('shell:show-item', data.filepath);
     }, [data.filepath]);
 
-    const handleClick = useCallback((onSelect: (id: number) => void) => {
+    const handleClick = useCallback((onSelect: (id: number, e: React.MouseEvent) => void, e: React.MouseEvent) => {
+        onSelect(data.id, e);
+
         if(clickTimer.current) {
             clearTimeout(clickTimer.current);
             clickTimer.current = null;
@@ -35,22 +37,14 @@ export const usePhotoCardViewModel = (data: Media) => {
         } else {
             clickTimer.current = setTimeout(() => {
                 clickTimer.current = null;
-                onSelect(data.id);
             }, 250);
         }
     }, [data.id, openInFolder]);
-
-    const handleContextMenu = useCallback((e: React.MouseEvent) => {
-        e.preventDefault();
-
-        console.log('[PhotoCard] Context menu requested for:', data.id);
-    }, [data.id]);
 
     return {
         imageUrl,
         displayTime,
         hasThumbnail,
         handleClick,
-        handleContextMenu,
     };
 };

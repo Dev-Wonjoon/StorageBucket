@@ -1,4 +1,4 @@
-import { IpcMainInvokeEvent} from 'electron';
+import { IpcMainInvokeEvent } from 'electron';
 import { DownloadManager } from '../managers/DownloadManager';
 
 export const downloadHandler = {

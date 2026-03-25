@@ -4,7 +4,8 @@ import { usePhotoCardViewModel } from "./usePhotoCardViewModel";
 interface PhotoCardProps {
     data: Media;
     isSelected: boolean;
-    onClick: (id: number) => void;
+    onClick: (id: number, e: React.MouseEvent) => void;
+    onContextMenu: (e: React.MouseEvent, mediaId: number) => void;
     onToggleFavorite: (id: number) => void;
     onDelete: (id: number) => void;
     isDownloading?: boolean;
@@ -13,13 +14,18 @@ interface PhotoCardProps {
     eta?: string;
 }
 
-export const PhotoCard = ({ data, isSelected, onClick, onToggleFavorite, onDelete, isDownloading = false, progress, speed, eta }: PhotoCardProps) => {
-    const { imageUrl, displayTime, hasThumbnail, handleClick, handleContextMenu } = usePhotoCardViewModel(data);
+export const PhotoCard = ({ data, isSelected, onClick, onContextMenu, onToggleFavorite, onDelete, isDownloading = false, progress, speed, eta }: PhotoCardProps) => {
+    const { imageUrl, displayTime, hasThumbnail, handleClick } = usePhotoCardViewModel(data);
 
     return (
         <div
-            onClick={() => !isDownloading && handleClick(onClick)}
-            onContextMenu={(e) => !isDownloading && handleContextMenu(e)}
+            onClick={(e) => !isDownloading && handleClick(onClick, e)}
+            onContextMenu={(e) => {
+                if(!isDownloading) {
+                    e.preventDefault();
+                    onContextMenu(e, data.id);
+                }
+            }}
             className={`
                 group relative rounded-xl overflow-hidden border-2 transition-all duration-200 shadow-sm
                 bg-[--bg-sidebar]

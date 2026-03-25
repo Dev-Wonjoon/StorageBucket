@@ -30,6 +30,16 @@ const api = {
   getFavorites: () => ipcRenderer.invoke('favorite:get-all'),
   toggleFavorite: (mediaId: number) => ipcRenderer.invoke('favorite:toggle', mediaId),
   checkFavorite: (mediaId: number) => ipcRenderer.invoke('favorite:check', mediaId),
+  getAllTags: () => ipcRenderer.invoke('tag:get-all'),
+  getMediaTags: (mediaId: number) => ipcRenderer.invoke('tag:get-by-media', mediaId),
+  createTag: (name: string) => ipcRenderer.invoke('tag:create', name),
+  renameTag: (tagId: number, newName: string) => ipcRenderer.invoke('tag:rename', tagId, newName),
+  deleteTag: (tagId: number) => ipcRenderer.invoke('tag:delete', tagId),
+  addTagsToMedia: (mediaId: number, tagNames: string[]) => ipcRenderer.invoke('tag:add-to-media', mediaId, tagNames),
+  removeTagFromMedia: (mediaId: number, tagId: number[]) => ipcRenderer.invoke('tag:remove-from-media', mediaId, tagId),
+  bulkAddTags: (mediaIds: number[], tagNames: string[]) => ipcRenderer.invoke('tag:bulk-add', mediaIds, tagNames),
+  bulkRemoveTags: (mediaIds: number[], tagIds: number[]) => ipcRenderer.invoke('tag:bulk-remove', mediaIds, tagIds),
+  bulkReplaceTags: (mediaIds: number[], tagNames: string[]) => ipcRenderer.invoke('tag:bulk-replace', mediaIds, tagNames),
 }
 
 

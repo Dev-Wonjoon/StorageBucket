@@ -2,9 +2,26 @@
 
 import { PhotoCard } from "./PhotoCard";
 import { useGalleryViewModel } from "./useGalleryViewModel";
+import { ContextMenu } from "@renderer/components/ui/ContextMenu";
+import { TagModal } from "@renderer/components/TagModal";
 
 export const GalleryPage = () => {
-    const { galleryItems, selectedId, isLoading, toggleSelect, toggleFavorite, deleteMedia } = useGalleryViewModel();
+    const { 
+        galleryItems, 
+        selectedId, 
+        selectedIds,
+        contextMenu,
+        tagModal,
+        isLoading,
+        handleSelect,
+        toggleFavorite,
+        deleteMedia,
+        handleContextMenu,
+        closeContextMenu,
+        openTagModal,
+        closeTagModal,
+        refresh
+    } = useGalleryViewModel();
 
     if (isLoading && galleryItems.length === 0) {
         return (
@@ -22,13 +39,14 @@ export const GalleryPage = () => {
                 <span className="text-sm text-[--text-muted]">총 {galleryItems.length}개 항목</span>
             </div>
             {galleryItems.length > 0 ? (
-                <div className="grid grid-col-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <div className="grid grid-col-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 isolate">
                     {galleryItems.map(({media, isDownloading, progress, speed, eta}) => (
                         <PhotoCard
                             key={media.id}
                             data={media}
-                            isSelected={selectedId === media.id}
-                            onClick={toggleSelect}
+                            isSelected={selectedId === media.id || selectedIds.has(media.id)}
+                            onClick={handleSelect}
+                            onContextMenu={handleContextMenu}
                             onToggleFavorite={toggleFavorite}
                             onDelete={deleteMedia}
                             isDownloading={isDownloading}
@@ -47,6 +65,39 @@ export const GalleryPage = () => {
                     <p className="text-lg font-medium text-[--text-main]">표시할 미디어가 없습니다.</p>
                     <p className="text-sm mt-1">URL을 입력하여 다운로드를 시작해보세요</p>
                 </div>
+            )}
+            {/* 컨텍스트 메뉴 */}
+            {contextMenu && (
+                <ContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    onClose={closeContextMenu}
+                    items={[
+                        {
+                            label: "태그 관리",
+                            onClick: () => {
+                                const ids = selectedIds.size > 0
+                                    ? [...selectedIds]
+                                    : [contextMenu.mediaId];
+                                openTagModal(ids);
+                            },
+                        },
+                        {
+                            label: "삭제",
+                            danger: true,
+                            onClick: () => deleteMedia(contextMenu.mediaId),
+                        },
+                    ]}
+                />
+            )}
+
+            {/* 태그 모달 */}
+            {tagModal && (
+                <TagModal
+                    mediaIds={tagModal.mediaIds}
+                    onClose={closeTagModal}
+                    onUpdated={refresh}
+                />
             )}
         </div>
     );
