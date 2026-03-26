@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
+import { BaseModal } from "./BaseModal";
 
 interface ContextMenuItem {
     label: string;
@@ -17,15 +17,6 @@ interface ContextMenuProps {
 export const ContextMenu = ({ x, y, items, onClose }: ContextMenuProps) => {
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // ESC 키로 닫기
-    useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === "Escape") onClose();
-        };
-        document.addEventListener("keydown", handleEsc);
-        return () => document.removeEventListener("keydown", handleEsc);
-    }, [onClose]);
-
     // 화면 밖으로 나가지 않도록 위치 보정
     useEffect(() => {
         if (!menuRef.current) return;
@@ -38,34 +29,9 @@ export const ContextMenu = ({ x, y, items, onClose }: ContextMenuProps) => {
         }
     }, [x, y]);
 
-    return createPortal(
-        <>
-            {/* 오버레이 */}
-            <div
-                style={{
-                    position: "fixed",
-                    inset: 0,
-                    zIndex: 99998,
-                    backgroundColor: "transparent",
-                }}
-                onClick={onClose}
-            />
-            {/* 메뉴 */}
-            <div
-                ref={menuRef}
-                style={{
-                    position: "fixed",
-                    left: x,
-                    top: y,
-                    zIndex: 99999,
-                    minWidth: 160,
-                    backgroundColor: "var(--bg-popup)",
-                    borderRadius: 8,
-                    padding: "4px 0",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                }}
-                onClick={(e) => e.stopPropagation()}
-            >
+    return (
+        <BaseModal onClose={onClose} position={{ x, y }} containerRef={menuRef} overlayClassName="bg-transparent">
+            <div className="min-w-[160px] py-1">
                 {items.map((item, i) => (
                     <button
                         key={i}
@@ -73,33 +39,14 @@ export const ContextMenu = ({ x, y, items, onClose }: ContextMenuProps) => {
                             item.onClick();
                             onClose();
                         }}
-                        style={{
-                            display: "block",
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "8px 16px",
-                            fontSize: 14,
-                            border: "none",
-                            background: "none",
-                            cursor: "pointer",
-                            color: item.danger
-                                ? "#f87171"
-                                : "var(--text-popup)",
-                        }}
-                        onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                                "rgba(255,255,255,0.1)")
-                        }
-                        onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                                "transparent")
-                        }
+                        className={`block w-full text-left px-4 py-2 text-sm border-none bg-transparent cursor-pointer hover:bg-white/10 ${
+                            item.danger ? "text-red-400" : "text-[var(--text-popup)]"
+                        }`}
                     >
                         {item.label}
                     </button>
                 ))}
             </div>
-        </>,
-        document.body
+        </BaseModal>
     );
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
+import { BaseModal } from "./ui/BaseModal";
 
 interface Tag {
     id: number;
@@ -42,16 +42,6 @@ export const TagModal = ({ mediaIds, onClose, onUpdated }: TagModalProps) => {
         loadTags();
         inputRef.current?.focus();
     }, [loadTags]);
-
-    // Esc 눌렀을 때
-    useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if(e.key === 'Escape') onClose();
-        };
-
-        document.addEventListener('keydown', handleEsc);
-        return () => document.removeEventListener('keydown', handleEsc);
-    }, [onClose]);
 
     // 태그 추가
     const handleAddTag = async () => {
@@ -109,26 +99,13 @@ export const TagModal = ({ mediaIds, onClose, onUpdated }: TagModalProps) => {
             !mediaTags.some((mt) => mt.id === t.id)
         ) : [];
     
-    return createPortal(
-        <>
-            {/* 오버레이 */}
-            <div
-                style={{ position: "fixed", inset: 0, zIndex: 99998, backgroundColor: "transparent" }}
-                onClick={onClose}
-            />
-            {/* 모달 */}
-            <div
-                style={{ position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}
-            >
-                <div
-                    className="border border-[--border-line] rounded-2xl p-6 w-[400px] max-h-[70vh] flex flex-col"
-                    style={{ pointerEvents: "auto", backgroundColor: "var(--bg-popup)", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                <h2 className="text-lg font-semibold text-[--text-main] mb-1">
+    return (
+        <BaseModal onClose={onClose}>
+            <div className="border border-[var(--border-line)] p-6 w-[400px] max-h-[70vh] flex flex-col">
+                <h2 className="text-lg font-semibold text-[var(--text-main)] mb-1">
                     태그 관리
                 </h2>
-                <p className="text-sm text-[--text-muted] mb-4">
+                <p className="text-sm text-[var(--text-muted)] mb-4">
                     {isSingle ? "미디어에 태그를 추가하거나 제거합니다." : `${mediaIds.length}개 미디어에 태그를 일괄 추가합니다.`}
                 </p>
 
@@ -141,11 +118,11 @@ export const TagModal = ({ mediaIds, onClose, onUpdated }: TagModalProps) => {
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
                         placeholder="태그 이름 입력 후 Enter"
-                        className="flex-1 px-3 py-2 rounded-lg border border-[--border-line] bg-[--bg-app] text-sm text-[--text-main] outline-none focus:border-[--color-primary]"
+                        className="flex-1 px-3 py-2 rounded-lg border border-[var(--border-line)] bg-[var(--bg-app)] text-sm text-[var(--text-main)] outline-none focus:border-[var(--color-primary)]"
                     />
                     <button
                         onClick={handleAddTag}
-                        className="px-4 py-2 rounded-lg bg-[--color-primary] text-white text-sm hover:opacity-90"
+                        className="px-4 py-2 rounded-lg bg-[var(--color-primary)] text-white text-sm hover:opacity-90"
                     >
                         추가
                     </button>
@@ -158,7 +135,7 @@ export const TagModal = ({ mediaIds, onClose, onUpdated }: TagModalProps) => {
                             <button
                                 key={tag.id}
                                 onClick={() => handleQuickAdd(tag.name)}
-                                className="px-2.5 py-1 rounded-full text-xs border border-[--border-line] text-[--text-muted] hover:bg-[--bg-active] hover:text-[--text-main] transition-colors"
+                                className="px-2.5 py-1 rounded-full text-xs border border-[var(--border-line)] text-[var(--text-muted)] hover:bg-[var(--bg-active)] hover:text-[var(--text-main)] transition-colors"
                             >
                                 + {tag.name}
                             </button>
@@ -169,15 +146,15 @@ export const TagModal = ({ mediaIds, onClose, onUpdated }: TagModalProps) => {
                 {/* 현재 미디어 태그 목록 (단일 미디어) */}
                 {isSingle && (
                     <div className="flex-1 overflow-y-auto">
-                        <p className="text-xs text-[--text-muted] mb-2">현재 태그</p>
+                        <p className="text-xs text-[var(--text-muted)] mb-2">현재 태그</p>
                         {isLoading ? (
-                            <p className="text-sm text-[--text-muted]">불러오는 중...</p>
+                            <p className="text-sm text-[var(--text-muted)]">불러오는 중...</p>
                         ) : mediaTags.length > 0 ? (
                             <div className="flex flex-wrap gap-1.5">
                                 {mediaTags.map((tag) => (
                                     <span
                                         key={tag.id}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[--bg-active] text-[--text-main]"
+                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[var(--bg-active)] text-[var(--text-main)]"
                                     >
                                         {tag.name}
                                         <button
@@ -190,7 +167,7 @@ export const TagModal = ({ mediaIds, onClose, onUpdated }: TagModalProps) => {
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-[--text-muted]">태그가 없습니다.</p>
+                            <p className="text-sm text-[var(--text-muted)]">태그가 없습니다.</p>
                         )}
                     </div>
                 )}
@@ -199,14 +176,12 @@ export const TagModal = ({ mediaIds, onClose, onUpdated }: TagModalProps) => {
                 <div className="flex justify-end mt-4">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 rounded-xl border border-[--border-line] text-[--text-main] text-sm hover:bg-[--bg-active]"
+                        className="px-4 py-2 rounded-xl border border-[var(--border-line)] text-[var(--text-main)] text-sm hover:bg-[var(--bg-active)]"
                     >
                         닫기
                     </button>
                 </div>
             </div>
-            </div>
-        </>,
-        document.body
+        </BaseModal>
     );
 }
