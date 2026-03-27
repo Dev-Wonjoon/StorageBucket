@@ -1,4 +1,4 @@
-import { db } from "../../database";
+import { db, upsertFtsEntry } from "../../database";
 import { tags, mediaTags } from "../../database/schema";
 import { eq, and, inArray } from "drizzle-orm";
 
@@ -66,12 +66,14 @@ export const TagService = {
                 db.insert(mediaTags).values({ mediaId, tagId: tag.id }).run();
             }
         }
+        upsertFtsEntry(mediaId);
     },
 
     async removeFromMedia(mediaId: number, tagId: number) {
         db.delete(mediaTags)
             .where(and(eq(mediaTags.mediaId, mediaId), eq(mediaTags.tagId, tagId)))
             .run();
+        upsertFtsEntry(mediaId);
     },
 
     // --- 다중 미디어 태그 관리 ---
@@ -94,6 +96,9 @@ export const TagService = {
                 }
             }
         }
+        for(const mediaId of mediaIds) {
+            upsertFtsEntry(mediaId);
+        }
     },
 
     async bulkRemoveFromMedias(mediaIds: number[], tagIds: number[]) {
@@ -102,6 +107,9 @@ export const TagService = {
                 inArray(mediaTags.mediaId, mediaIds),
                 inArray(mediaTags.tagId, tagIds),
             )).run();
+        for(const mediaId of mediaIds) {
+            upsertFtsEntry(mediaId);
+        }
     },
 
     async bulkReplaceOnMedias(mediaIds: number[], tagNames: string[]) {
@@ -111,6 +119,10 @@ export const TagService = {
         
         if(tagNames.length > 0) {
             await TagService.bulkAddToMedias(mediaIds, tagNames);
+        } else {
+            for(const mediaId of mediaIds) {
+                upsertFtsEntry(mediaId);
+            }
         }
     },
 };

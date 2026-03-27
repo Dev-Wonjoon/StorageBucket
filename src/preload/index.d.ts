@@ -1,5 +1,6 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import { ipcRenderer } from 'electron';
+import { MediaSearchRequest, MediaSearchResult } from 'src/shared/types';
 
 declare global {
   interface Window {
@@ -36,6 +37,10 @@ declare global {
       bulkAddTags: (mediaIds: number[], tagNames: string[]) => Promise<void>,
       bulkRemoveTags: (mediaIds: number[], tagIds: number[]) => Promise<void>,
       bulkReplaceTags: (mediaIds: number[], tagNames: string[]) => Promise<void>,
+      searchMedia(request: MediaSearchRequest): Promise<MediaSearchResult>,
+      suggestAuthors(keyword: string): Promise<string[]>,
+      suggestPlatforms(keyword: string): Promise<string[]>,
+      suggestTags(keyword: string): Promise<string[]>,
     }
   }
 }

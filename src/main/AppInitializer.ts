@@ -3,7 +3,7 @@ import { app, BrowserWindow, shell, ipcMain, IpcMainInvokeEvent } from 'electron
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
-import { initDB } from '../database/index';
+import { initDB, createFtsTable, rebuildFtsIndex, getFtsCount, getMediaCount } from '../database/index';
 import { setupMediaProtocol } from './utils/protocol';
 import { DownloadManager } from './managers/DownloadManager';
 
@@ -12,6 +12,7 @@ import { favoriteHandler } from './handlers/FavoriteHandler';
 import { mediaHandler } from './handlers/MediaHandler';
 import { systemHandler } from './handlers/SystemHandler';
 import { tagHandler } from './handlers/TagHandler';
+import { searchHandler } from './handlers/SearchHandler';
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any>;
 
@@ -25,6 +26,17 @@ export class AppInitializer {
             initDB();
         } catch(error) {
             console.error('DB Initialization Failed:', error);
+        }
+
+        try {
+            createFtsTable();
+            if (getFtsCount() === 0 && getMediaCount() > 0) {
+                console.log('[FTS] Rebuilding index for existing data...');
+                rebuildFtsIndex();
+            }
+            console.log('[FTS] FTS5 initialized.');
+        } catch(error) {
+            console.error('[FTS] Initialization failed:', error);
         }
 
         electronApp.setAppUserModelId('com.storagebucket');
@@ -100,6 +112,7 @@ export class AppInitializer {
             ...mediaHandler,
             ...systemHandler,
             ...tagHandler,
+            ...searchHandler,
         };
 
         console.log(`[Main] Found ${Object.keys(handlers).length} handlers to register.`);

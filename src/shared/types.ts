@@ -51,8 +51,10 @@ export interface MediaSearchRequest {
     page: number;
     limit: number;
 
+    keyword?: string;
     title?: string;
     tags?: string | string[];
+    tagMode?: 'and' | 'or';
     author?: string | string[];
     platform?: string | string[];
 

@@ -6,6 +6,7 @@ import { SettingsPage } from "./features/settings/SettingsPage";
 import { useDownloadViewModel } from "./features/download/useDownloadViewModel";
 import { EngineSetupModal } from "./components/EngineSetupModal";
 import { FavoritesPage } from "./features/favorites/FavoritesPage";
+import { SearchPage } from "./features/search/SearchPage";
 
 function App() {
 	const [activeMenu, setActiveMenu] = useState('galley');
@@ -45,13 +46,9 @@ function App() {
             case 'gallery':
                 return <GalleryPage />;
             case 'search':
-                return (
-                    <div className="flex items-center justify-center h-full text-[--text-muted]">
-                        검색기능 준비 중...
-                    </div>
-                );
+                return <SearchPage />;
             case 'favorites':
-                return <FavoritesPage />
+                return <FavoritesPage />;
             case 'settings':
                 return <SettingsPage />;
             default:

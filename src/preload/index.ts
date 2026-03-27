@@ -40,6 +40,9 @@ const api = {
   bulkAddTags: (mediaIds: number[], tagNames: string[]) => ipcRenderer.invoke('tag:bulk-add', mediaIds, tagNames),
   bulkRemoveTags: (mediaIds: number[], tagIds: number[]) => ipcRenderer.invoke('tag:bulk-remove', mediaIds, tagIds),
   bulkReplaceTags: (mediaIds: number[], tagNames: string[]) => ipcRenderer.invoke('tag:bulk-replace', mediaIds, tagNames),
+  searchMedia: (request) => ipcRenderer.invoke('search:media', request),
+  suggestAuthors: (keyword) => ipcRenderer.invoke('search:suggest-authors', keyword),
+  suggestTags: (keyword) => ipcRenderer.invoke('search:suggest-tags', keyword),
 }
 
 

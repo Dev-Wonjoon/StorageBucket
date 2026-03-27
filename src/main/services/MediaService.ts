@@ -1,4 +1,4 @@
-import { db } from '../../database';
+import { db, upsertFtsEntry, deleteFtsEntry } from '../../database';
 import { downloadUrls, favorites, medias, platforms, profiles } from '../../database/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { Media } from '../../shared/types';
@@ -35,6 +35,7 @@ export const MediaService = {
         }
 
         db.delete(medias).where(eq(medias.id, id)).run();
+        deleteFtsEntry(id);
     },
     
     registerMedia(metadata: any, localFilepath: string, thumbnailPath: string | null): Media {
@@ -130,6 +131,8 @@ export const MediaService = {
 
             console.log(`[MediaService] Registered media: ${newMedia.title} (ID: ${newMedia.id})`);
 
+            // FTS 인덱스 갱신
+            setTimeout(() => upsertFtsEntry(newMedia.id), 0);
             return newMedia as Media;
         })
     }
