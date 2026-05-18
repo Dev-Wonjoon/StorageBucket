@@ -6,7 +6,7 @@ export const searchHandler = {
     'search:media': async (_: IpcMainInvokeEvent, request: MediaSearchRequest) => {
         return await SearchService.search(request);
     },
-    'search:suggest_authors': async (_: IpcMainInvokeEvent, keyword: string) => {
+    'search:suggest-authors': async (_: IpcMainInvokeEvent, keyword: string) => {
         return await SearchService.suggestAuthors(keyword);
     },
     'search:suggest-platforms': async (_: IpcMainInvokeEvent, keyword: string) => {

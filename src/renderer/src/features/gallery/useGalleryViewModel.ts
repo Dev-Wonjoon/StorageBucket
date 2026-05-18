@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect, useRef } from "react";
-import { Media, DownloadItem, GalleryItem } from "src/shared/types";
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { Media, DownloadItem, GalleryItem } from 'src/shared/types'
 
-const hashStringToNumber = (str: string): number => 
-    Math.abs(str.split('').reduce((acc, ch) => acc * 31 + ch.charCodeAt(0), 0)) || Date.now();
+const hashStringToNumber = (str: string): number =>
+    Math.abs(str.split('').reduce((acc, ch) => acc * 31 + ch.charCodeAt(0), 0)) || Date.now()
 
 const jobToPlaceholder = (item: DownloadItem): Media => ({
     id: -hashStringToNumber(item.id),
@@ -17,156 +17,187 @@ const jobToPlaceholder = (item: DownloadItem): Media => ({
     updatedAt: new Date(),
     author: '',
     platform: '',
-    url: item.url || null,
-});
+    url: item.url || null
+})
 
-export const useGalleryViewModel = () => {
-    const [medias, setMedias] = useState<Media[]>([]);
-    const [downloadQueue, setDownloadQueue] = useState<DownloadItem[]>([]);
-    const [selectedId, setSelectedId] = useState<number | null>(null);
-    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-    const [isLoading, setIsLoading] = useState(true);
-    const lastClickedId = useRef<number | null>(null);
+interface GalleryViewModel {
+    galleryItems: GalleryItem[]
+    medias: Media[]
+    selectedId: number | null
+    selectedIds: Set<number>
+    contextMenu: { x: number; y: number; mediaId: number } | null
+    tagModal: { mediaIds: number[] } | null
+    isLoading: boolean
+    toggleSelect: (id: number) => void
+    toggleFavorite: (id: number) => Promise<void>
+    deleteMedia: (id: number) => Promise<void>
+    refresh: () => Promise<void>
+    handleSelect: (id: number, e: React.MouseEvent) => void
+    selectAll: () => void
+    clearSelection: () => void
+    handleContextMenu: (e: React.MouseEvent, mediaId: number) => void
+    closeContextMenu: () => void
+    openTagModal: (mediaIds: number[]) => void
+    closeTagModal: () => void
+}
+
+export const useGalleryViewModel = (): GalleryViewModel => {
+    const [medias, setMedias] = useState<Media[]>([])
+    const [downloadQueue, setDownloadQueue] = useState<DownloadItem[]>([])
+    const [selectedId, setSelectedId] = useState<number | null>(null)
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+    const [isLoading, setIsLoading] = useState(true)
+    const lastClickedId = useRef<number | null>(null)
 
     const [contextMenu, setContextMenu] = useState<{
-        x: number;
-        y: number;
-        mediaId: number;
-    } | null>(null);
+        x: number
+        y: number
+        mediaId: number
+    } | null>(null)
 
     const [tagModal, setTagModal] = useState<{
-        mediaIds: number[];
-    } | null>(null);
+        mediaIds: number[]
+    } | null>(null)
 
-    
-    const galleryItems: GalleryItem[] = [
-        ...downloadQueue
-            .filter(item => item.status === 'downloading' || item.status === 'pending')
-            .map(item => ({
-                media: jobToPlaceholder(item),
-                isDownloading: true,
-                progress: item.progress,
-                speed: item.speed,
-                eta: item.eta,
-                downloadId: item.id
-            })),
-        ...medias.map(media => ({
-            media,
-            isDownloading: false,
-        })),
-    ];
-
+    const galleryItems: GalleryItem[] = useMemo(
+        () => [
+            ...downloadQueue
+                .filter((item) => item.status === 'downloading' || item.status === 'pending')
+                .map((item) => ({
+                    media: jobToPlaceholder(item),
+                    isDownloading: true,
+                    progress: item.progress,
+                    speed: item.speed,
+                    eta: item.eta,
+                    downloadId: item.id
+                })),
+            ...medias.map((media) => ({
+                media,
+                isDownloading: false
+            }))
+        ],
+        [downloadQueue, medias]
+    )
 
     const loadMedia = useCallback(async () => {
         try {
-            setIsLoading(true);
-            const items = await window.electron.ipcRenderer.invoke('media:get-all');
-            setMedias(items);
-        } catch(error) {
-            console.error('[GalleryViewModel] Failed to load media', error);
+            setIsLoading(true)
+            if (!window.electron?.ipcRenderer) {
+                setMedias([])
+                return
+            }
+            const items = await window.electron.ipcRenderer.invoke('media:get-all')
+            setMedias(items)
+        } catch (error) {
+            console.error('[GalleryViewModel] Failed to load media', error)
         } finally {
-            setIsLoading(false);
+            setIsLoading(false)
         }
-    }, []);
+    }, [])
 
     const toggleSelect = useCallback((id: number) => {
-        setSelectedId(prev => prev === id ? null : id);
-    }, []);
+        setSelectedId((prev) => (prev === id ? null : id))
+    }, [])
 
-    const handleSelect = useCallback((id: number, e: React.MouseEvent) => {
-        if(e.ctrlKey || e.metaKey) {
-            setSelectedIds(prev => {
-                const next = new Set(prev);
-                if(next.has(id)) next.delete(id);
-                else next.add(id);
-                return next;
-            });
-            setSelectedId(null);
-        } else if(e.shiftKey && lastClickedId.current !== null) {
-            const ids = galleryItems
-                .filter(item => !item.isDownloading)
-                .map(item => item.media.id);
-            const startIdx = ids.indexOf(lastClickedId.current);
-            const endIdx = ids.indexOf(id);
-            if(startIdx !== -1 && endIdx !== -1) {
-                const [from, to] = [Math.min(startIdx, endIdx), Math.max(startIdx, endIdx)];
-                const rangeIds = ids.slice(from, to + 1);
-                setSelectedIds(prev => {
-                    const next = new Set(prev);
-                    rangeIds.forEach(rid => next.add(rid));
-                    return next;
-                });
+    const handleSelect = useCallback(
+        (id: number, e: React.MouseEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                setSelectedIds((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(id)) next.delete(id)
+                    else next.add(id)
+                    return next
+                })
+                setSelectedId(null)
+            } else if (e.shiftKey && lastClickedId.current !== null) {
+                const ids = galleryItems
+                    .filter((item) => !item.isDownloading)
+                    .map((item) => item.media.id)
+                const startIdx = ids.indexOf(lastClickedId.current)
+                const endIdx = ids.indexOf(id)
+                if (startIdx !== -1 && endIdx !== -1) {
+                    const [from, to] = [Math.min(startIdx, endIdx), Math.max(startIdx, endIdx)]
+                    const rangeIds = ids.slice(from, to + 1)
+                    setSelectedIds((prev) => {
+                        const next = new Set(prev)
+                        rangeIds.forEach((rid) => next.add(rid))
+                        return next
+                    })
+                }
+                setSelectedId(null)
+            } else {
+                setSelectedIds(new Set())
+                toggleSelect(id)
             }
-            setSelectedId(null);
-        } else {
-            setSelectedIds(new Set());
-            toggleSelect(id);
+            lastClickedId.current = id
+        },
+        [galleryItems, toggleSelect]
+    )
+
+    useEffect(() => {
+        loadMedia()
+
+        const handleRefresh = (): void => {
+            console.log('[GalleryViewModel] Refresh signal received.')
+            loadMedia()
         }
-        lastClickedId.current = id;
-    }, [galleryItems, toggleSelect]);
+
+        window.addEventListener('gallery-refresh', handleRefresh)
+        return () => window.removeEventListener('gallery-refresh', handleRefresh)
+    }, [loadMedia])
 
     useEffect(() => {
-        loadMedia();
+        if (!window.api?.onQueueUpdate) return
 
-        const handleRefresh = () => {
-            console.log('[GalleryViewModel] Refresh signal received.');
-            loadMedia();
-        };
-
-        window.addEventListener('gallery-refresh', handleRefresh);
-        return () => window.removeEventListener('gallery-refresh', handleRefresh);
-    }, [loadMedia]);
-
-    useEffect(() => {
         const removeListener = window.api.onQueueUpdate((updateQueue: DownloadItem[]) => {
-            setDownloadQueue(updateQueue);
-        });
+            setDownloadQueue(updateQueue)
+        })
 
-        return () => removeListener?.();
-    }, []);
+        return () => removeListener?.()
+    }, [])
 
     const toggleFavorite = useCallback(async (id: number) => {
-        const isFav = await window.electron.ipcRenderer.invoke('favorite:toggle', id);
-        setMedias(prev => prev.map(m => m.id === id ? { ...m, isFavorite: isFav} : m));
-    }, []);
+        if (!window.electron?.ipcRenderer) return
+        const isFav = await window.electron.ipcRenderer.invoke('favorite:toggle', id)
+        setMedias((prev) => prev.map((m) => (m.id === id ? { ...m, isFavorite: isFav } : m)))
+    }, [])
 
     const deleteMedia = useCallback(async (id: number) => {
-        const confirmed = window.confirm('정말 삭제하시겠습니까?');
-        if(!confirmed) return
+        const confirmed = window.confirm('정말 삭제하시겠습니까?')
+        if (!confirmed) return
 
-        await window.electron.ipcRenderer.invoke('media:delete', id);
-        setMedias(prev => prev.filter(m => m.id !== id));
-    }, []);
+        if (!window.electron?.ipcRenderer) return
+        await window.electron.ipcRenderer.invoke('media:delete', id)
+        setMedias((prev) => prev.filter((m) => m.id !== id))
+    }, [])
 
     const selectAll = useCallback(() => {
-        const allIds = medias.map(m => m.id);
-        setSelectedIds(new Set(allIds));
-        setSelectedId(null);
-    }, [medias]);
+        const allIds = medias.map((m) => m.id)
+        setSelectedIds(new Set(allIds))
+        setSelectedId(null)
+    }, [medias])
 
     const clearSelection = useCallback(() => {
-        setSelectedIds(new Set());
-        setSelectedId(null);
-    }, []);
+        setSelectedIds(new Set())
+        setSelectedId(null)
+    }, [])
 
     const handleContextMenu = useCallback((e: React.MouseEvent, mediaId: number) => {
-        e.preventDefault();
-        setContextMenu({ x: e.clientX, y: e.clientY, mediaId});
-    }, []);
+        e.preventDefault()
+        setContextMenu({ x: e.clientX, y: e.clientY, mediaId })
+    }, [])
 
     const closeContextMenu = useCallback(() => {
-        setContextMenu(null);
-    }, []);
+        setContextMenu(null)
+    }, [])
 
     const openTagModal = useCallback((mediaIds: number[]) => {
-        setTagModal({ mediaIds });
-    }, []);
+        setTagModal({ mediaIds })
+    }, [])
 
     const closeTagModal = useCallback(() => {
-        setTagModal(null);
-    }, []);
-
-    
+        setTagModal(null)
+    }, [])
 
     return {
         galleryItems,
@@ -186,6 +217,6 @@ export const useGalleryViewModel = () => {
         handleContextMenu,
         closeContextMenu,
         openTagModal,
-        closeTagModal,
-    };
-};
+        closeTagModal
+    }
+}

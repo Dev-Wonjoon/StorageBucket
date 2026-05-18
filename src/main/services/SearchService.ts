@@ -4,6 +4,11 @@ import { desc, like, and, gte, lte, or, type SQL, eq, inArray, count, sql } from
 import { Media, MediaSearchRequest, MediaSearchResult } from '../../shared/types';
 
 export const SearchService = {
+
+    // const buildFtsPrefixQuery = (keyword: String) => {
+        
+    // }
+
     // FTS5 통합 검색
     async search(request: MediaSearchRequest): Promise<MediaSearchResult> {
         const { page = 1, limit = 50, startDate, endDate, keyword, tags: tagFilter, tagMode = 'and', author, platform } = request;

@@ -1,195 +1,196 @@
-import { useState } from "react";
-import { useSearchViewModel } from "./useSearchViewModel";
+import { type KeyboardEvent, type ReactElement, useState } from 'react'
+import { Search, X } from 'lucide-react'
+import { ContextMenu } from '@renderer/components/ui/ContextMenu'
+import { TagModal } from '@renderer/components/TagModal'
+import { PhotoCard } from '../gallery/PhotoCard'
+import { useSearchViewModel } from './useSearchViewModel'
 
-export const SearchPage = () => {
-    const vm = useSearchViewModel();
-    const [tagInput, setTagInput] = useState('');
-    const [platformInput, setPlatformInput] = useState('');
-    const [authorInput, setAuthorInput] = useState('');
+const SuggestionList = ({
+    items,
+    onSelect
+}: {
+    items: string[]
+    onSelect: (value: string) => void
+}): ReactElement | null => {
+    if (items.length === 0) return null
 
-    // 태그 입력 핸들러
-    const handleTagInput = (value: string) => {
-        setTagInput(value);
-        vm.suggestTags(value);
-    };
+    return (
+        <div className="absolute top-full z-20 mt-1 w-full overflow-hidden rounded-lg border border-[var(--border-line)] bg-[var(--bg-popup)] shadow-lg">
+            {items.map((item) => (
+                <button
+                    key={item}
+                    type="button"
+                    onClick={() => onSelect(item)}
+                    className="w-full px-3 py-2 text-left text-sm text-[var(--text-main)] hover:bg-[var(--bg-hover)]"
+                >
+                    {item}
+                </button>
+            ))}
+        </div>
+    )
+}
 
-    const handleTagKeyDown = (e: React.KeyboardEvent) => {
-        if(e.key === 'Enter' && tagInput.trim()) {
-            vm.addTag(tagInput.trim());
-            setTagInput('');
-        }
-    };
+export const SearchPage = (): ReactElement => {
+    const vm = useSearchViewModel()
+    const [tagInput, setTagInput] = useState('')
+    const [platformInput, setPlatformInput] = useState('')
+    const [authorInput, setAuthorInput] = useState('')
 
-    // 플랫폼 입력 핸들러
-    const handlePlatformInput = (value: string) => {
-        setPlatformInput(value);
-        vm.suggestPlatforms(value);
-    };
+    const addTagFromInput = (): void => {
+        const value = tagInput.trim()
+        if (!value) return
+        vm.addTag(value)
+        setTagInput('')
+    }
 
-    const handlePlatformKeyDown = (e: React.KeyboardEvent) => {
-        if(e.key === 'Enter' && platformInput.trim()) {
-            vm.addPlatform(platformInput.trim());
-            setPlatformInput('');
-        }
-    };
+    const addPlatformFromInput = (): void => {
+        const value = platformInput.trim()
+        if (!value) return
+        vm.addPlatform(value)
+        setPlatformInput('')
+    }
 
-    // 작성자 입력 핸들러
-    const handleAuthorInput = (value: string) => {
-        setAuthorInput(value);
-        vm.suggestAuthors(value);
-    };
+    const addAuthorFromInput = (): void => {
+        const value = authorInput.trim()
+        if (!value) return
+        vm.addAuthor(value)
+        setAuthorInput('')
+    }
 
-    const handleAuthorKeyDown = (e: React.KeyboardEvent) => {
-        if(e.key === 'Enter' && authorInput.trim()) {
-            vm.addAuthor(authorInput.trim());
-            setAuthorInput('');
-        }
-    };
+    const handleEnter = (e: KeyboardEvent, action: () => void): void => {
+        if (e.key === 'Enter') action()
+    }
 
-        return (
-        <div className="flex flex-col h-full">
-            {/* 검색 영역 */}
-            <div className="p-4 border-b border-[--border-line] space-y-3">
-                {/* 키워드 검색 */}
-                <input
-                    type="text"
-                    value={vm.keyword}
-                    onChange={(e) => vm.setKeyword(e.target.value)}
-                    placeholder="제목, 작성자, URL, 태그로 검색..."
-                    className="w-full px-4 py-2 rounded-lg
-                        bg-[--bg-hover] text-[--text-main]
-                        placeholder-[--text-placeholder]
-                        border border-[--border-line]
-                        focus:outline-none focus:border-[--color-primary]"
-                />
+    const hasFilters =
+        vm.selectedTags.length > 0 ||
+        vm.selectedPlatforms.length > 0 ||
+        vm.selectedAuthors.length > 0
 
-                {/* 필터 입력 영역 */}
-                <div className="flex gap-3">
-                    {/* 태그 필터 */}
-                    <div className="flex-1 relative">
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={tagInput}
-                                onChange={(e) => handleTagInput(e.target.value)}
-                                onKeyDown={handleTagKeyDown}
-                                placeholder="태그 추가..."
-                                className="flex-1 px-3 py-1.5 text-sm rounded-lg
-                                    bg-[--bg-hover] text-[--text-main]
-                                    placeholder-[--text-placeholder]
-                                    border border-[--border-line]
-                                    focus:outline-none focus:border-[--color-primary]"
-                            />
-                            {/* AND/OR 토글 */}
-                            {vm.selectedTags.length > 1 && (
-                                <button
-                                    onClick={() => vm.setTagMode(vm.tagMode === 'and' ? 'or' : 'and')}
-                                    className={`px-2 py-1.5 text-xs font-bold rounded-lg border transition-colors
-                                        ${vm.tagMode === 'and'
-                                            ? 'bg-[--color-primary] text-white border-[--color-primary]'
-                                            : 'bg-[--bg-hover] text-[--text-main] border-[--border-line]'
-                                        }`}
-                                >
-                                    {vm.tagMode.toUpperCase()}
-                                </button>
-                            )}
-                        </div>
-                        {/* 태그 자동완성 */}
-                        {vm.tagSuggestions.length > 0 && (
-                            <div className="absolute z-20 top-full mt-1 w-full rounded-lg border border-[--border-line] bg-(--bg-popup) shadow-lg overflow-hidden">
-                                {vm.tagSuggestions.map(tag => (
-                                    <button
-                                        key={tag}
-                                        onClick={() => { vm.addTag(tag); setTagInput(''); }}
-                                        className="w-full px-3 py-2 text-sm text-left text-[--text-main] hover:bg-[--bg-hover]"
-                                    >{tag}</button>
-                                ))}
-                            </div>
-                        )}
+    return (
+        <section className="sb-library">
+            <header>
+                <h1 className="sb-page-title">검색</h1>
+                <p className="sb-page-subtitle">
+                    {vm.isLoading ? '검색 중...' : `결과 ${vm.total}개`}
+                </p>
+            </header>
+
+            <div className="mt-4 grid gap-3">
+                <div className="sb-input-shell">
+                    <Search size={18} strokeWidth={1.8} className="ml-3 flex-none" />
+                    <input
+                        type="text"
+                        value={vm.keyword}
+                        onChange={(e) => vm.setKeyword(e.target.value)}
+                        placeholder="제목, 작성자, URL, 태그 검색"
+                        aria-label="미디어 검색"
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            value={tagInput}
+                            onChange={(e) => {
+                                setTagInput(e.target.value)
+                                vm.suggestTags(e.target.value)
+                            }}
+                            onKeyDown={(e) => handleEnter(e, addTagFromInput)}
+                            placeholder="태그 추가"
+                            className="h-10 w-full rounded-lg border border-[var(--border-line)] bg-[var(--bg-popup)] px-3 text-sm text-[var(--text-main)] outline-none placeholder:text-[var(--text-placeholder)] focus:border-[var(--border-strong)]"
+                        />
+                        <SuggestionList
+                            items={vm.tagSuggestions}
+                            onSelect={(tag) => {
+                                vm.addTag(tag)
+                                setTagInput('')
+                            }}
+                        />
                     </div>
 
-                    {/* 플랫폼 필터 */}
-                    <div className="flex-1 relative">
+                    <div className="relative">
                         <input
                             type="text"
                             value={platformInput}
-                            onChange={(e) => handlePlatformInput(e.target.value)}
-                            onKeyDown={handlePlatformKeyDown}
-                            placeholder="플랫폼 추가..."
-                            className="w-full px-3 py-1.5 text-sm rounded-lg
-                                bg-[--bg-hover] text-[--text-main]
-                                placeholder-[--text-placeholder]
-                                border border-[--border-line]
-                                focus:outline-none focus:border-[--color-primary]"
+                            onChange={(e) => {
+                                setPlatformInput(e.target.value)
+                                vm.suggestPlatforms(e.target.value)
+                            }}
+                            onKeyDown={(e) => handleEnter(e, addPlatformFromInput)}
+                            placeholder="플랫폼 추가"
+                            className="h-10 w-full rounded-lg border border-[var(--border-line)] bg-[var(--bg-popup)] px-3 text-sm text-[var(--text-main)] outline-none placeholder:text-[var(--text-placeholder)] focus:border-[var(--border-strong)]"
                         />
-                        {vm.platformSuggestions.length > 0 && (
-                            <div className="absolute z-20 top-full mt-1 w-full rounded-lg border border-[--border-line] bg-(--bg-popup) shadow-lg overflow-hidden">
-                                {vm.platformSuggestions.map(p => (
-                                    <button
-                                        key={p}
-                                        onClick={() => { vm.addPlatform(p); setPlatformInput(''); }}
-                                        className="w-full px-3 py-2 text-sm text-left text-[--text-main] hover:bg-[--bg-hover]"
-                                    >{p}</button>
-                                ))}
-                            </div>
-                        )}
+                        <SuggestionList
+                            items={vm.platformSuggestions}
+                            onSelect={(platform) => {
+                                vm.addPlatform(platform)
+                                setPlatformInput('')
+                            }}
+                        />
                     </div>
 
-                    {/* 작성자 필터 */}
-                    <div className="flex-1 relative">
+                    <div className="relative">
                         <input
                             type="text"
                             value={authorInput}
-                            onChange={(e) => handleAuthorInput(e.target.value)}
-                            onKeyDown={handleAuthorKeyDown}
-                            placeholder="작성자 추가..."
-                            className="w-full px-3 py-1.5 text-sm rounded-lg
-                                bg-[--bg-hover] text-[--text-main]
-                                placeholder-[--text-placeholder]
-                                border border-[--border-line]
-                                focus:outline-none focus:border-[--color-primary]"
+                            onChange={(e) => {
+                                setAuthorInput(e.target.value)
+                                vm.suggestAuthors(e.target.value)
+                            }}
+                            onKeyDown={(e) => handleEnter(e, addAuthorFromInput)}
+                            placeholder="작성자 추가"
+                            className="h-10 w-full rounded-lg border border-[var(--border-line)] bg-[var(--bg-popup)] px-3 text-sm text-[var(--text-main)] outline-none placeholder:text-[var(--text-placeholder)] focus:border-[var(--border-strong)]"
                         />
-                        {vm.authorSuggestions.length > 0 && (
-                            <div className="absolute z-20 top-full mt-1 w-full rounded-lg border border-[--border-line] bg-(--bg-popup) shadow-lg overflow-hidden">
-                                {vm.authorSuggestions.map(a => (
-                                    <button
-                                        key={a}
-                                        onClick={() => { vm.addAuthor(a); setAuthorInput(''); }}
-                                        className="w-full px-3 py-2 text-sm text-left text-[--text-main] hover:bg-[--bg-hover]"
-                                    >{a}</button>
-                                ))}
-                            </div>
-                        )}
+                        <SuggestionList
+                            items={vm.authorSuggestions}
+                            onSelect={(author) => {
+                                vm.addAuthor(author)
+                                setAuthorInput('')
+                            }}
+                        />
                     </div>
                 </div>
 
-                {/* 선택된 필터 칩 */}
-                {(vm.selectedTags.length > 0 || vm.selectedPlatforms.length > 0 || vm.selectedAuthors.length > 0) && (
-                    <div className="flex flex-wrap gap-2 items-center">
-                        {vm.selectedTags.map(tag => (
-                            <span key={`tag-${tag}`}
-                                className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-[--color-primary] text-white">
+                {hasFilters && (
+                    <div className="flex flex-wrap items-center gap-2">
+                        {vm.selectedTags.map((tag) => (
+                            <button
+                                key={`tag-${tag}`}
+                                type="button"
+                                onClick={() => vm.removeTag(tag)}
+                                className="sb-chip is-active gap-1"
+                            >
                                 {tag}
-                                <button onClick={() => vm.removeTag(tag)} className="hover:opacity-70">x</button>
-                            </span>
+                                <X size={13} />
+                            </button>
                         ))}
-                        {vm.selectedPlatforms.map(p => (
-                            <span key={`platform-${p}`}
-                                className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-[--bg-active] text-[--text-main]">
-                                {p}
-                                <button onClick={() => vm.removePlatform(p)} className="hover:opacity-70">x</button>
-                            </span>
+                        {vm.selectedPlatforms.map((platform) => (
+                            <button
+                                key={`platform-${platform}`}
+                                type="button"
+                                onClick={() => vm.removePlatform(platform)}
+                                className="sb-chip gap-1"
+                            >
+                                {platform}
+                                <X size={13} />
+                            </button>
                         ))}
-                        {vm.selectedAuthors.map(a => (
-                            <span key={`author-${a}`}
-                                className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-[--bg-active] text-[--text-main] border border-[--border-line]">
-                                {a}
-                                <button onClick={() => vm.removeAuthor(a)} className="hover:opacity-70">x</button>
-                            </span>
+                        {vm.selectedAuthors.map((author) => (
+                            <button
+                                key={`author-${author}`}
+                                type="button"
+                                onClick={() => vm.removeAuthor(author)}
+                                className="sb-chip gap-1"
+                            >
+                                {author}
+                                <X size={13} />
+                            </button>
                         ))}
                         <button
+                            type="button"
                             onClick={vm.clearAll}
-                            className="text-xs text-[--text-muted] hover:text-[--text-main]"
+                            className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)]"
                         >
                             초기화
                         </button>
@@ -197,80 +198,80 @@ export const SearchPage = () => {
                 )}
             </div>
 
-            {/* 결과 헤더 */}
-            <div className="px-4 py-2 text-sm text-[--text-muted]">
-                {vm.isLoading ? '검색 중...' : `${vm.total}개 결과`}
-            </div>
-
-            {/* 결과 그리드 */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="sb-gallery-scroll mt-4">
                 {vm.results.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                        {vm.results.map(media => (
-                            <SearchResultCard key={media.id} media={media} />
+                    <div className="sb-media-grid">
+                        {vm.results.map((media) => (
+                            <PhotoCard
+                                key={media.id}
+                                data={media}
+                                isSelected={
+                                    vm.selectedId === media.id || vm.selectedIds.has(media.id)
+                                }
+                                onClick={vm.handleSelect}
+                                onContextMenu={vm.handleContextMenu}
+                                onToggleFavorite={vm.toggleFavorite}
+                                onDelete={vm.deleteMedia}
+                            />
                         ))}
                     </div>
-                ) : !vm.isLoading ? (
-                    <div className="flex items-center justify-center h-full text-[--text-muted]">
-                        {vm.keyword || vm.selectedTags.length > 0 || vm.selectedPlatforms.length > 0 || vm.selectedAuthors.length > 0
-                            ? '검색 결과가 없습니다'
-                            : '검색어를 입력하세요'}
-                    </div>
-                ) : null}
+                ) : (
+                    !vm.isLoading && (
+                        <div className="sb-empty-state">
+                            <Search size={28} strokeWidth={1.7} />
+                            <p className="mt-3 text-lg font-semibold text-[var(--text-main)]">
+                                검색 결과가 없습니다
+                            </p>
+                            <p className="mt-1 text-sm">검색어 또는 필터를 조정해보세요.</p>
+                        </div>
+                    )
+                )}
 
                 {vm.hasNextPage && (
-                    <div className="flex justify-center mt-4">
+                    <div className="mt-4 flex justify-center">
                         <button
+                            type="button"
                             onClick={vm.loadMore}
-                            className="px-4 py-2 text-sm rounded-lg
-                                bg-[--bg-hover] text-[--text-main]
-                                hover:bg-[--bg-active]"
+                            className="sb-action-button px-4"
                         >
                             더 보기
                         </button>
                     </div>
                 )}
             </div>
-        </div>
-    );
-};
 
-// 검색 결과 카드
-const SearchResultCard = ({ media }: { media: any }) => {
-    const thumbnailUrl = media.thumbnailPath
-        ? `media:///${media.thumbnailPath}`
-        : null;
+            {vm.contextMenu && (
+                <ContextMenu
+                    x={vm.contextMenu.x}
+                    y={vm.contextMenu.y}
+                    onClose={vm.closeContextMenu}
+                    items={[
+                        {
+                            label: '태그 관리',
+                            onClick: () => {
+                                const ids =
+                                    vm.selectedIds.size > 0
+                                        ? [...vm.selectedIds]
+                                        : [vm.contextMenu!.mediaId]
+                                vm.openTagModal(ids)
+                            }
+                        },
+                        {
+                            label: '삭제',
+                            danger: true,
+                            onClick: () => vm.deleteMedia(vm.contextMenu!.mediaId)
+                        }
+                    ]}
+                />
+            )}
 
-    return (
-        <div className="group relative rounded-xl overflow-hidden border-2 transition-all duration-200 shadow-sm
-            bg-[--bg-sidebar] hover:border-[--border-line] hover:scale-[1.02] hover:shadow-lg cursor-pointer"
-        >
-            {/* 썸네일 */}
-            <div className="aspect-video bg-[--bg-active] overflow-hidden">
-                {thumbnailUrl ? (
-                    <img
-                        src={thumbnailUrl}
-                        alt={media.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                    />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[--text-muted]">
-                        <span className="text-[10px] opacity-60">No Preview</span>
-                    </div>
-                )}
-            </div>
-
-            {/* 정보 */}
-            <div className="p-3 border-t border-[--border-line]">
-                <h3 className="text-sm font-medium truncate text-[--text-main]" title={media.title}>
-                    {media.title}
-                </h3>
-                <div className="flex gap-2 mt-1 text-xs text-[--text-muted]">
-                    {media.author && <span>{media.author}</span>}
-                    {media.platform && <span>· {media.platform}</span>}
-                </div>
-            </div>
-        </div>
-    );
+            {vm.tagModal && (
+                <TagModal
+                    mediaIds={vm.tagModal.mediaIds}
+                    onClose={vm.closeTagModal}
+                    onUpdated={vm.refresh}
+                />
+            )}
+        </section>
+    )
 }
