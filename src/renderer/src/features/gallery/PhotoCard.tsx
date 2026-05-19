@@ -41,7 +41,8 @@ export const PhotoCard = ({
 
     return (
         <article
-            onClick={(e) => !isDownloading && handleClick(onClick, e)}
+            onClick={(e) => {
+                e.stopPropagation(); if (!isDownloading) handleClick(onClick, e)}}
             onContextMenu={(e) => {
                 if (!isDownloading && onContextMenu) {
                     e.preventDefault()

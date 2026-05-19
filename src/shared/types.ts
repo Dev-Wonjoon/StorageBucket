@@ -117,6 +117,7 @@ export interface DownloadResultItem {
     metadata: DownloadResultMetadata;
     videoPath: string;
     thumbnailPath: string | null;
+    
 }
 
 export interface DownloadResultMetadata {
@@ -124,8 +125,13 @@ export interface DownloadResultMetadata {
     title: string;
     extractor_key: string;
     filename: string;
+    filesize?: number;
     duration?: number;
     uploader?: string;
+    uploader_id?: string;
+    uploader_url?: string;
+    channel_id?: string;
+    channel?: string;
     webpage_url: string;
     thumbnail?: string;
 }

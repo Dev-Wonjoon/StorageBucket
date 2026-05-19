@@ -19,6 +19,7 @@ extraResources:
 asarUnpack:
   - resources/**
 win:
+  icon: build/icon.ico
   target: portable
   executableName: storagebucket
 portable:

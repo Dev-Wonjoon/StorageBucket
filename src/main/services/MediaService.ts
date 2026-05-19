@@ -3,21 +3,31 @@ import { downloadUrls, favorites, medias, platforms, profiles } from '../../data
 import { eq, and, desc } from 'drizzle-orm';
 import { Media } from '../../shared/types';
 import { cleanUrl } from '../utils/ArgsUtils';
+import fs from 'fs';
 
 export const MediaService = {
     
     async getAll() {
         const rows = db
-            .select()
+            .select({
+                media: medias,
+                url: downloadUrls.url,
+                author: profiles.ownerName,
+                platform: platforms.name,
+                favorite: favorites.id,
+            })
             .from(medias)
             .leftJoin(downloadUrls, eq(medias.urlId, downloadUrls.id))
-            .leftJoin(favorites, eq(favorites.mediaId, medias.id))
+            .leftJoin(profiles, eq(medias.profileId, profiles.id))
+            .leftJoin(platforms, eq(medias.platformId, platforms.id))
+            .leftJoin(favorites, eq(medias.id, favorites.mediaId))
             .orderBy(desc(medias.createdAt))
-            .all();
-        
-        return rows.map(row => ({
+            .all()
+        return rows.map((row) => ({
             ...row.media,
-            url: row.download_urls?.url ?? null,
+            url: row.url ?? null,
+            author: row.author ?? null,
+            platform: row.platform ?? null,
             isFavorite: !!row.favorite,
         }));
     },
@@ -58,8 +68,16 @@ export const MediaService = {
                 platformId = newPlatform.id;
             }
 
-            const uploaderId = metadata.uploader_id || metadata.uploader_url || 'unknown';
-            const uploaderName = metadata.uploader || 'unknown';
+            const uploaderName = metadata.uploader || metadata.channel || metadata.uploader_id || 'unknown';
+            const uploaderId = 
+                metadata.uploader_id ||
+                metadata.channel_id ||
+                metadata.uploader_url ||
+                metadata.channel ||
+                metadata.uploader ||
+                metadata.webpage_url ||
+                metadata.id;
+            
             let profileId: number;
 
             const exsitingProfile = tx.select()
@@ -69,6 +87,7 @@ export const MediaService = {
                     eq(profiles.platformId, platformId)
                 ))
                 .get();
+            
             if(exsitingProfile) {
                 profileId = exsitingProfile.id;
 
@@ -117,10 +136,12 @@ export const MediaService = {
                 }
             }
 
+            const fileSize = metadata.filesize || fs.statSync(localFilepath).size
+
             const newMedia = tx.insert(medias).values({
                 title: metadata.title || 'Untitled',
                 filepath: localFilepath,
-                filesize: metadata.filesize || null,
+                filesize: fileSize || null,
                 thumbnailPath: thumbnailPath,
                 urlId: urlId,
                 platformId: platformId,

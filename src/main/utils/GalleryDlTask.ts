@@ -1,4 +1,4 @@
-import { ChildProcess, spawn } from "child_process";
+import { ChildProcess, spawn, spawnSync } from "child_process";
 import path from 'path';
 import fs from 'fs';
 import { BinManager } from "../managers/BinManager";
@@ -11,6 +11,48 @@ import {
     TaskHandle
 } from '../../shared/types';
 import { extractSiteKey, cleanUrl } from "./ArgsUtils";
+
+const readMetadata = (file: string): any => {
+    const parsed = path.parse(file);
+    const candidates = [
+        `${file}.json`,
+        path.join(parsed.dir, `${parsed.name}.json`)
+    ];
+
+    for(const candidate of candidates) {
+        if(fs.existsSync(candidate)) {
+            try {
+                return JSON.parse(fs.readFileSync(candidate, 'utf8'));
+            } catch {
+                return {};
+            }
+        }
+    }
+
+    return {};
+}
+
+const createVideoThumbnail = (file: string): string | null => {
+    if(!file.match(/\.(mp4|webm|mov|mkv)$/i)) return null;
+
+    const ffmpegPath = BinManager.getInstance().getBinaryPath('ffmpeg');
+    const thumbDir = path.join(ConfigManager.getInstance().getThumbnailPath(), 'instagram');
+
+    if(!fs.existsSync(thumbDir)) fs.mkdirSync(thumbDir, { recursive: true });
+
+    const output = path.join(thumbDir, `${path.basename(file, path.extname(file))}.jpg`);
+
+    const result = spawnSync(ffmpegPath, [
+        '-y',
+        '-ss', '00:00:01',
+        '-i', file,
+        '-frames:v', '1',
+        '-q:v', '2',
+        output
+    ]);
+
+    return result.status === 0 && fs.existsSync(output) ? output : null;
+}
 
 export function downloadGalleryDl(
     url: string,
@@ -26,7 +68,8 @@ export function downloadGalleryDl(
         const args = [
             cleanUrl(url),
             '-d', basePath,
-            '-o', 'directory=["gallery-dl", "{category}", "{uploader_id:?//}{uploader_id}/{subcategory}"]',
+            '-o', 'directory=["{category}", "{owner_id}"]',
+            '-o', 'filename="{media_id}_{filename}.{extension}"',
         ];
 
         const cookieFile = ConfigManager.getInstance().getCookieFilePath();
@@ -79,24 +122,48 @@ export function downloadGalleryDl(
             }
 
             if(code === 0 && downloadedFiles.length > 0) {
-                const mainFile = downloadedFiles[0];
-                const title = path.basename(mainFile, path.extname(mainFile));
-
                 const results: DownloadResultItem[] = downloadedFiles.map(file => {
-                    const isImage = !!file.match(/\.(jpg|jpeg|png|webp|gif|heic)$/i);
-                    const metadata: DownloadResultMetadata = {
-                        id: path.basename(file),
-                        title: title,
-                        extractor_key: extractSiteKey(url),
-                        filename: file,
-                        webpage_url: url,
-                    };
-                    return {
-                        metadata,
-                        videoPath: file,
-                        thumbnailPath: isImage ? file : null
-                    };
-                });
+					const info = readMetadata(file);
+					const isImage = !!file.match(/\.(jpg|jpeg|png|webp|gif|heic)$/i);
+
+					const uploaderId = 
+						info.uploader_id ||
+						info.username ||
+						info.owner?.username ||
+						info.user?.username ||
+						info.author?.username;
+					
+					const uploaderName =
+						uploaderId ||
+						info.uploader ||
+						info.owner?.full_name ||
+						info.user?.full_name ||
+						'unknown';
+					
+					const title =
+						info.title ||
+						info.description ||
+						info.caption ||
+						path.basename(file, path.extname(file));
+
+					const metadata: DownloadResultMetadata = {
+						id: String(info.id || info.shortcode || path.basename(file)),
+						title,
+						extractor_key: extractSiteKey(url),
+						filename: file,
+						filesize: fs.statSync(file).size,
+						uploader: uploaderName,
+						uploader_id: uploaderId,
+						webpage_url: url,
+						thumbnail: info.thumbnail || info.display_url,
+					};
+
+					return {
+						metadata,
+						videoPath: file,
+						thumbnailPath: isImage ? file : createVideoThumbnail(file)
+					};
+				});
 
                 callbacks.onProgress(100, { status: 'completed', itemCount: results.length });
 

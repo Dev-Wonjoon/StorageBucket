@@ -127,8 +127,13 @@ export function downloadYtdlp(
                         title: meta.title,
                         extractor_key: meta.extractor_key || meta.extractor,
                         filename: meta.filename || meta._filename || '',
+                        filesize: meta.filesize,
                         duration: meta.duration,
                         uploader: meta.uploader,
+                        uploader_id: meta.uploader_id,
+                        uploader_url: meta.uploader_url,
+                        channel_id: meta.channel_id,
+                        channel: meta.channel,
                         webpage_url: meta.webpage_url,
                         thumbnail: meta.thumbnail,
                     };

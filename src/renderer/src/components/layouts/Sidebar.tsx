@@ -51,9 +51,7 @@ export const Sidebar = ({ activeMenu, onMenuClick }: SidebarProps): ReactElement
                         <strong className="text-[var(--text-main)]">다운로드 엔진</strong>
                         <span className="text-[var(--text-muted)]">ready</span>
                     </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-active)]">
-                        <div className="h-full w-2/3 rounded-full bg-[var(--color-green)]" />
-                    </div>
+                    
                     <div className="flex gap-2">
                         <button
                             type="button"
