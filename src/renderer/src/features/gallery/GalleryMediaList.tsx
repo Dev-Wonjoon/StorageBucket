@@ -1,7 +1,7 @@
 import { type MouseEvent, type ReactElement } from "react";
 import { FolderOpen } from "lucide-react";
 import { GalleryItem } from "src/shared/types";
-import { GalleryViewMode } from "./GalleryToolBar";
+import { GalleryViewMode } from "./GalleryToolbar";
 import { PhotoCard } from "./PhotoCard";
 
 interface GalleryMediaListProps {

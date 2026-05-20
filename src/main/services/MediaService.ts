@@ -44,7 +44,22 @@ export const MediaService = {
             console.warn('[MediaService] File delete failed:', error);
         }
 
-        db.delete(medias).where(eq(medias.id, id)).run();
+        db.transaction((tx) => {
+            tx.delete(medias).where(eq(medias.id, id)).run();
+
+            if(media.urlId) {
+                const stillUsed = tx
+                    .select({ id: medias.id })
+                    .from(medias)
+                    .where(eq(medias.urlId, media.urlId))
+                    .get();
+                
+                if(!stillUsed) {
+                    tx.delete(downloadUrls).where(eq(downloadUrls.id, media.urlId)).run()
+                }
+            }
+        })
+        
         deleteFtsEntry(id);
     },
     

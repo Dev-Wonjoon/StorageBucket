@@ -1,6 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { db } from "../../database";
-import { downloadUrls } from "../../database/schema";
+import { downloadUrls, medias } from "../../database/schema";
 import { fetchVideoIds } from './YtdlpTask';
 
 export interface DuplicateResult {
@@ -12,7 +12,13 @@ export interface DuplicateResult {
 }
 
 export function checkUrlDuplicate(url: string): boolean {
-    const existing = db.select().from(downloadUrls).where(eq(downloadUrls.url, url)).get();
+    const existing = db
+                .select({ id: medias.id })
+                .from(medias)
+                .innerJoin(downloadUrls, eq(medias.urlId, downloadUrls.id))
+                .where(eq(downloadUrls.url, url))
+                .get();
+        
     return !!existing;
 }
 

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { GalleryItem } from "src/shared/types";
-import { GalleryViewMode } from "./GalleryToolBar";
+import { GalleryViewMode } from "./GalleryToolbar";
 
 interface UseGalleryFilterParams {
     galleryItems: GalleryItem[];

@@ -1,4 +1,4 @@
-import { FileWarning, Heart, Loader2, Star, Trash2 } from 'lucide-react'
+import { FileWarning, Loader2, Star, Trash2 } from 'lucide-react'
 import { type ReactElement } from 'react'
 import { Media } from 'src/shared/types'
 import { usePhotoCardViewModel } from './usePhotoCardViewModel'
@@ -115,7 +115,7 @@ export const PhotoCard = ({
                                     className="text-[var(--color-coral)]"
                                 />
                             ) : (
-                                <Heart size={16} />
+                                <Star size={16} />
                             )}
                         </button>
                         <button
