@@ -1,6 +1,5 @@
 import type { DownloadResultMetadata } from "../../shared/types";
 import type { InstagramStructure } from "../../shared/instagram_structure";
-import type { YtdlpStructure } from "../../shared/ytdlp_structure";
 
 export function mapInstagramMetadata(
     info: Partial<InstagramStructure>,

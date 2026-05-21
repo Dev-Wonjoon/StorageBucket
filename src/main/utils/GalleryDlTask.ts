@@ -77,59 +77,78 @@ export function downloadGalleryDl(
         });
 
         proc.on('close', (code) => {
-            if(aborted) {
-                reject(new Error('Aborted'));
-                return;
+    if(aborted) {
+        reject(new Error('Aborted'));
+        return;
+    }
+
+    if(code === 0 && downloadedItems.length > 0) {
+        // changed: 같은 포스트의 sidecar 이미지는 첫 번째 항목만 카드로 등록
+        const seenPostKeys = new Set<string>();
+
+        const firstItemsByPost = downloadedItems.filter((info) => {
+            const postKey =
+                info.post_id ||
+                info.post_url ||
+                info.shortcode ||
+                info.media_id;
+
+            if(!postKey) return true;
+
+            if(seenPostKeys.has(postKey)) {
+                return false;
             }
 
-            if(code === 0 && downloadedItems.length > 0) {
-                const results: DownloadResultItem[] = downloadedItems
-                    .map(info => {
-                        const file = buildGalleryDlDownloadedFilePath(basePath, info, url);
-                        if(!fs.existsSync(file)) return null;
+            seenPostKeys.add(postKey);
+            return true;
+        });
 
-                        const isImage = !!file.match(/\.(jpg|jpeg|png|webp|gif|heic)$/i);
-                        const metadata = mapGalleryDlInstagramMetadata(
-                            info, file, url, fs.statSync(file).size
-                        );
+        const results: DownloadResultItem[] = firstItemsByPost
+            .map(info => {
+                const file = buildGalleryDlDownloadedFilePath(basePath, info, url);
+                if(!fs.existsSync(file)) return null;
 
-                        return {
-                            metadata,
-                            videoPath: file,
-                            thumbnailPath: isImage ? file : createGalleryDlVideoThumbnail(file)
-                        };
-                    })
-                    .filter((item): item is DownloadResultItem => item !== null);
+                const isImage = !!file.match(/\.(jpg|jpeg|png|webp|gif|heic)$/i);
+                const metadata = mapGalleryDlInstagramMetadata(
+                    info, file, url, fs.statSync(file).size
+                );
 
-                    if(results.length === 0) {
-                        callbacks.onProgress(0, { status: 'failed' });
-                        reject(new Error('gallery-dl completed, but downloaded files not found.'));
-                        return;
-                    }
+                return {
+                    metadata,
+                    videoPath: file,
+                    thumbnailPath: isImage ? file : createGalleryDlVideoThumbnail(file)
+                };
+            })
+            .filter((item): item is DownloadResultItem => item !== null);
 
-                    callbacks.onProgress(100, { status: 'completed', itemCount: results.length });
+        if(results.length === 0) {
+            callbacks.onProgress(0, { status: 'failed' });
+            reject(new Error('gallery-dl completed, but downloaded files not found.'));
+            return;
+        }
 
-                    if(results.length === 1) {
-                        resolve({
-                            success: true,
-                            multiple: false,
-                            metadata: results[0].metadata,
-                            videoPath: results[0].videoPath,
-                            thumbnailPath: results[0].thumbnailPath
-                        });
-                    } else {
-                        resolve({
-                            success: true,
-                            multiple: true,
-                            items: results,
-                            metadata: results[0].metadata,
-                            videoPath: results[0].videoPath,
-                            thumbnailPath: results[0].thumbnailPath,
-                        });
-                    }
+        callbacks.onProgress(100, { status: 'completed', itemCount: results.length });
 
-                    return;
-            }
+        if(results.length === 1) {
+            resolve({
+                success: true,
+                multiple: false,
+                metadata: results[0].metadata,
+                videoPath: results[0].videoPath,
+                thumbnailPath: results[0].thumbnailPath
+            });
+        } else {
+            resolve({
+                success: true,
+                multiple: true,
+                items: results,
+                metadata: results[0].metadata,
+                videoPath: results[0].videoPath,
+                thumbnailPath: results[0].thumbnailPath,
+            });
+        }
+            return;
+        }
 
             callbacks.onProgress(0, { status: 'failed' });
             reject(new Error(`gallery-dl exited with code ${code}: ${stderrBuffer}`));

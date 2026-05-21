@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: com.storagebucket.app
 productName: storagebucket
 directories:
   buildResources: build
@@ -10,10 +10,8 @@ files:
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 extraResources:
-  - from: "resources/bin"
-    to: "bin"
-    filter:
-      - "**/*"
+  - from: build/icon.ico
+    to: icon.ico
   - from: drizzle
     to: drizzle
 asarUnpack:

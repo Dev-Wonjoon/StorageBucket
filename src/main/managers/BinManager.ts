@@ -9,11 +9,14 @@ const config = ConfigManager.getInstance();
 const isDev = !app.isPackaged;
 
 type EngineName = 'yt-dlp' | 'gallery-dl' | 'ffmpeg';
+type ReleaseProvider = 'github' | 'codeberg';
 
 interface EngineInfo {
     name: EngineName;
     repo: string;
+    provider: ReleaseProvider;
     getAssetName: (platform: string) => string;
+    getAssetCandidates?: (platform: string) => string[];
     license: LicenseInfo;
     bundled: boolean;
 }
@@ -22,6 +25,7 @@ const ENGINE_REGISTRY: Record<EngineName, EngineInfo> = {
     'yt-dlp': {
         name: 'yt-dlp',
         repo: 'yt-dlp/yt-dlp',
+        provider: 'github',
         getAssetName: (platform) => platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp',
         license: {
             name: 'Unlicense',
@@ -34,7 +38,14 @@ const ENGINE_REGISTRY: Record<EngineName, EngineInfo> = {
     'gallery-dl': {
         name: 'gallery-dl',
         repo: 'mikf/gallery-dl',
+        provider: 'codeberg',
         getAssetName: (platform) => platform === 'win32' ? 'gallery-dl.exe' : 'gallery-dl.bin',
+        getAssetCandidates: (platform) => {
+            if(platform == 'win32') {
+                return ['gallery-dl.exe', 'gallery-dl_x64.exe', 'gallery-dl_x86.exe']
+            }
+            return ['gallery-dl.bin', 'gallery-dl'];
+        },
         license: {
             name: 'GPL-2.0',
             url: 'https://github.com/mikf/gallery-dl/blob/master/LICENSE',
@@ -46,6 +57,7 @@ const ENGINE_REGISTRY: Record<EngineName, EngineInfo> = {
     'ffmpeg': {
         name: 'ffmpeg',
         repo: 'BtbN/FFmpeg-Builds',
+        provider: 'github',
         getAssetName: (platform) => {
             if(platform === 'win32') return 'ffmpeg-master-latest-win64-gpl.zip';
             if(platform === 'darwin') return 'ffmpeg-master-latest-darwin-gpl.zip';

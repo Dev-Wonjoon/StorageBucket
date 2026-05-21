@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { app, BrowserWindow, shell, ipcMain, IpcMainInvokeEvent } from 'electron';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
 import { initDB, createFtsTable, rebuildFtsIndex, getFtsCount, getMediaCount } from '../database/index';
@@ -15,6 +15,8 @@ import { tagHandler } from './handlers/TagHandler';
 import { searchHandler } from './handlers/SearchHandler';
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any>;
+
+const APP_USER_MODEL_ID = 'com.storagebucket.app';
 
 export class AppInitializer {
     private mainWindow: BrowserWindow | null = null;
@@ -39,7 +41,7 @@ export class AppInitializer {
             console.error('[FTS] Initialization failed:', error);
         }
 
-        electronApp.setAppUserModelId('com.storagebucket');
+        electronApp.setAppUserModelId(APP_USER_MODEL_ID);
         
         setupMediaProtocol();
         
@@ -64,6 +66,7 @@ export class AppInitializer {
             height: 800,
             show: false,
             autoHideMenuBar: true,
+            icon: this.resolveWindowIconPath(),
             webPreferences: {
                 preload: join(__dirname, '../preload/index.js'),
                 sandbox: false,
@@ -88,9 +91,20 @@ export class AppInitializer {
         }
     }
 
+    private resolveWindowIconPath(): string | undefined {
+        const candidates = [
+            join(process.cwd(), 'build', 'icon.ico'),
+            join(process.resourcesPath, 'icon.ico'),
+        ];
+
+        return candidates.find((candidate) => fs.existsSync(candidate));
+    }
+
     private setupDataPaths(): void {
-        const basePath = app.getAppPath();
-        const rootPath = app.isPackaged ? basePath : process.cwd();
+        // const basePath = app.getAppPath();
+        const rootPath = app.isPackaged
+            ? process.env.PORTABLE_EXECUTABLE_DIR || dirname(process.execPath)
+            : process.cwd();
 
         const portableDataPath = join(rootPath, 'data');
         if(!fs.existsSync(portableDataPath)) {

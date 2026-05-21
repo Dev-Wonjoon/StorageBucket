@@ -47,11 +47,20 @@ export class ConfigManager {
     public setBasePath(newPath: string): void {
         this.store.set('basePath', newPath);
 
-        this.store.get('downloadPath', path.join(newPath, 'downloads'));
-        this.store.get('thumbnailPath', path.join(newPath, 'thumbnails'));
+        this.store.set('downloadPath', path.join(newPath, 'downloads'));
+        this.store.set('thumbnailPath', path.join(newPath, 'thumbnails'));
     }
 
     public getDownloadPath(): string {
+        const savedPath = this.store.get('downloadPath');
+        const basePath = this.getBasePath();
+        const defaultDownloadPath = path.join(basePath, 'downloads');
+
+        if(!savedPath || savedPath === basePath) {
+            this.store.get('downloadedPath', defaultDownloadPath);
+            return defaultDownloadPath;
+        }
+
         return this.store.get('downloadPath');
     }
 

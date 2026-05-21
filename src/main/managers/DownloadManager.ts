@@ -189,19 +189,31 @@ export class DownloadManager {
             if(result && result.success) {
                 console.log(`[DownloadManager] Saving metadata to DB...`);
                 try {
-                    if(result.metadata) {
+                    // changed: register every item from playlist/multi-item downloads.
+                    if(result.multiple && result.items?.length) {
+                        for(const item of result.items) {
+                            MediaService.registerMedia(
+                                item.metadata,
+                                item.videoPath,
+                                item.thumbnailPath
+                            );
+                        }
+                    } else if(result.metadata) {
                         MediaService.registerMedia(
                             result.metadata,
                             result.videoPath,
                             result.thumbnailPath
                         );
                     } else {
-                        console.warn('[DownloadManager] metadata is null, skipping DB.');
+                        throw new Error('metadata is null');
                     }
+
+                    // changed: mark completed only after DB registration succeeds.
+                    this.updateJobStatus(job.id, 'completed', 100);
                 } catch(error) {
                     console.error(`[DownloadManager] Failed to save to DB:`, error);
+                    this.updateJobStatus(job.id, 'failed');
                 }
-                this.updateJobStatus(job.id, 'completed', 100);
             }
         } catch(error) {
             console.error(`[DownloadManager] Job failed: ${job.id}`, error);

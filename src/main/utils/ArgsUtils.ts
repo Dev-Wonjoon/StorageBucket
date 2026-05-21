@@ -2,7 +2,12 @@ import { DownloadOptions } from "../../shared/types";
 import path from 'path';
 import { isFastDomain, isInstagramDomain} from "./DelayStrategy";
 
-export const buildYtdlpArgs = (url: string, basePath: string, options: DownloadOptions): string[] => {
+export const buildYtdlpArgs = (
+    url: string, basePath: string,
+    options: DownloadOptions,
+    // changed: yt-dlp needs an explicit ffmpeg location after engines moved to app-local bin.
+    ffmpegPath?: string,
+): string[] => {
     const isInstagram = isInstagramDomain(url);
 
     const args = [
@@ -16,6 +21,11 @@ export const buildYtdlpArgs = (url: string, basePath: string, options: DownloadO
         '--progress',
         '--print-json',
     ];
+
+    if(ffmpegPath) {
+        // changed: pass the directory, not ffmpeg.exe itself.
+        args.push('--ffmpeg-location', path.dirname(ffmpegPath));
+    }
 
     if(isInstagram) {
         args.push('--yes-playlist');

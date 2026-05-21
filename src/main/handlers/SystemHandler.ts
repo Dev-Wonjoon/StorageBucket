@@ -1,6 +1,6 @@
 import { dialog, IpcMainInvokeEvent } from "electron";
 import { ConfigManager } from "../managers/ConfigManager";
-import { BinManager } from "../managers/BinManager";
+import { EngineManager } from "../managers/EngineManager";
 
 export const systemHandler = {
     'get-download-path': async () => {
@@ -21,22 +21,22 @@ export const systemHandler = {
     },
 
     'system:engine-install': async (_: IpcMainInvokeEvent, engine: string) => {
-        return await BinManager.getInstance().downloadEngine(engine as any);
+        return await EngineManager.getInstance().installEngine(engine as any);
     },
 
     'system:engine-licenses': async () => {
-        return BinManager.getInstance().getLicenses();
+        return EngineManager.getInstance().getLicense();
     },
 
     'system:engine-status': async () => {
-        const bin = BinManager.getInstance();
-        const engines = Object.keys(bin.getEngineRegistry()) as Array<'yt-dlp' | 'gallery-dl' | 'ffmpeg'>;
+        const manager = EngineManager.getInstance()
+        const engines = Object.keys(manager.getRegistry()) as Array<'yt-dlp' | 'gallery-dl' | 'ffmpeg'>;
 
         const status: Record<string, { installed: boolean; version: string | null; }> = {};
         for(const name of engines) {
             status[name] = {
-                installed: bin.checkExists(name),
-                version: await bin.getInstalledVersion(name),
+                installed: manager.checkExists(name),
+                version: await manager.getInstalledVersion(name),
             };
         }
         return status;
