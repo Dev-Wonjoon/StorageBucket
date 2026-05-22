@@ -1,10 +1,14 @@
-import { type ReactElement } from "react";
-import { ExternalLink, MoreHorizontal, Tags, Trash2 } from "lucide-react";
-import { Media } from "src/shared/types";
-import { formatBytes, getImageUrl } from "./galleryFormatters";
+import { type ReactElement } from 'react'
+import { ExternalLink, MoreHorizontal, Tags, Trash2 } from 'lucide-react'
+import { Button } from '@renderer/components/ui/Button'
+import { Chip } from '@renderer/components/ui/Chip'
+import { EmptyState } from '@renderer/components/ui/EmptyState'
+import { IconButton } from '@renderer/components/ui/IconButton'
+import { Media } from 'src/shared/types'
+import { formatBytes, getImageUrl } from './galleryFormatters'
 
 interface GalleryDetailPanelProps {
-    media?: Media | null;
+    media?: Media | null
     onDelete: (id: number) => void
     onOpenTagModal: (ids: number[]) => void
     onFilterAuthor: (author: string) => void
@@ -16,48 +20,58 @@ export const GalleryDetailPanel = ({
     onOpenTagModal,
     onFilterAuthor
 }: GalleryDetailPanelProps): ReactElement => {
-    const imageUrl = getImageUrl(media);
+    const imageUrl = getImageUrl(media)
 
     return (
-        <aside className="sb-detail" 
-                aria-label="선택한 미디어 상세"
-                onClick={(e) => e.stopPropagation()}
+        <aside
+            className="absolute right-0 top-0 z-20 grid h-full min-h-0 w-80 grid-rows-[auto_minmax(0,1fr)_auto] border-l border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900 max-[1180px]:hidden"
+            aria-label="선택한 미디어 상세"
+            onClick={(e) => e.stopPropagation()}
         >
-            <header className="sb-detail-head">
+            <header className="flex h-[68px] items-center justify-between gap-3 border-b border-slate-200 px-4 dark:border-slate-800">
                 <strong className="text-sm">상세 정보</strong>
-                <button className="sb-icon-button" type="button" title="더보기" aria-label="더보기">
+                <IconButton title="더보기" aria-label="더보기">
                     <MoreHorizontal size={18} strokeWidth={1.8} />
-                </button>
+                </IconButton>
             </header>
 
-            <div className="sb-detail-body">
+            <div className="min-h-0 overflow-auto p-4">
                 {media ? (
                     <>
-                        <div className="sb-detail-preview">
+                        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
                             {imageUrl ? (
-                                <img src={imageUrl} alt={`${media.title} 미리보기`} />
+                                <img
+                                    src={imageUrl}
+                                    alt={`${media.title} 미리보기`}
+                                    className="block aspect-[16/10] w-full object-contain"
+                                />
                             ) : (
-                                <div className="sb-thumb-empty" />
+                                <div className="grid aspect-[16/10] w-full place-items-center bg-gradient-to-br from-slate-500 via-amber-400 to-emerald-900 text-white" />
                             )}
                         </div>
 
-                        <h2 className="sb-detail-title">{media.title}</h2>
-                        <p className="sb-detail-url" title={media.url || media.filepath}>
+                        <h2 className="my-3.5 mb-1 text-lg leading-snug text-slate-950 dark:text-slate-100">
+                            {media.title}
+                        </h2>
+                        <p
+                            className="mb-4 truncate text-xs text-slate-500 dark:text-slate-400"
+                            title={media.url || media.filepath}
+                        >
                             {media.url || media.filepath || '저장 위치 없음'}
                         </p>
 
-                        <div className="sb-info-list">
-                            <div className="sb-info-row">
-                                <span>플랫폼</span>
+                        <div className="grid gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 dark:border-slate-700 dark:bg-slate-700">
+                            <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2.5 bg-white p-2.5 text-[13px] dark:bg-slate-900">
+                                <span className="text-slate-500 dark:text-slate-400">플랫폼</span>
                                 <strong>{media.platform || '미분류'}</strong>
                             </div>
 
-                            <div className="sb-info-row">
-                                <span>작성자</span>
+                            <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2.5 bg-white p-2.5 text-[13px] dark:bg-slate-900">
+                                <span className="text-slate-500 dark:text-slate-400">작성자</span>
                                 {media.author ? (
                                     <button
                                         type="button"
-                                        className="sb-info-link"
+                                        className="truncate text-left font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
                                         onClick={() => onFilterAuthor(media.author!)}
                                         title={`${media.author} 항목만 보기`}
                                     >
@@ -68,37 +82,43 @@ export const GalleryDetailPanel = ({
                                 )}
                             </div>
 
-                            <div className="sb-info-row">
-                                <span>파일 크기</span>
+                            <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2.5 bg-white p-2.5 text-[13px] dark:bg-slate-900">
+                                <span className="text-slate-500 dark:text-slate-400">
+                                    파일 크기
+                                </span>
                                 <strong>{formatBytes(media.filesize)}</strong>
                             </div>
 
-                            <div className="sb-info-row">
-                                <span>저장일</span>
-                                <strong>{new Date(media.createdAt).toLocaleDateString('ko-KR')}</strong>
+                            <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2.5 bg-white p-2.5 text-[13px] dark:bg-slate-900">
+                                <span className="text-slate-500 dark:text-slate-400">저장일</span>
+                                <strong>
+                                    {new Date(media.createdAt).toLocaleDateString('ko-KR')}
+                                </strong>
                             </div>
                         </div>
 
-                        <div className="sb-section-label">Tags</div>
-                        <div className="sb-tag-cloud">
-                            <span className="sb-chip is-active">{media.platform || 'media'}</span>
-                            {media.isFavorite && <span className="sb-chip">즐겨찾기</span>}
-                            <span className="sb-chip">미분류</span>
+                        <div className="mb-2 mt-[18px] text-xs font-extrabold uppercase text-slate-500 dark:text-slate-400">
+                            Tags
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                            <Chip active>{media.platform || 'media'}</Chip>
+                            {media.isFavorite && <Chip>즐겨찾기</Chip>}
+                            <Chip>미분류</Chip>
                         </div>
                     </>
                 ) : (
-                    <div className="sb-empty-state h-full">
-                        <p className="text-sm font-semibold text-[var(--text-main)]">
-                            선택한 미디어가 없습니다
-                        </p>
-                        <p className="mt-1 text-xs">카드를 선택하면 상세 정보가 표시됩니다.</p>
-                    </div>
+                    <EmptyState
+                        title="선택한 미디어가 없습니다"
+                        description="카드를 선택하면 상세 정보가 표시됩니다."
+                        className="h-full min-h-0"
+                    />
                 )}
             </div>
 
-            <div className="sb-detail-actions">
-                <button
-                    className="sb-action-button is-primary"
+            <div className="grid grid-cols-3 gap-2 border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+                <Button
+                    variant="primary"
+                    size="md"
                     type="button"
                     disabled={!media?.filepath}
                     onClick={() =>
@@ -108,27 +128,29 @@ export const GalleryDetailPanel = ({
                 >
                     <ExternalLink size={16} strokeWidth={1.8} />
                     열기
-                </button>
+                </Button>
 
-                <button
-                    className="sb-action-button"
+                <Button
+                    variant="secondary"
+                    size="md"
                     type="button"
                     disabled={!media}
                     onClick={() => media && onOpenTagModal([media.id])}
                 >
                     <Tags size={16} strokeWidth={1.8} />
                     태그
-                </button>
+                </Button>
 
-                <button
-                    className="sb-action-button"
+                <Button
+                    variant="secondary"
+                    size="md"
                     type="button"
                     disabled={!media}
                     onClick={() => media && onDelete(media.id)}
                 >
                     <Trash2 size={16} strokeWidth={1.8} />
                     삭제
-                </button>
+                </Button>
             </div>
         </aside>
     )

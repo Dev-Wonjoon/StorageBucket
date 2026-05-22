@@ -60,15 +60,15 @@ function App(): ReactElement {
     }
 
     return (
-        <div className="sb-app font-sans transition-colors duration-200">
+        <div className="grid h-screen w-full grid-cols-[232px_minmax(0,1fr)] overflow-hidden bg-slate-50 font-sans text-slate-950 transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100 max-[840px]:grid-cols-1">
             <Sidebar activeMenu={activeMenu} onMenuClick={setActiveMenu} />
 
-            <div className="sb-main">
-                <div className="sb-topbar">
+            <div className="grid h-screen min-w-0 grid-rows-[auto_minmax(0,1fr)]">
+                <div className="grid min-h-[68px] items-center border-b border-slate-200 bg-slate-50/95 px-5 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
                     <DownloadBar />
                 </div>
 
-                <main className="sb-content">{renderContent()}</main>
+                <main className="min-h-0 overflow-hidden">{renderContent()}</main>
             </div>
 
             {showSetup && <EngineSetupModal onComplete={() => setShowSetup(false)} />}

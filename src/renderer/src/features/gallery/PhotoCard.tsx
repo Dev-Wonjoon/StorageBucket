@@ -1,5 +1,6 @@
 import { FileWarning, Loader2, Star, Trash2 } from 'lucide-react'
 import { type ReactElement } from 'react'
+import { IconButton } from '@renderer/components/ui/IconButton'
 import { Media } from 'src/shared/types'
 import { usePhotoCardViewModel } from './usePhotoCardViewModel'
 
@@ -42,7 +43,9 @@ export const PhotoCard = ({
     return (
         <article
             onClick={(e) => {
-                e.stopPropagation(); if (!isDownloading) handleClick(onClick, e)}}
+                e.stopPropagation()
+                if (!isDownloading) handleClick(onClick, e)
+            }}
             onContextMenu={(e) => {
                 if (!isDownloading && onContextMenu) {
                     e.preventDefault()
@@ -50,38 +53,56 @@ export const PhotoCard = ({
                 }
             }}
             className={[
-                'sb-media-card',
-                layout === 'list' ? 'is-list' : '',
-                isSelected ? 'is-selected' : '',
-                isDownloading ? 'is-disabled' : ''
+                'group min-w-0 overflow-hidden rounded-lg border bg-white transition-[border-color,box-shadow,transform] dark:bg-slate-900',
+                layout === 'list'
+                    ? 'grid grid-cols-[168px_minmax(0,1fr)_auto] items-stretch max-[840px]:grid-cols-[132px_minmax(0,1fr)]'
+                    : '',
+                isSelected
+                    ? 'border-indigo-500 shadow-[0_0_0_2px_rgb(238,242,255)] dark:shadow-[0_0_0_2px_rgb(49,46,129)]'
+                    : 'border-slate-200 dark:border-slate-700',
+                isDownloading
+                    ? 'opacity-70'
+                    : 'cursor-pointer hover:-translate-y-px hover:border-slate-300 hover:shadow-lg dark:hover:border-slate-600'
             ].join(' ')}
         >
-            <div className="sb-media-thumb">
+            <div
+                className={`relative overflow-hidden bg-slate-200 dark:bg-slate-800 ${layout === 'list' ? 'min-h-[104px]' : 'aspect-[16/10]'}`}
+            >
                 {isDownloading ? (
-                    <div className="sb-thumb-empty">
+                    <div className="grid h-full min-h-[118px] w-full place-items-center bg-gradient-to-br from-slate-500 via-amber-400 to-emerald-900 text-white">
                         <Loader2 size={28} strokeWidth={2} className="animate-spin" />
                     </div>
                 ) : hasThumbnail && imageUrl ? (
-                    <img src={imageUrl} alt={data.title} loading="lazy" />
+                    <img
+                        src={imageUrl}
+                        alt={data.title}
+                        loading="lazy"
+                        className="block h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.035]"
+                    />
                 ) : (
-                    <div className="sb-thumb-empty">
+                    <div className="grid h-full min-h-[118px] w-full place-items-center bg-gradient-to-br from-slate-500 via-amber-400 to-emerald-900 text-white">
                         <FileWarning size={28} strokeWidth={1.8} />
                     </div>
                 )}
 
-                <span className="sb-pill sb-thumb-source">{platform}</span>
+                <span className="absolute left-2 top-2 inline-flex h-[22px] items-center rounded-md bg-slate-950/75 px-2 text-[11px] font-bold text-white">
+                    {platform}
+                </span>
                 {(displayTime || isDownloading) && (
-                    <span className="sb-pill sb-thumb-duration">
+                    <span className="absolute bottom-2 right-2 inline-flex h-[22px] items-center rounded-md bg-slate-950/75 px-2 text-[11px] font-bold text-white">
                         {isDownloading ? '진행 중' : displayTime}
                     </span>
                 )}
             </div>
 
-            <div className="sb-card-body">
-                <h3 className="sb-media-title" title={data.title}>
+            <div className="grid gap-2 p-2.5">
+                <h3
+                    className="m-0 truncate text-[13px] font-bold leading-snug text-slate-950 dark:text-slate-100"
+                    title={data.title}
+                >
                     {data.title}
                 </h3>
-                <div className="sb-media-meta">
+                <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
                     <span className="truncate">{data.author || 'unknown'}</span>
                     <span className="flex-none">
                         {isDownloading
@@ -97,14 +118,13 @@ export const PhotoCard = ({
                 </div>
 
                 {!isDownloading && (
-                    <div className="sb-card-actions">
-                        <button
-                            type="button"
+                    <div className="flex justify-end gap-1">
+                        <IconButton
+                            size="sm"
                             onClick={(e) => {
                                 e.stopPropagation()
                                 onToggleFavorite(data.id)
                             }}
-                            className="sb-icon-button h-8 w-8"
                             title={data.isFavorite ? '즐겨찾기 해제' : '즐겨찾기'}
                             aria-label={data.isFavorite ? '즐겨찾기 해제' : '즐겨찾기'}
                         >
@@ -112,38 +132,40 @@ export const PhotoCard = ({
                                 <Star
                                     size={16}
                                     fill="currentColor"
-                                    className="text-[var(--color-coral)]"
+                                    className="text-rose-600 dark:text-rose-400"
                                 />
                             ) : (
                                 <Star size={16} />
                             )}
-                        </button>
-                        <button
-                            type="button"
+                        </IconButton>
+                        <IconButton
+                            size="sm"
                             onClick={(e) => {
                                 e.stopPropagation()
                                 onDelete(data.id)
                             }}
-                            className="sb-icon-button h-8 w-8"
                             title="삭제"
                             aria-label="삭제"
                         >
                             <Trash2 size={16} />
-                        </button>
+                        </IconButton>
                     </div>
                 )}
             </div>
 
             {isDownloading && (
-                <div className="sb-download-progress">
-                    <div className="sb-progress-copy">
+                <div className="grid gap-2 border-t border-slate-200 bg-rose-50 p-2.5 dark:border-slate-800 dark:bg-rose-950">
+                    <div className="flex justify-between gap-2 text-xs font-bold text-rose-600 dark:text-rose-300">
                         <span>
                             {progress !== undefined ? `${progress.toFixed(0)}%` : '대기 중'}
                         </span>
                         <span>{speed || eta || '준비 중'}</span>
                     </div>
-                    <div className="sb-progress-track">
-                        <i style={{ width: `${Math.max(0, Math.min(progress || 0, 100))}%` }} />
+                    <div className="h-1.5 overflow-hidden rounded-full bg-rose-200 dark:bg-rose-900">
+                        <div
+                            className="h-full rounded-full bg-rose-600 dark:bg-rose-400"
+                            style={{ width: `${Math.max(0, Math.min(progress || 0, 100))}%` }}
+                        />
                     </div>
                 </div>
             )}

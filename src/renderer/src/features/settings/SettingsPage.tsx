@@ -14,6 +14,13 @@ const SETTINGS_TABS = [
 
 export const SettingsPage = (): ReactElement => {
     const [activeTab, setActiveTab] = useState('general')
+    const tabButtonClass = (active: boolean): string =>
+        [
+            'flex h-10 w-full items-center gap-2.5 rounded-lg border px-3 text-left text-sm transition-colors',
+            active
+                ? 'border-slate-200 bg-slate-100 font-bold text-slate-950 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
+                : 'border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
+        ].join(' ')
 
     const renderContent = (): ReactElement => {
         switch (activeTab) {
@@ -31,10 +38,12 @@ export const SettingsPage = (): ReactElement => {
     }
 
     return (
-        <section className="sb-library">
+        <section className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] px-5 pb-5 pt-[18px]">
             <header>
-                <h1 className="sb-page-title">설정</h1>
-                <p className="sb-page-subtitle">
+                <h1 className="m-0 text-2xl font-bold leading-tight text-slate-950 dark:text-slate-100">
+                    설정
+                </h1>
+                <p className="mt-1.5 text-[13px] text-slate-500 dark:text-slate-400">
                     앱 동작, 다운로드 엔진, 라이선스 정보를 관리합니다.
                 </p>
             </header>
@@ -46,7 +55,7 @@ export const SettingsPage = (): ReactElement => {
                             key={id}
                             type="button"
                             onClick={() => setActiveTab(id)}
-                            className={`sb-nav-button ${activeTab === id ? 'is-active' : ''}`}
+                            className={tabButtonClass(activeTab === id)}
                         >
                             <Icon size={17} strokeWidth={1.8} />
                             <span>{label}</span>

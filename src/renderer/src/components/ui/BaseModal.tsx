@@ -1,34 +1,34 @@
-import { useEffect } from "react";
-import { createPortal } from "react-dom";
+import { type ReactNode, type ReactPortal, type RefObject, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface BaseModalProps {
-    onClose?: () => void;
-    closeOnOverlay?: boolean;
-    position?: "center" | { x: number; y: number };
-    containerRef?: React.RefObject<HTMLDivElement | null>;
-    overlayClassName?: string;
-    children: React.ReactNode;
+    onClose?: () => void
+    closeOnOverlay?: boolean
+    position?: 'center' | { x: number; y: number }
+    containerRef?: RefObject<HTMLDivElement | null>
+    overlayClassName?: string
+    children: ReactNode
 }
 
 export const BaseModal = ({
     onClose,
     closeOnOverlay = true,
-    position = "center",
+    position = 'center',
     containerRef,
-    overlayClassName = "bg-black/50",
-    children,
-}: BaseModalProps) => {
+    overlayClassName = 'bg-black/50',
+    children
+}: BaseModalProps): ReactPortal => {
     // ESC 키로 닫기
     useEffect(() => {
-        if (!onClose) return;
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === "Escape") onClose();
-        };
-        document.addEventListener("keydown", handleEsc);
-        return () => document.removeEventListener("keydown", handleEsc);
-    }, [onClose]);
+        if (!onClose) return
+        const handleEsc = (e: KeyboardEvent): void => {
+            if (e.key === 'Escape') onClose()
+        }
+        document.addEventListener('keydown', handleEsc)
+        return () => document.removeEventListener('keydown', handleEsc)
+    }, [onClose])
 
-    const isCenter = position === "center";
+    const isCenter = position === 'center'
 
     return createPortal(
         <>
@@ -39,9 +39,9 @@ export const BaseModal = ({
             />
             {/* 컨테이너 */}
             {isCenter ? (
-                <div className="fixed inset-0 z-[99999] flex items-center justify-center pointer-events-none">
+                <div className="pointer-events-none fixed inset-0 z-[99999] flex items-center justify-center">
                     <div
-                        className="pointer-events-auto bg-[var(--bg-popup)] shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-2xl overflow-hidden"
+                        className="pointer-events-auto overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {children}
@@ -50,8 +50,11 @@ export const BaseModal = ({
             ) : (
                 <div
                     ref={containerRef}
-                    className="fixed z-[99999] bg-[var(--bg-popup)] shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-lg"
-                    style={{ left: (position as { x: number; y: number }).x, top: (position as { x: number; y: number }).y }}
+                    className="fixed z-[99999] rounded-lg bg-white shadow-2xl dark:bg-slate-900"
+                    style={{
+                        left: (position as { x: number; y: number }).x,
+                        top: (position as { x: number; y: number }).y
+                    }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {children}
@@ -59,5 +62,5 @@ export const BaseModal = ({
             )}
         </>,
         document.body
-    );
-};
+    )
+}

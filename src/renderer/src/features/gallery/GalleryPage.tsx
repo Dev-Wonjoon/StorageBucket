@@ -7,7 +7,6 @@ import { useGalleryFilter } from './useGalleryFilter'
 import { GalleryMediaList } from './GalleryMediaList'
 import { GalleryOverlays } from './GalleryOverlays'
 
-
 export const GalleryPage = (): ReactElement => {
     const [query, setQuery] = useState('')
     const [viewMode, setViewMode] = useState<GalleryViewMode>('grid')
@@ -35,11 +34,11 @@ export const GalleryPage = (): ReactElement => {
         viewMode,
         selectedId,
         selectedIds
-    });
+    })
 
     if (isLoading && galleryItems.length === 0) {
         return (
-            <div className="flex h-full items-center justify-center text-[var(--text-muted)]">
+            <div className="flex h-full items-center justify-center text-slate-500 dark:text-slate-400">
                 <div className="flex flex-col items-center gap-2">
                     <FolderOpen size={28} strokeWidth={1.7} />
                     <p>미디어를 불러오는 중...</p>
@@ -49,13 +48,16 @@ export const GalleryPage = (): ReactElement => {
     }
 
     return (
-        <div className={`sb-page-shell ${selectedMedia ? 'has-detail' : ''}`}
+        <div
+            className="relative grid h-full min-h-0 grid-cols-[minmax(0,1fr)] overflow-hidden"
             onClick={clearSelection}
         >
-            <section className="sb-library">
+            <section className="grid min-h-0 min-w-0 grid-rows-[auto_auto_minmax(0,1fr)] px-5 pb-5 pt-[18px]">
                 <header>
-                    <h1 className="sb-page-title">라이브러리</h1>
-                    <p className="sb-page-subtitle">
+                    <h1 className="m-0 text-2xl font-bold leading-tight text-slate-950 dark:text-slate-100">
+                        라이브러리
+                    </h1>
+                    <p className="mt-1.5 text-[13px] text-slate-500 dark:text-slate-400">
                         최근 저장한 미디어 {galleryItems.length}개 · 선택 {selectedCount}개 · 진행
                         중 {activeDownloads}개
                     </p>
