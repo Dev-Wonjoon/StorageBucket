@@ -4,23 +4,24 @@ import Database from "better-sqlite3";
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from './schema';
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, renameSync } from "fs";
+import { getDatabasePath, getLegacyDatabasePath } from "../main/utils/portablePath";
 
-const getDbPath = () => {
-    if(app.isPackaged) {
-        return join(dirname(app.getPath('exe')), 'storagebucket.db');
-    }
-    return join(process.cwd(), 'storagebucket.db');
-}
-
-const dbPath = getDbPath();
+const dbPath = getDatabasePath();
 const dbFolder = dirname(dbPath);
+const legacyDbPath = getLegacyDatabasePath();
 
 if(!existsSync(dbFolder)) {
     console.log(`[Database] Creating folder: ${dbFolder}`);
     mkdirSync(dbFolder, { recursive: true });
 }
 console.log(`[Database] File path: ${dbPath}`);
+
+if(!existsSync(dbPath) && existsSync(legacyDbPath)) {
+    console.log(`[Database] Moving legacy database: ${legacyDbPath} -> ${dbPath}`);
+    renameSync(legacyDbPath, dbPath);
+}
+
 
 let sqlite;
 try {

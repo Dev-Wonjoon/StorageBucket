@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { app, BrowserWindow, shell, ipcMain, IpcMainInvokeEvent } from 'electron';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
 import { initDB, createFtsTable, rebuildFtsIndex, getFtsCount, getMediaCount } from '../database/index';
@@ -13,6 +13,7 @@ import { mediaHandler } from './handlers/MediaHandler';
 import { systemHandler } from './handlers/SystemHandler';
 import { tagHandler } from './handlers/TagHandler';
 import { searchHandler } from './handlers/SearchHandler';
+import { getPortableDataPath } from './utils/portablePath';
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any>;
 
@@ -102,14 +103,7 @@ export class AppInitializer {
 
     private setupDataPaths(): void {
         // const basePath = app.getAppPath();
-        const rootPath = app.isPackaged
-            ? process.env.PORTABLE_EXECUTABLE_DIR || dirname(process.execPath)
-            : process.cwd();
-
-        const portableDataPath = join(rootPath, 'data');
-        if(!fs.existsSync(portableDataPath)) {
-            fs.mkdirSync(portableDataPath, { recursive: true });
-        }
+        const portableDataPath = getPortableDataPath();
 
         app.setPath('userData', portableDataPath);
         app.setPath('sessionData', join(portableDataPath, 'session'));
