@@ -4,7 +4,8 @@ directories:
   buildResources: build
 files:
   - '!**/.vscode/*'
-  - '!src/*'
+  - '!bin/**'
+  - '!src/*'  
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
@@ -21,7 +22,7 @@ win:
   target: portable
   executableName: storagebucket
 portable:
-  artifactName: "${productName}-${version}-portable.${ext}"
+  artifactName: "${productName}-${version}-.${ext}"
   requestExecutionLevel: "user"
 nsis:
   artifactName: ${name}-${version}-setup.${ext}

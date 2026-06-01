@@ -10,6 +10,8 @@ StorageBucket is a powerful desktop media downloader and manager based on `yt-dl
 
 ---
 
+![Storage Bucket screenshot](docs/images/image_1.png)
+
 ## Key Features
 
 * **yt-dlp Based Downloader**: Provides stable and high-speed downloads using the robust `yt-dlp` engine.
