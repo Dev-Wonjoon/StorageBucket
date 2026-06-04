@@ -22,9 +22,9 @@ export class DownloadManager {
 
     private mainWindow: BrowserWindow | null = null;
 
-    private constructor() {
-        this.restoreQueue();
-    };
+    private restored = false;
+
+    private constructor() {};
 
     private async restoreQueue() {
         try {
@@ -59,6 +59,13 @@ export class DownloadManager {
         }
     }
 
+    private async restoreQueueOnce(): Promise<void> {
+        if(this.restored) return;
+        this.restored = true;
+
+        await this.restoreQueue();
+    }
+
     public static getInstance(): DownloadManager {
         if(!DownloadManager.instance) {
             DownloadManager.instance = new DownloadManager();
@@ -68,6 +75,7 @@ export class DownloadManager {
 
     public setWindow(window: BrowserWindow) {
         this.mainWindow = window;
+        void this.restoreQueueOnce();
     }
 
     public async addJob(url: string, options: DownloadOptions) {

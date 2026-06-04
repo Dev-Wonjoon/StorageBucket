@@ -19,10 +19,11 @@ asarUnpack:
   - resources/**
 win:
   icon: build/icon.ico
-  target: portable
+  target:
+    - zip
   executableName: storagebucket
 portable:
-  artifactName: "${productName}-${version}-.${ext}"
+  artifactName: "${productName}-${version}.${ext}"
   requestExecutionLevel: "user"
 nsis:
   artifactName: ${name}-${version}-setup.${ext}

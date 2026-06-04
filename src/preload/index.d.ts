@@ -41,6 +41,8 @@ declare global {
       suggestAuthors(keyword: string): Promise<string[]>,
       suggestPlatforms(keyword: string): Promise<string[]>,
       suggestTags(keyword: string): Promise<string[]>,
+      onBootstrapReady: (callback: () => void) => () => void,
+      onBootstrapError: (callback: (error: { message: string }) => void) => () => void,
     }
   }
 }

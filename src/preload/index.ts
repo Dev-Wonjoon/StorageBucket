@@ -18,6 +18,16 @@ const api = {
       ipcRenderer.removeListener('download:duplicate', subscription);
     }
   },
+  onBootstrapReady: (callback: () => void) => {
+    const subscription = () => callback();
+    ipcRenderer.on('app:bootstrap-ready', subscription);
+    return () => ipcRenderer.removeListener('app-bootstrap-ready', subscription);
+  },
+  onBootstrapError: (callback: (error: { message: string }) => void) => {
+    const subscription = (_event: any, value: { message: string }) => callback(value);
+    ipcRenderer.on('app:bootstrap-error', subscription);
+    return () => ipcRenderer.removeListener('app-bootstrap-error', subscription);
+  },
   getMediaFiles: () => ipcRenderer.invoke('media:get-all'),
   deleteMedia: (id: string) => ipcRenderer.invoke('media:delete', id),
   getEngineStatus: () => ipcRenderer.invoke('system:engine-status'),

@@ -10,6 +10,14 @@ export const LicenseSettings = (): ReactElement => {
             title="오픈소스 라이센스"
             description="이 애플리케이션은 다음 오픈소스 소프트웨어를 외부 도구로 사용합니다. 이 도구들은 앱에 포함되지 않으며, 사용자가 별도로 설치합니다."
         >
+            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+                <p className="text-sm font-semibold text-slate-950 dark:text-slate-100">
+                    Responsible use
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                    Use external download engines only for media you own, are authorized to download, or that is licensed for download. You are responsible for complying with copyright law, platform terms, and content licenses.
+                </p>
+            </div>
             {licenses.map((license) => (
                 <div key={license.name}>
                     <button

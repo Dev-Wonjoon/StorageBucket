@@ -23,15 +23,7 @@ if(!existsSync(dbPath) && existsSync(legacyDbPath)) {
 }
 
 
-let sqlite;
-try {
-    sqlite = new Database(dbPath, {
-        verbose: console.log
-    });
-} catch(error) {
-    console.error('[Database] Connection Failed. Check if file is locked.');
-    throw error;
-}
+let sqlite = new Database(dbPath);
 
 export const db = drizzle(sqlite, { schema });
 

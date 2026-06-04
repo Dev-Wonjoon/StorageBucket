@@ -22,6 +22,7 @@ export const MediaService = {
             .leftJoin(platforms, eq(medias.platformId, platforms.id))
             .leftJoin(favorites, eq(medias.id, favorites.mediaId))
             .orderBy(desc(medias.createdAt))
+            .limit(60)
             .all()
         return rows.map((row) => ({
             ...row.media,

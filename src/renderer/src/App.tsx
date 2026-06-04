@@ -8,20 +8,43 @@ import { EngineSetupModal } from './components/EngineSetupModal'
 import { FavoritesPage } from './features/favorites/FavoritesPage'
 import { SearchPage } from './features/search/SearchPage'
 import { type EngineStatus } from 'src/shared/types'
+import { StatusMessage } from './components/ui/StatusMessage'
 
 function App(): ReactElement {
     const [activeMenu, setActiveMenu] = useState('gallery')
     const [showSetup, setShowSetup] = useState(false)
+    const [isBootstrapReady, setIsBootstrapReady] = useState(false);
+    const [bootstrapError, setBootstrapError] = useState<string | null>(null);
     const { startDownload } = useDownloadViewModel()
 
     useEffect(() => {
-        if (!window.api?.getEngineStatus) return
+        const removeReady = window.api.onBootstrapReady(() => {
+            setIsBootstrapReady(true);
+        });
 
-        window.api.getEngineStatus().then((status: Record<string, EngineStatus>) => {
-            const hasMissing = Object.values(status).some((s) => !s.installed)
-            if (hasMissing) setShowSetup(true)
-        })
-    }, [])
+        const removeError = window.api.onBootstrapError((error) => {
+            setBootstrapError(error.message);
+        });
+
+        return () => {
+            removeReady();
+            removeError();
+        }
+    }, []);
+
+    useEffect(() => {
+        if(!isBootstrapReady) return;
+        if (!window.api?.getEngineStatus) return;
+
+        const timer = window.setTimeout(() => {
+            window.api.getEngineStatus().then((status: Record<string, EngineStatus>) => {
+                const hasMissing = Object.values(status).some((s) => !s.installed)
+                if(hasMissing) setShowSetup(true);
+            })
+        }, 500);
+
+        return () => window.clearTimeout(timer);
+    }, [isBootstrapReady]);
 
     useEffect(() => {
         const handleGlobalPaste = (e: ClipboardEvent): void => {
@@ -68,7 +91,16 @@ function App(): ReactElement {
                     <DownloadBar />
                 </div>
 
-                <main className="min-h-0 overflow-hidden">{renderContent()}</main>
+                <main>
+                    {bootstrapError ? (
+                        <StatusMessage type="error" message={bootstrapError}/>
+                    ) : !isBootstrapReady ? (
+                        <StatusMessage type="loading" message="Preparing library..."/>
+                    ) : (
+                        renderContent()
+                    )}
+
+                </main>
             </div>
 
             {showSetup && <EngineSetupModal onComplete={() => setShowSetup(false)} />}
