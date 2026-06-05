@@ -1,14 +1,14 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { Media, DownloadItem, GalleryItem } from 'src/shared/types'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type DownloadJob, type GalleryItem, type Media } from 'src/shared/types'
 
 const hashStringToNumber = (str: string): number =>
     Math.abs(str.split('').reduce((acc, ch) => acc * 31 + ch.charCodeAt(0), 0)) || Date.now()
 
-const jobToPlaceholder = (item: DownloadItem): Media => ({
+const jobToPlaceholder = (item: DownloadJob): Media => ({
     id: -hashStringToNumber(item.id),
-    title: item.title || item.url || item.id || 'Downloading...',
+    title: item.title || item.url || item.id || '다운로드 실패',
     filepath: '',
-    thumbnailPath: null,
+    thumbnailPath: item.thumbnail || null,
     duration: 0,
     filesize: 0,
     platformId: null,
@@ -16,7 +16,7 @@ const jobToPlaceholder = (item: DownloadItem): Media => ({
     createdAt: new Date(),
     updatedAt: new Date(),
     author: '',
-    platform: '',
+    platform: item.status === 'failed' ? 'Failed' : 'Queue',
     url: item.url || null
 })
 
@@ -43,7 +43,7 @@ interface GalleryViewModel {
 
 export const useGalleryViewModel = (): GalleryViewModel => {
     const [medias, setMedias] = useState<Media[]>([])
-    const [downloadQueue, setDownloadQueue] = useState<DownloadItem[]>([])
+    const [downloadQueue, setDownloadQueue] = useState<DownloadJob[]>([])
     const [selectedId, setSelectedId] = useState<number | null>(null)
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
     const [isLoading, setIsLoading] = useState(true)
@@ -62,14 +62,19 @@ export const useGalleryViewModel = (): GalleryViewModel => {
     const galleryItems: GalleryItem[] = useMemo(
         () => [
             ...downloadQueue
-                .filter((item) => item.status === 'downloading' || item.status === 'pending')
+                .filter(
+                    (item) =>
+                        item.status === 'downloading' ||
+                        item.status === 'pending' ||
+                        item.status === 'failed'
+                )
                 .map((item) => ({
                     media: jobToPlaceholder(item),
-                    isDownloading: true,
+                    isDownloading: item.status === 'downloading' || item.status === 'pending',
                     progress: item.progress,
-                    speed: item.speed,
-                    eta: item.eta,
-                    downloadId: item.id
+                    downloadId: item.id,
+                    downloadStatus: item.status,
+                    errorMessage: item.errorMessage
                 })),
             ...medias.map((media) => ({
                 media,
@@ -101,6 +106,9 @@ export const useGalleryViewModel = (): GalleryViewModel => {
 
     const handleSelect = useCallback(
         (id: number, e: React.MouseEvent) => {
+            const target = galleryItems.find((item) => item.media.id === id)
+            if (target?.downloadStatus) return
+
             if (e.ctrlKey || e.metaKey) {
                 setSelectedIds((prev) => {
                     const next = new Set(prev)
@@ -111,7 +119,7 @@ export const useGalleryViewModel = (): GalleryViewModel => {
                 setSelectedId(null)
             } else if (e.shiftKey && lastClickedId.current !== null) {
                 const ids = galleryItems
-                    .filter((item) => !item.isDownloading)
+                    .filter((item) => !item.downloadStatus)
                     .map((item) => item.media.id)
                 const startIdx = ids.indexOf(lastClickedId.current)
                 const endIdx = ids.indexOf(id)
@@ -147,9 +155,20 @@ export const useGalleryViewModel = (): GalleryViewModel => {
     }, [loadMedia])
 
     useEffect(() => {
+        window.api
+            ?.getDownloadQueue?.()
+            .then((queue: DownloadJob[]) => {
+                setDownloadQueue(queue)
+            })
+            .catch((error: unknown) => {
+                console.warn('[GalleryViewModel] Failed to load download queue', error)
+            })
+    }, [])
+
+    useEffect(() => {
         if (!window.api?.onQueueUpdate) return
 
-        const removeListener = window.api.onQueueUpdate((updateQueue: DownloadItem[]) => {
+        const removeListener = window.api.onQueueUpdate((updateQueue: DownloadJob[]) => {
             setDownloadQueue(updateQueue)
         })
 

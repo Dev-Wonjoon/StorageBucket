@@ -1,33 +1,55 @@
 # StorageBucket
 
-StorageBucket is a desktop media library manager with support for user-configured external download engines. It helps you save, organize, and review media that you own, are authorized to download, or that is available under a license permitting download.
+StorageBucket is a project designed to make managing various types of media easier.
+<br>
+<br>
 
----
+# 1. Introduction
+
+StorageBucket is a desktop app built to manage media-saving tasks from different sources in one place.  
+Users can register download tasks and organize completed media using tags or favorites.
+
+<br>
+<br>
 
 ## Language
-- **English** (Current)
-- [**한국어 (Korean)**](./README.ko.md)
+
+- **English** (Current page)
+- [**한국어**](./README.ko.md)
 
 ---
 
-![Storage Bucket screenshot](docs/images/image_1.png)
+![StorageBucket screenshot](docs/images/image_1.png)
 
-## Key Features
+## Features
 
-* **External Engine Support**: Works with user-managed external tools such as `yt-dlp`, `gallery-dl`, and FFmpeg.
-* **Authorized Media Workflows**: Designed for media you own, are authorized to download, or that is licensed for download.
-* **Gallery Management**: Systematically organizes and displays downloaded media in a clean gallery view for easy access.
-* **Quality & Format Options**: Allows users to choose between video/audio types and various quality settings such as Best, 1080p, or 720p.
+- Register URL-based media download tasks and manage their status
+- Store download history, thumbnails, and metadata locally
+- Integrate with external tools such as yt-dlp and gallery-dl
+- Manage save paths and app settings
+- Separate main/renderer processes through Electron IPC
+- Manage local data with SQLite and Drizzle ORM
 
----
+<br>
+<br>
 
-## Responsible Use
+## Roadmap
 
-StorageBucket is intended for downloading and managing media that you own, are authorized to download, or that is available under a license permitting download.
+- Download queue priority, pause, and resume
+- Retry failed tasks and provide detailed error logs
+- Download presets and format selection options
+- Improved list rendering performance for large media libraries
 
-Users are responsible for complying with applicable copyright laws, platform terms of service, and content licenses. StorageBucket does not include DRM circumvention features and should not be used to access, download, or distribute copyrighted content without permission.
+<br>
+<br>
 
----
+## Usage Responsibility
+
+This app is intended for personal storage and management of media that the user has the right or permission to use.  
+Users are responsible for complying with copyright laws, platform terms of service, and content licenses. This project is not intended for copyright infringement, DRM circumvention, or unauthorized redistribution.
+
+<br>
+<br>
 
 ## License
 

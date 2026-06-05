@@ -1,15 +1,16 @@
 import { BrowserWindow } from "electron";
 import { randomUUID } from "crypto";
-import { DownloadOptions, DownloadJob} from "../../shared/types";
+import { DownloadOptions, DownloadJob } from "../../shared/types";
 import { downloadQueue } from "../../database/schema";
 import { ne, eq } from "drizzle-orm";
 import { db } from "../../database";
 import { resolveDownloadTask } from "../utils/TaskRouter";
 import { ConfigManager } from "./ConfigManager";
 import { MediaService } from "../services/MediaService";
-import { calculateJobDelay } from "../utils/DelayStrategy";
+import { calculateJobDelay, isInstagramDomain } from "../utils/DelayStrategy";
 import { cleanUrl } from "../utils/ArgsUtils";
 import { checkDuplicate, checkUrlDuplicate } from "../utils/DuplicateChecker";
+import { EngineManager } from "./EngineManager";
 
 
 
@@ -24,7 +25,7 @@ export class DownloadManager {
 
     private restored = false;
 
-    private constructor() {};
+    private constructor() { };
 
     private async restoreQueue() {
         try {
@@ -35,10 +36,13 @@ export class DownloadManager {
                 url: job.url,
                 status: job.status as any,
                 progress: job.progress || 0,
-                options: JSON.parse(job.options as string || '{}')
+                options: JSON.parse(job.options as string || '{}'),
+                title: job.title ?? undefined,
+                thumbnail: job.thumbnail ?? undefined,
+                errorMessage: job.errorMessage ?? undefined
             }));
             this.queue.forEach(job => {
-                if(job.status === 'downloading') {
+                if (job.status === 'downloading') {
                     job.status = 'pending';
                     job.progress = 0;
 
@@ -51,23 +55,23 @@ export class DownloadManager {
 
             console.log(`[DownloadManager] Restored ${this.queue.length} jobs from DB.`);
 
-            if(this.queue.length > 0) {
+            if (this.queue.length > 0) {
                 this.processQueue();
             }
-        } catch(error) {
+        } catch (error) {
             console.error('[DownloadManager] Failed to restore queue:', error);
         }
     }
 
     private async restoreQueueOnce(): Promise<void> {
-        if(this.restored) return;
+        if (this.restored) return;
         this.restored = true;
 
         await this.restoreQueue();
     }
 
     public static getInstance(): DownloadManager {
-        if(!DownloadManager.instance) {
+        if (!DownloadManager.instance) {
             DownloadManager.instance = new DownloadManager();
         }
         return DownloadManager.instance;
@@ -79,16 +83,35 @@ export class DownloadManager {
     }
 
     public async addJob(url: string, options: DownloadOptions) {
+
+
         const cleanedUrl = cleanUrl(url);
-        
-        if(checkUrlDuplicate(cleanedUrl)) {
+
+        if (checkUrlDuplicate(cleanedUrl)) {
             return { success: false, message: '이미 다운로드 된 미디어입니다.' };
+        }
+
+        const engineManager = EngineManager.getInstance();
+        const requiredEngines = isInstagramDomain(cleanedUrl)
+            ? (['gallery-dl', 'ffmpeg'] as const)
+            : (['yt-dlp', 'ffmpeg'] as const);
+
+        const missingEngine = requiredEngines.find((name) => !engineManager.checkExists(name));
+
+        if (missingEngine) {
+            return {
+                success: false,
+                message:
+                    missingEngine === 'ffmpeg'
+                        ? 'FFmpeg 설치가 필요합니다. 설정에서 다운로드 엔진을 먼저 설치해 주세요.'
+                        : `${missingEngine} 설치가 필요합니다. 설정에서 다운로드 엔진을 먼저 설치해 주세요.`
+            }
         }
 
         const inQueue = this.queue.find(
             j => j.url === cleanedUrl && (j.status === 'pending' || j.status === 'downloading')
         );
-        if(inQueue) {
+        if (inQueue) {
             return { success: false, message: '이미 다운로드 대기열에 있는 URL입니다.' };
         }
 
@@ -110,17 +133,20 @@ export class DownloadManager {
                 status: 'pending',
                 options: JSON.stringify(options),
                 progress: 0,
+                title: null,
+                thumbnail: null,
+                errorMessage: null,
                 createdAt: new Date(),
                 updatedAt: new Date()
             });
-        } catch(error) {
+        } catch (error) {
             console.error('[DownloadManager] DB Insert Failed:', error);
         }
 
         console.log(`[DownloadManager] Job added: ${job.id}`);
         this.notifyQueueUpdate();
 
-        if(!this.isProcessing) {
+        if (!this.isProcessing) {
             this.processQueue();
         }
 
@@ -128,13 +154,13 @@ export class DownloadManager {
     }
 
     private async processQueue() {
-        if(this.queue.length === 0 || !this.mainWindow) {
+        if (this.queue.length === 0 || !this.mainWindow) {
             this.isProcessing = false;
             return;
         }
 
         const jobIndex = this.queue.findIndex(j => j.status === 'pending');
-        if(jobIndex === -1) {
+        if (jobIndex === -1) {
             this.isProcessing = false;
             return;
         }
@@ -144,10 +170,10 @@ export class DownloadManager {
 
         try {
             const dupResult = await checkDuplicate(job.url);
-            if(dupResult.isDuplicate) {
+            if (dupResult.isDuplicate) {
                 this.removeJob(job.id);
 
-                if(this.mainWindow && !this.mainWindow.isDestroyed()) {
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
                     this.mainWindow.webContents.send('download:duplicate', {
                         jobId: job.id,
                         message: '이미 다운로드된 미디어입니다.',
@@ -159,10 +185,10 @@ export class DownloadManager {
                 return;
             }
 
-            if(dupResult.matchedIds && dupResult.matchedIds.length > 0) {
+            if (dupResult.matchedIds && dupResult.matchedIds.length > 0) {
                 job.options = { ...job.options, excludeIds: dupResult.matchedIds };
             }
-        } catch(error) {
+        } catch (error) {
             console.warn('[DownloadManager] Duplicate check failed:', error);
         }
 
@@ -179,34 +205,37 @@ export class DownloadManager {
                 job.options,
                 {
                     onProgress: (progress, extra) => {
-                        if(this.mainWindow && !this.mainWindow.isDestroyed()) {
+                        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
                             this.mainWindow.webContents.send('download:progress', {
                                 jobId: job.id,
                                 progress,
                                 ...extra
                             });
                         }
-                        if(progress >= 0) {
-                            this.updateJobStatus(job.id, 'downloading', progress);
+                        if (progress >= 0) {
+                            this.updateJobStatus(job.id, 'downloading', progress, {
+                                title: extra?.title,
+                                thumbnail: extra?.thumbnail,
+                            });
                         }
                     },
                 }
             );
             const result = await handle.promise;
 
-            if(result && result.success) {
+            if (result && result.success) {
                 console.log(`[DownloadManager] Saving metadata to DB...`);
                 try {
                     // changed: register every item from playlist/multi-item downloads.
-                    if(result.multiple && result.items?.length) {
-                        for(const item of result.items) {
+                    if (result.multiple && result.items?.length) {
+                        for (const item of result.items) {
                             MediaService.registerMedia(
                                 item.metadata,
                                 item.videoPath,
                                 item.thumbnailPath
                             );
                         }
-                    } else if(result.metadata) {
+                    } else if (result.metadata) {
                         MediaService.registerMedia(
                             result.metadata,
                             result.videoPath,
@@ -218,14 +247,18 @@ export class DownloadManager {
 
                     // changed: mark completed only after DB registration succeeds.
                     this.updateJobStatus(job.id, 'completed', 100);
-                } catch(error) {
+                } catch (error) {
                     console.error(`[DownloadManager] Failed to save to DB:`, error);
                     this.updateJobStatus(job.id, 'failed');
                 }
             }
-        } catch(error) {
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '다운로드에 실패했습니다.';
+
             console.error(`[DownloadManager] Job failed: ${job.id}`, error);
-            this.updateJobStatus(job.id, 'failed');
+            this.updateJobStatus(job.id, 'failed', job.progress, {
+                errorMessage: message
+            });
         }
         this.notifyQueueUpdate();
 
@@ -236,13 +269,26 @@ export class DownloadManager {
         }, delay);
     }
 
-    private updateJobStatus(id: string, status: DownloadJob['status'], progress?: number) {
+    private updateJobStatus(
+        id: string, 
+        status: DownloadJob['status'], 
+        progress?: number,
+        patch: Partial<DownloadJob> = {}
+    ) {
         const index = this.queue.findIndex(j => j.id === id);
-        if(index === -1) return;
+        if (index === -1) return;
 
-        this.queue[index].status = status;
-        if(progress !== undefined) this.queue[index].progress = progress;
+        const current = this.queue[index];
+        const next = {
+            ...current,
+            ...Object.fromEntries(
+                Object.entries(patch).filter(([, value]) => value !== undefined)
+            ),
+            status,
+            progress: progress ?? current.progress
+        };
 
+        this.queue[index] = next;
         this.notifyQueueUpdate();
 
         try {
@@ -250,17 +296,20 @@ export class DownloadManager {
                 .set({
                     status: status,
                     progress: progress || this.queue[index].progress,
+                    title: next.title ?? null,
+                    thumbnail: next.thumbnail ?? null,
+                    errorMessage: next.errorMessage ?? null,
                     updatedAt: new Date()
                 })
                 .where(eq(downloadQueue.id, id))
                 .run();
-        } catch(error) {
+        } catch (error) {
             console.error('[DownloadManager] DB Update Failed:', error);
         }
     }
 
     private notifyQueueUpdate() {
-        if(this.mainWindow && !this.mainWindow.isDestroyed()) {
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
             this.mainWindow.webContents.send('download:queue-update', this.queue);
         }
     }
@@ -269,7 +318,7 @@ export class DownloadManager {
         this.queue = this.queue.filter(j => j.id !== jobId);
         try {
             db.delete(downloadQueue).where(eq(downloadQueue.id, jobId)).run();
-        } catch(error) {
+        } catch (error) {
             console.error('[DownloadManager] Failed to delete job from DB:', error);
         }
         this.notifyQueueUpdate();
@@ -278,5 +327,9 @@ export class DownloadManager {
     public clearQueue() {
         this.queue = this.queue.filter(j => j.status === 'downloading');
         this.notifyQueueUpdate();
+    }
+
+    public getQueue() {
+        return this.queue;
     }
 }

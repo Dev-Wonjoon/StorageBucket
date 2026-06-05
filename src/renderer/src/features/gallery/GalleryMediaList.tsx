@@ -36,7 +36,7 @@ export const GalleryMediaList = ({
                             : 'grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3.5'
                     }
                 >
-                    {visibleItems.map(({ media, isDownloading, progress, speed, eta }) => (
+                    {visibleItems.map(({ media, isDownloading, progress, speed, eta, downloadStatus, errorMessage }) => (
                         <PhotoCard
                             key={media.id}
                             data={media}
@@ -49,6 +49,8 @@ export const GalleryMediaList = ({
                             progress={progress}
                             speed={speed}
                             eta={eta}
+                            downloadStatus={downloadStatus}
+                            errorMessage={errorMessage}
                             layout={viewMode === 'list' ? 'list' : 'grid'}
                         />
                     ))}

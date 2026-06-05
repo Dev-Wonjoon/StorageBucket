@@ -36,6 +36,7 @@ export interface DownloadJob {
     progress?: number;
     title?: string;
     thumbnail?: string;
+    errorMessage?: string;
 }
 
 export interface VideoInfo {
@@ -76,16 +77,20 @@ export interface GalleryItem {
     speed?: string;
     eta?: string;
     downloadId?: string;
+    downloadStatus?: DownloadJob['status'];
+    errorMessage?: string;
 }
 
 export interface DownloadItem {
     id: string;
-    title: string;
+    title?: string;
     url?: string;
     progress: number;
-    status: 'pending' | 'downloading' | 'completed' | 'error';
+    status: 'pending' | 'downloading' | 'completed' | 'failed' | 'error';
     speed?: string;
     eta?: string;
+    thumbnail?: string;
+    errorMessage?: string;
 }
 
 export interface DownloadState {

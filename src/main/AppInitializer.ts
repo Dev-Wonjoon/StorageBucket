@@ -45,7 +45,9 @@ const lazyHandlers: Record<string, () => Promise<IpcHandler>> = {
     'search:suggest-authors': () => import('./handlers/SearchHandler').then((m) => m.searchHandler['search:suggest-authors']),
     'search:suggest-platforms': () => import('./handlers/SearchHandler').then((m) => m.searchHandler['search:suggest-platforms']),
     'search:suggest-tags': () => import('./handlers/SearchHandler').then((m) => m.searchHandler['search:suggest-tags']),
-    'search:rebuild-index': () => import('./handlers/SearchHandler').then((m) => m.searchHandler['search:rebuild-index'])
+    'search:rebuild-index': () => import('./handlers/SearchHandler').then((m) => m.searchHandler['search:rebuild-index']),
+
+    'download:get-queue': () => import('./handlers/DownloadHandler').then((m) => m.downloadHandler['download:get-queue']),
 }
 
 const APP_USER_MODEL_ID = 'com.storagebucket.app';
@@ -142,6 +144,7 @@ export class AppInitializer {
     private isDatabaseChannel(channel: string): boolean {
         return (
             channel === 'video:download' ||
+            channel === 'download:get-queue' ||
             channel.startsWith('media:') ||
             channel.startsWith('favorite:') ||
             channel.startsWith('tag:') ||

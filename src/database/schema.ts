@@ -175,6 +175,9 @@ export const downloadQueue = sqliteTable('download_queue', {
     status: text('status').notNull(),
     options: text('options', { mode: 'json'}),
     progress: integer('progress').default(0),
+    title: text('title'),
+    thumbnail: text('thumbnail'),
+    errorMessage: text('error_message'),
     createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });

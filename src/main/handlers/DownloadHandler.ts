@@ -7,5 +7,9 @@ export const downloadHandler = {
         const result = await DownloadManager.getInstance().addJob(url, options || {});
         if(result) return result;
         return { success: true, message: "Download added to queue" };
+    },
+
+    'download:get-queue': async () => {
+        return DownloadManager.getInstance().getQueue();
     }
 };

@@ -43,6 +43,7 @@ declare global {
       suggestTags(keyword: string): Promise<string[]>,
       onBootstrapReady: (callback: () => void) => () => void,
       onBootstrapError: (callback: (error: { message: string }) => void) => () => void,
+      getDownloadQueue: () => Promise<any[]>,
     }
   }
 }

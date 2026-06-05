@@ -5,15 +5,17 @@ import { Media, MediaSearchRequest, MediaSearchResult } from '../../shared/types
 
 export const SearchService = {
 
-    // const buildFtsPrefixQuery = (keyword: String) => {
-        
-    // }
+    const buildFtsPrefixQuery = (keyword: String) => {
+        const trimmed = keyword.trim();
+    }
 
     // FTS5 통합 검색
     async search(request: MediaSearchRequest): Promise<MediaSearchResult> {
         const { page = 1, limit = 50, startDate, endDate, keyword, tags: tagFilter, tagMode = 'and', author, platform } = request;
         const offset = (page - 1) * limit;
         const conditions: SQL[] = [];
+
+
 
         // FTS5 MATCH (제목, 작성자, URL, 태그명 통합 검색)
         if (keyword && keyword.trim()) {
