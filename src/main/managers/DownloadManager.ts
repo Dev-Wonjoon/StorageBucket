@@ -1,102 +1,99 @@
-import { BrowserWindow } from "electron";
-import { randomUUID } from "crypto";
-import { DownloadOptions, DownloadJob } from "../../shared/types";
-import { downloadQueue } from "../../database/schema";
-import { ne, eq } from "drizzle-orm";
-import { db } from "../../database";
-import { resolveDownloadTask } from "../utils/TaskRouter";
-import { ConfigManager } from "./ConfigManager";
-import { MediaService } from "../services/MediaService";
-import { calculateJobDelay, isInstagramDomain } from "../utils/DelayStrategy";
-import { cleanUrl } from "../utils/ArgsUtils";
-import { checkDuplicate, checkUrlDuplicate } from "../utils/DuplicateChecker";
-import { EngineManager } from "./EngineManager";
-
-
+import { BrowserWindow } from 'electron'
+import { randomUUID } from 'crypto'
+import { DownloadOptions, DownloadJob } from '../../shared/types'
+import { downloadQueue } from '../../database/schema'
+import { eq } from 'drizzle-orm'
+import { db } from '../../database'
+import { resolveDownloadTask } from '../utils/TaskRouter'
+import { ConfigManager } from './ConfigManager'
+import { MediaService } from '../services/MediaService'
+import { calculateJobDelay, isInstagramDomain } from '../utils/DelayStrategy'
+import { cleanUrl } from '../utils/ArgsUtils'
+import { checkDuplicate, checkUrlDuplicate } from '../utils/DuplicateChecker'
+import { EngineManager } from './EngineManager'
 
 export class DownloadManager {
-    private static instance: DownloadManager;
+    private static instance: DownloadManager
 
-    private queue: DownloadJob[] = [];
+    private queue: DownloadJob[] = []
 
-    private isProcessing = false;
+    private isProcessing = false
 
-    private mainWindow: BrowserWindow | null = null;
+    private mainWindow: BrowserWindow | null = null
 
-    private restored = false;
+    private restored = false
 
-    private constructor() { };
+    private constructor() {}
 
     private async restoreQueue() {
         try {
-            const savedJobs = await db.select().from(downloadQueue).where(ne(downloadQueue.status, 'completed'));
+            const savedJobs = await db.select().from(downloadQueue)
 
-            this.queue = savedJobs.map(job => ({
+            this.queue = savedJobs.map((job) => ({
                 id: job.id,
                 url: job.url,
                 status: job.status as any,
                 progress: job.progress || 0,
-                options: JSON.parse(job.options as string || '{}'),
+                options: JSON.parse((job.options as string) || '{}'),
                 title: job.title ?? undefined,
                 thumbnail: job.thumbnail ?? undefined,
-                errorMessage: job.errorMessage ?? undefined
-            }));
-            this.queue.forEach(job => {
+                errorMessage: job.errorMessage ?? undefined,
+                log: job.log as DownloadJob['log'] | undefined
+            }))
+            this.queue.forEach((job) => {
                 if (job.status === 'downloading') {
-                    job.status = 'pending';
-                    job.progress = 0;
+                    job.status = 'pending'
+                    job.progress = 0
 
                     db.update(downloadQueue)
                         .set({ status: 'pending', progress: 0 })
                         .where(eq(downloadQueue.id, job.id))
-                        .run();
+                        .run()
                 }
-            });
+            })
 
-            console.log(`[DownloadManager] Restored ${this.queue.length} jobs from DB.`);
+            console.log(`[DownloadManager] Restored ${this.queue.length} jobs from DB.`)
 
             if (this.queue.length > 0) {
-                this.processQueue();
+                this.processQueue()
             }
         } catch (error) {
-            console.error('[DownloadManager] Failed to restore queue:', error);
+            console.error('[DownloadManager] Failed to restore queue:', error)
         }
     }
 
     private async restoreQueueOnce(): Promise<void> {
-        if (this.restored) return;
-        this.restored = true;
+        if (this.restored) return
+        this.restored = true
 
-        await this.restoreQueue();
+        await this.restoreQueue()
     }
 
     public static getInstance(): DownloadManager {
         if (!DownloadManager.instance) {
-            DownloadManager.instance = new DownloadManager();
+            DownloadManager.instance = new DownloadManager()
         }
-        return DownloadManager.instance;
+        return DownloadManager.instance
     }
 
     public setWindow(window: BrowserWindow) {
-        this.mainWindow = window;
-        void this.restoreQueueOnce();
+        this.mainWindow = window
+        void this.restoreQueueOnce()
     }
 
     public async addJob(url: string, options: DownloadOptions) {
-
-
-        const cleanedUrl = cleanUrl(url);
+        const cleanedUrl = cleanUrl(url)
 
         if (checkUrlDuplicate(cleanedUrl)) {
-            return { success: false, message: '이미 다운로드 된 미디어입니다.' };
+            return { success: false, message: '이미 다운로드 된 미디어입니다.' }
         }
 
-        const engineManager = EngineManager.getInstance();
+        const engineManager = EngineManager.getInstance()
         const requiredEngines = isInstagramDomain(cleanedUrl)
             ? (['gallery-dl', 'ffmpeg'] as const)
-            : (['yt-dlp', 'ffmpeg'] as const);
+            : (['yt-dlp', 'ffmpeg'] as const)
 
-        const missingEngine = requiredEngines.find((name) => !engineManager.checkExists(name));
+        const missingEngine = requiredEngines.find((name) => !engineManager.checkExists(name))
 
         if (missingEngine) {
             return {
@@ -109,22 +106,22 @@ export class DownloadManager {
         }
 
         const inQueue = this.queue.find(
-            j => j.url === cleanedUrl && (j.status === 'pending' || j.status === 'downloading')
-        );
+            (j) => j.url === cleanedUrl && (j.status === 'pending' || j.status === 'downloading')
+        )
         if (inQueue) {
-            return { success: false, message: '이미 다운로드 대기열에 있는 URL입니다.' };
+            return { success: false, message: '이미 다운로드 대기열에 있는 URL입니다.' }
         }
 
-        const id = randomUUID();
+        const id = randomUUID()
         const job: DownloadJob = {
             id,
             url: cleanedUrl,
             options,
             status: 'pending',
             progress: 0
-        };
+        }
 
-        this.queue.push(job);
+        this.queue.push(job)
 
         try {
             await db.insert(downloadQueue).values({
@@ -138,93 +135,101 @@ export class DownloadManager {
                 errorMessage: null,
                 createdAt: new Date(),
                 updatedAt: new Date()
-            });
+            })
         } catch (error) {
-            console.error('[DownloadManager] DB Insert Failed:', error);
+            console.error('[DownloadManager] DB Insert Failed:', error)
         }
 
-        console.log(`[DownloadManager] Job added: ${job.id}`);
-        this.notifyQueueUpdate();
+        console.log(`[DownloadManager] Job added: ${job.id}`)
+        this.notifyQueueUpdate()
 
         if (!this.isProcessing) {
-            this.processQueue();
+            this.processQueue()
         }
 
-        return { success: true, message: '다운로드가 시작되었습니다.' };
+        return { success: true, message: '다운로드가 시작되었습니다.' }
     }
 
     private async processQueue() {
         if (this.queue.length === 0 || !this.mainWindow) {
-            this.isProcessing = false;
-            return;
+            this.isProcessing = false
+            return
         }
 
-        const jobIndex = this.queue.findIndex(j => j.status === 'pending');
+        const jobIndex = this.queue.findIndex((j) => j.status === 'pending')
         if (jobIndex === -1) {
-            this.isProcessing = false;
-            return;
+            this.isProcessing = false
+            return
         }
 
-        this.isProcessing = true;
-        const job = this.queue[jobIndex];
+        this.isProcessing = true
+        const job = this.queue[jobIndex]
 
         try {
-            const dupResult = await checkDuplicate(job.url);
+            this.appendJobLog(job.id, '중복 검사를 시작했습니다.')
+            const dupResult = await checkDuplicate(job.url)
+            this.appendJobLog(job.id, '중복 검사가 완료되었습니다.')
             if (dupResult.isDuplicate) {
-                this.removeJob(job.id);
+                this.removeJob(job.id)
 
                 if (this.mainWindow && !this.mainWindow.isDestroyed()) {
                     this.mainWindow.webContents.send('download:duplicate', {
                         jobId: job.id,
-                        message: '이미 다운로드된 미디어입니다.',
-                    });
+                        message: '이미 다운로드된 미디어입니다.'
+                    })
                 }
 
-                const delay = calculateJobDelay(job.url);
-                setTimeout(() => this.processQueue(), delay);
-                return;
+                const delay = calculateJobDelay(job.url)
+                setTimeout(() => this.processQueue(), delay)
+                return
             }
 
             if (dupResult.matchedIds && dupResult.matchedIds.length > 0) {
-                job.options = { ...job.options, excludeIds: dupResult.matchedIds };
+                job.options = { ...job.options, excludeIds: dupResult.matchedIds }
             }
         } catch (error) {
-            console.warn('[DownloadManager] Duplicate check failed:', error);
+            console.warn('[DownloadManager] Duplicate check failed:', error)
         }
 
-        this.updateJobStatus(job.id, 'downloading');
-        const config = ConfigManager.getInstance();
-        const basePath = config.getDownloadPath() || process.cwd();
+        this.updateJobStatus(job.id, 'downloading', 0, {
+            log: {
+                summary: '다운로드를 시작했습니다.',
+                steps: ['작업이 시작되었습니다.', '중복 검사를 완료했습니다.'],
+                raw: '',
+                startedAt: new Date().toISOString(),
+                engine: isInstagramDomain(job.url) ? 'gallery-dl' : 'yt-dlp'
+            }
+        })
+        const config = ConfigManager.getInstance()
+        const basePath = config.getDownloadPath() || process.cwd()
 
-        console.log(`[DownloadManager] Starting job ${job.id} to ${basePath}`);
+        console.log(`[DownloadManager] Starting job ${job.id} to ${basePath}`)
 
         try {
-            const handle = resolveDownloadTask(
-                job.url,
-                basePath,
-                job.options,
-                {
-                    onProgress: (progress, extra) => {
-                        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                            this.mainWindow.webContents.send('download:progress', {
-                                jobId: job.id,
-                                progress,
-                                ...extra
-                            });
-                        }
-                        if (progress >= 0) {
-                            this.updateJobStatus(job.id, 'downloading', progress, {
-                                title: extra?.title,
-                                thumbnail: extra?.thumbnail,
-                            });
-                        }
-                    },
+            const handle = resolveDownloadTask(job.url, basePath, job.options, {
+                onProgress: (progress, extra) => {
+                    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                        this.mainWindow.webContents.send('download:progress', {
+                            jobId: job.id,
+                            progress,
+                            ...extra
+                        })
+                    }
+                    if (progress >= 0) {
+                        this.updateJobStatus(job.id, 'downloading', progress, {
+                            title: extra?.title,
+                            thumbnail: extra?.thumbnail
+                        })
+                    }
+                },
+                onLog: (line, type) => {
+                    this.appendJobLog(job.id, line, type)
                 }
-            );
-            const result = await handle.promise;
+            })
+            const result = await handle.promise
 
             if (result && result.success) {
-                console.log(`[DownloadManager] Saving metadata to DB...`);
+                console.log(`[DownloadManager] Saving metadata to DB...`)
                 try {
                     // changed: register every item from playlist/multi-item downloads.
                     if (result.multiple && result.items?.length) {
@@ -233,103 +238,162 @@ export class DownloadManager {
                                 item.metadata,
                                 item.videoPath,
                                 item.thumbnailPath
-                            );
+                            )
                         }
                     } else if (result.metadata) {
                         MediaService.registerMedia(
                             result.metadata,
                             result.videoPath,
                             result.thumbnailPath
-                        );
+                        )
                     } else {
-                        throw new Error('metadata is null');
+                        throw new Error('metadata is null')
                     }
 
                     // changed: mark completed only after DB registration succeeds.
-                    this.updateJobStatus(job.id, 'completed', 100);
+                    this.updateJobStatus(job.id, 'completed', 100, {
+                        errorMessage: null,
+                        log: {
+                            summary: '다운로드가 완료되었습니다.',
+                            steps: [
+                                ...(job.log?.steps ?? []),
+                                '파일 저장이 완료되었습니다.',
+                                '미디어 DB 등록이 완료되었습니다.',
+                                '작업이 성공적으로 종료되었습니다.'
+                            ],
+                            raw: job.log?.raw ?? '',
+                            startedAt: job.log?.startedAt,
+                            finishedAt: new Date().toISOString(),
+                            engine: job.log?.engine,
+                            outputPath: result.videoPath,
+                            itemCount: result.multiple ? (result.items?.length ?? 0) : 1
+                        }
+                    })
                 } catch (error) {
-                    console.error(`[DownloadManager] Failed to save to DB:`, error);
-                    this.updateJobStatus(job.id, 'failed');
+                    console.error(`[DownloadManager] Failed to save to DB:`, error)
+
+                    const message =
+                        error instanceof Error ? error.message : '미디어 DB 등록에 실패했습니다.'
+
+                    this.updateJobStatus(job.id, 'failed', job.progress, {
+                        errorMessage: message.split('\n')[0],
+                        log: {
+                            ...(job.log ?? {}),
+                            summary: message.split('\n')[0],
+                            finishedAt: new Date().toISOString(),
+                            steps: [
+                                ...(job.log?.steps ?? []),
+                                '미디어 DB 등록 중 오류가 발생했습니다.'
+                            ]
+                        }
+                    })
                 }
             }
         } catch (error) {
-            const message = error instanceof Error ? error.message : '다운로드에 실패했습니다.';
+            const message = error instanceof Error ? error.message : '다운로드에 실패했습니다.'
 
-            console.error(`[DownloadManager] Job failed: ${job.id}`, error);
+            console.error(`[DownloadManager] Job failed: ${job.id}`, error)
             this.updateJobStatus(job.id, 'failed', job.progress, {
-                errorMessage: message
-            });
+                errorMessage: message.split('\n')[0],
+                log: {
+                    ...(job.log ?? {}),
+                    summary: message.split('\n')[0],
+                    finishedAt: new Date().toISOString(),
+                    steps: [...(job.log?.steps ?? []), '미디어 DB 등록 중 오류가 발생했습니다.']
+                }
+            })
         }
-        this.notifyQueueUpdate();
+        this.notifyQueueUpdate()
 
-        const delay = calculateJobDelay(job.url);
+        const delay = calculateJobDelay(job.url)
 
         setTimeout(() => {
             this.processQueue()
-        }, delay);
+        }, delay)
+    }
+
+    private appendJobLog(id: string, line: string, type: 'app' | 'raw' = 'app') {
+        const job = this.queue.find((j) => j.id === id)
+        if (!job) return
+
+        const log = job.log ?? { steps: [], raw: '' }
+
+        if (type === 'raw') {
+            log.raw = [log.raw, line].filter(Boolean).join('\n')
+        } else {
+            log.steps = [...(log.steps ?? []), line]
+        }
+
+        job.log = log
+
+        db.update(downloadQueue)
+            .set({ log, updatedAt: new Date() })
+            .where(eq(downloadQueue.id, id))
+            .run()
     }
 
     private updateJobStatus(
-        id: string, 
-        status: DownloadJob['status'], 
+        id: string,
+        status: DownloadJob['status'],
         progress?: number,
         patch: Partial<DownloadJob> = {}
     ) {
-        const index = this.queue.findIndex(j => j.id === id);
-        if (index === -1) return;
+        const index = this.queue.findIndex((j) => j.id === id)
+        if (index === -1) return
 
-        const current = this.queue[index];
+        const current = this.queue[index]
         const next = {
             ...current,
-            ...Object.fromEntries(
-                Object.entries(patch).filter(([, value]) => value !== undefined)
-            ),
+            ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)),
             status,
             progress: progress ?? current.progress
-        };
+        }
 
-        this.queue[index] = next;
-        this.notifyQueueUpdate();
+        this.queue[index] = next
+        this.notifyQueueUpdate()
 
         try {
             db.update(downloadQueue)
                 .set({
                     status: status,
-                    progress: progress || this.queue[index].progress,
+                    progress: progress ?? this.queue[index].progress,
                     title: next.title ?? null,
                     thumbnail: next.thumbnail ?? null,
                     errorMessage: next.errorMessage ?? null,
+                    log: next.log ?? null,
+                    startedAt: next.log?.startedAt ? new Date(next.log.startedAt) : null,
+                    finishedAt: next.log?.finishedAt ? new Date(next.log.finishedAt) : null,
                     updatedAt: new Date()
                 })
                 .where(eq(downloadQueue.id, id))
-                .run();
+                .run()
         } catch (error) {
-            console.error('[DownloadManager] DB Update Failed:', error);
+            console.error('[DownloadManager] DB Update Failed:', error)
         }
     }
 
     private notifyQueueUpdate() {
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-            this.mainWindow.webContents.send('download:queue-update', this.queue);
+            this.mainWindow.webContents.send('download:queue-update', this.queue)
         }
     }
 
     public removeJob(jobId: string) {
-        this.queue = this.queue.filter(j => j.id !== jobId);
+        this.queue = this.queue.filter((j) => j.id !== jobId)
         try {
-            db.delete(downloadQueue).where(eq(downloadQueue.id, jobId)).run();
+            db.delete(downloadQueue).where(eq(downloadQueue.id, jobId)).run()
         } catch (error) {
-            console.error('[DownloadManager] Failed to delete job from DB:', error);
+            console.error('[DownloadManager] Failed to delete job from DB:', error)
         }
-        this.notifyQueueUpdate();
+        this.notifyQueueUpdate()
     }
 
     public clearQueue() {
-        this.queue = this.queue.filter(j => j.status === 'downloading');
-        this.notifyQueueUpdate();
+        this.queue = this.queue.filter((j) => j.status === 'downloading')
+        this.notifyQueueUpdate()
     }
 
     public getQueue() {
-        return this.queue;
+        return this.queue
     }
 }

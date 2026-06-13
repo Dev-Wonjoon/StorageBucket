@@ -1,15 +1,18 @@
 import { type ReactElement, useState } from 'react'
 import { FolderOpen } from 'lucide-react'
+import { type DownloadLog } from 'src/shared/types'
 import { useGalleryViewModel } from './useGalleryViewModel'
 import { GalleryDetailPanel } from './GalleryDetailPanel'
 import { GalleryToolbar, type GalleryViewMode } from './GalleryToolbar'
 import { useGalleryFilter } from './useGalleryFilter'
 import { GalleryMediaList } from './GalleryMediaList'
 import { GalleryOverlays } from './GalleryOverlays'
+import { DownloadLogModal } from './DownloadLogModal'
 
 export const GalleryPage = (): ReactElement => {
     const [query, setQuery] = useState('')
     const [viewMode, setViewMode] = useState<GalleryViewMode>('grid')
+    const [downloadLog, setDownloadLog] = useState<DownloadLog | null>(null)
     const {
         galleryItems,
         selectedId,
@@ -79,6 +82,7 @@ export const GalleryPage = (): ReactElement => {
                     onContextMenu={handleContextMenu}
                     onToggleFavorite={toggleFavorite}
                     onDelete={deleteMedia}
+                    onOpenDownloadLog={setDownloadLog}
                 />
             </section>
 
@@ -101,6 +105,10 @@ export const GalleryPage = (): ReactElement => {
                 onCloseTagModal={closeTagModal}
                 onUpdated={refresh}
             />
+
+            {downloadLog && (
+                <DownloadLogModal log={downloadLog} onClose={() => setDownloadLog(null)} />
+            )}
         </div>
     )
 }

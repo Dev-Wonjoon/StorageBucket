@@ -59,30 +59,40 @@ export const useGalleryViewModel = (): GalleryViewModel => {
         mediaIds: number[]
     } | null>(null)
 
-    const galleryItems: GalleryItem[] = useMemo(
-        () => [
-            ...downloadQueue
-                .filter(
-                    (item) =>
-                        item.status === 'downloading' ||
-                        item.status === 'pending' ||
-                        item.status === 'failed'
-                )
-                .map((item) => ({
-                    media: jobToPlaceholder(item),
-                    isDownloading: item.status === 'downloading' || item.status === 'pending',
-                    progress: item.progress,
-                    downloadId: item.id,
-                    downloadStatus: item.status,
-                    errorMessage: item.errorMessage
-                })),
-            ...medias.map((media) => ({
-                media,
-                isDownloading: false
+    const galleryItems: GalleryItem[] = useMemo(() => {
+        const jobsByUrl = new Map(downloadQueue.map((job) => [job.url, job]))
+
+        const queueItems = downloadQueue
+            .filter(
+                (item) =>
+                    item.status === 'downloading' ||
+                    item.status === 'pending' ||
+                    item.status === 'failed'
+            )
+            .map((item) => ({
+                media: jobToPlaceholder(item),
+                isDownloading: item.status === 'downloading' || item.status === 'pending',
+                progress: item.progress,
+                downloadId: item.id,
+                downloadStatus: item.status,
+                errorMessage: item.errorMessage ?? undefined,
+                downloadLog: item.log
             }))
-        ],
-        [downloadQueue, medias]
-    )
+
+        const mediaItems = medias.map((media) => {
+            const job = media.url ? jobsByUrl.get(media.url) : undefined
+            const completedJob = job?.status === 'completed' ? job : undefined
+
+            return {
+                media,
+                isDownloading: false,
+                downloadId: completedJob?.id,
+                errorMessage: completedJob?.errorMessage ?? undefined,
+                downloadLog: completedJob?.log
+            }
+        })
+        return [...queueItems, ...mediaItems]
+    }, [downloadQueue, medias])
 
     const loadMedia = useCallback(async () => {
         try {

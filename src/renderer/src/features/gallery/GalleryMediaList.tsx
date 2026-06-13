@@ -1,6 +1,6 @@
 import { type MouseEvent, type ReactElement } from 'react'
 import { FolderOpen } from 'lucide-react'
-import { GalleryItem } from 'src/shared/types'
+import { type DownloadLog, GalleryItem } from 'src/shared/types'
 import { EmptyState } from '@renderer/components/ui/EmptyState'
 import { GalleryViewMode } from './GalleryToolbar'
 import { PhotoCard } from './PhotoCard'
@@ -14,6 +14,7 @@ interface GalleryMediaListProps {
     onContextMenu: (e: MouseEvent, mediaId: number) => void
     onToggleFavorite: (id: number) => void
     onDelete: (id: number) => void
+    onOpenDownloadLog: (log: DownloadLog) => void
 }
 
 export const GalleryMediaList = ({
@@ -24,7 +25,8 @@ export const GalleryMediaList = ({
     onSelect,
     onContextMenu,
     onToggleFavorite,
-    onDelete
+    onDelete,
+    onOpenDownloadLog
 }: GalleryMediaListProps): ReactElement => {
     return (
         <div className="min-h-0 overflow-auto pr-1">
@@ -36,24 +38,37 @@ export const GalleryMediaList = ({
                             : 'grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3.5'
                     }
                 >
-                    {visibleItems.map(({ media, isDownloading, progress, speed, eta, downloadStatus, errorMessage }) => (
-                        <PhotoCard
-                            key={media.id}
-                            data={media}
-                            isSelected={selectedId === media.id || selectedIds.has(media.id)}
-                            onClick={onSelect}
-                            onContextMenu={onContextMenu}
-                            onToggleFavorite={onToggleFavorite}
-                            onDelete={onDelete}
-                            isDownloading={isDownloading}
-                            progress={progress}
-                            speed={speed}
-                            eta={eta}
-                            downloadStatus={downloadStatus}
-                            errorMessage={errorMessage}
-                            layout={viewMode === 'list' ? 'list' : 'grid'}
-                        />
-                    ))}
+                    {visibleItems.map(
+                        ({
+                            media,
+                            isDownloading,
+                            progress,
+                            speed,
+                            eta,
+                            downloadStatus,
+                            errorMessage,
+                            downloadLog
+                        }) => (
+                            <PhotoCard
+                                key={media.id}
+                                data={media}
+                                isSelected={selectedId === media.id || selectedIds.has(media.id)}
+                                onClick={onSelect}
+                                onContextMenu={onContextMenu}
+                                onToggleFavorite={onToggleFavorite}
+                                onDelete={onDelete}
+                                isDownloading={isDownloading}
+                                progress={progress}
+                                speed={speed}
+                                eta={eta}
+                                downloadStatus={downloadStatus}
+                                errorMessage={errorMessage}
+                                downloadLog={downloadLog}
+                                onOpenDownloadLog={onOpenDownloadLog}
+                                layout={viewMode === 'list' ? 'list' : 'grid'}
+                            />
+                        )
+                    )}
                 </div>
             ) : (
                 <EmptyState

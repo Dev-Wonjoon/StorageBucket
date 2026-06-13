@@ -9,7 +9,7 @@ export const en = {
     download: {
         placeholder: 'Enter URL to download',
         button: 'Download',
-        activeCount: '{{count}} in progress',
+        activeCount: '{{count}} in progress'
     },
     settings: {
         title: 'Settings',

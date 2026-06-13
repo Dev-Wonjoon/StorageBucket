@@ -13,38 +13,38 @@ import { StatusMessage } from './components/ui/StatusMessage'
 function App(): ReactElement {
     const [activeMenu, setActiveMenu] = useState('gallery')
     const [showSetup, setShowSetup] = useState(false)
-    const [isBootstrapReady, setIsBootstrapReady] = useState(false);
-    const [bootstrapError, setBootstrapError] = useState<string | null>(null);
+    const [isBootstrapReady, setIsBootstrapReady] = useState(false)
+    const [bootstrapError, setBootstrapError] = useState<string | null>(null)
     const { startDownload } = useDownloadViewModel()
 
     useEffect(() => {
         const removeReady = window.api.onBootstrapReady(() => {
-            setIsBootstrapReady(true);
-        });
+            setIsBootstrapReady(true)
+        })
 
         const removeError = window.api.onBootstrapError((error) => {
-            setBootstrapError(error.message);
-        });
+            setBootstrapError(error.message)
+        })
 
         return () => {
-            removeReady();
-            removeError();
+            removeReady()
+            removeError()
         }
-    }, []);
+    }, [])
 
     useEffect(() => {
-        if(!isBootstrapReady) return;
-        if (!window.api?.getEngineStatus) return;
+        if (!isBootstrapReady) return
+        if (!window.api?.getEngineStatus) return
 
         const timer = window.setTimeout(() => {
             window.api.getEngineStatus().then((status: Record<string, EngineStatus>) => {
                 const hasMissing = Object.values(status).some((s) => !s.installed)
-                if(hasMissing) setShowSetup(true);
+                if (hasMissing) setShowSetup(true)
             })
-        }, 500);
+        }, 500)
 
-        return () => window.clearTimeout(timer);
-    }, [isBootstrapReady]);
+        return () => window.clearTimeout(timer)
+    }, [isBootstrapReady])
 
     useEffect(() => {
         const handleGlobalPaste = (e: ClipboardEvent): void => {
@@ -93,13 +93,12 @@ function App(): ReactElement {
 
                 <main>
                     {bootstrapError ? (
-                        <StatusMessage type="error" message={bootstrapError}/>
+                        <StatusMessage type="error" message={bootstrapError} />
                     ) : !isBootstrapReady ? (
-                        <StatusMessage type="loading" message="Preparing library..."/>
+                        <StatusMessage type="loading" message="Preparing library..." />
                     ) : (
                         renderContent()
                     )}
-
                 </main>
             </div>
 

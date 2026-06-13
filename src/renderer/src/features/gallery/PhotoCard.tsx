@@ -1,7 +1,7 @@
-import { FileWarning, Loader2, Star, Trash2 } from 'lucide-react'
+import { FileWarning, Info, Loader2, Star, Trash2 } from 'lucide-react'
 import { type ReactElement } from 'react'
-import { IconButton } from '@renderer/components/ui/IconButton'
-import { type DownloadJob, type Media } from 'src/shared/types'
+import { CardActionButtons, type CardActionButtonItem } from '@renderer/components/ui/CardActionButton'
+import { type DownloadJob, type DownloadLog, type Media } from 'src/shared/types'
 import { usePhotoCardViewModel } from './usePhotoCardViewModel'
 
 interface PhotoCardProps {
@@ -17,6 +17,8 @@ interface PhotoCardProps {
     eta?: string
     downloadStatus?: DownloadJob['status']
     errorMessage?: string
+    downloadLog?: DownloadLog
+    onOpenDownloadLog?: (log: DownloadLog) => void
     layout?: 'grid' | 'list'
 }
 
@@ -39,6 +41,8 @@ export const PhotoCard = ({
     eta,
     downloadStatus,
     errorMessage,
+    downloadLog,
+    onOpenDownloadLog,
     layout = 'grid'
 }: PhotoCardProps): ReactElement => {
     const { imageUrl, displayTime, hasThumbnail, handleClick } = usePhotoCardViewModel(data)
@@ -47,6 +51,53 @@ export const PhotoCard = ({
     const isActiveQueueItem =
         downloadStatus === 'pending' || downloadStatus === 'downloading' || isDownloading
     const platform = data.platform || (isFailed ? 'Failed' : isQueueItem ? 'Queue' : 'Media')
+    const visibleDownloadLog =
+        downloadLog ??
+        (errorMessage
+            ? {
+                summary: errorMessage,
+                steps: ['저장된 상세 로그가 없습니다.'],
+                raw: errorMessage
+            }
+            : undefined)
+
+    const actionItems: CardActionButtonItem[] = [
+        {
+            key: 'log',
+            title: '다운로드 로그',
+            icon: <Info size={16} />,
+            hidden: !visibleDownloadLog,
+            onClick: (e) => {
+                e.stopPropagation()
+                if (!visibleDownloadLog) return
+                onOpenDownloadLog?.(visibleDownloadLog)
+            }
+        },
+        {
+            key: 'favorite',
+            title: data.isFavorite ? '즐겨찾기 해제' : '즐겨찾기',
+            icon: data.isFavorite ? (
+                <Star size={16} fill="currentColor" className="text-rose-600 dark:text-rose-400" />
+            ) : (
+                <Star size={16} />
+            ),
+            hidden: isQueueItem,
+            onClick: (e) => {
+                e.stopPropagation()
+                onToggleFavorite(data.id)
+            }
+        },
+        {
+            key: 'delete',
+            title: '삭제',
+            icon: <Trash2 size={16} />,
+            hidden: isQueueItem,
+            onClick: (e) => {
+                e.stopPropagation()
+                onDelete(data.id)
+            }
+        }
+    ]
 
     return (
         <article
@@ -129,75 +180,11 @@ export const PhotoCard = ({
                                 ]
                                     .filter(Boolean)
                                     .join(' · ')
-                              : formatDate(data.createdAt)}
+                            : formatDate(data.createdAt)}
                     </span>
                 </div>
-
-                {!isQueueItem && (
-                    <div className="flex justify-end gap-1">
-                        <IconButton
-                            size="sm"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                onToggleFavorite(data.id)
-                            }}
-                            title={data.isFavorite ? '즐겨찾기 해제' : '즐겨찾기'}
-                            aria-label={data.isFavorite ? '즐겨찾기 해제' : '즐겨찾기'}
-                        >
-                            {data.isFavorite ? (
-                                <Star
-                                    size={16}
-                                    fill="currentColor"
-                                    className="text-rose-600 dark:text-rose-400"
-                                />
-                            ) : (
-                                <Star size={16} />
-                            )}
-                        </IconButton>
-                        <IconButton
-                            size="sm"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                onDelete(data.id)
-                            }}
-                            title="삭제"
-                            aria-label="삭제"
-                        >
-                            <Trash2 size={16} />
-                        </IconButton>
-                    </div>
-                )}
+                <CardActionButtons items={actionItems} />
             </div>
-
-            {isQueueItem && (
-                <div className="grid gap-2 border-t border-slate-200 bg-rose-50 p-2.5 dark:border-slate-800 dark:bg-rose-950">
-                    <div className="flex justify-between gap-2 text-xs font-bold text-rose-600 dark:text-rose-300">
-                        <span>
-                            {isFailed
-                                ? '다운로드 실패'
-                                : progress !== undefined
-                                  ? `${progress.toFixed(0)}%`
-                                  : '대기 중'}
-                        </span>
-                        <span
-                            className="min-w-0 truncate"
-                            title={isFailed ? errorMessage : undefined}
-                        >
-                            {isFailed
-                                ? errorMessage || '오류가 발생했습니다.'
-                                : speed || eta || '준비 중'}
-                        </span>
-                    </div>
-                    {!isFailed && (
-                        <div className="h-1.5 overflow-hidden rounded-full bg-rose-200 dark:bg-rose-900">
-                            <div
-                                className="h-full rounded-full bg-rose-600 dark:bg-rose-400"
-                                style={{ width: `${Math.max(0, Math.min(progress || 0, 100))}%` }}
-                            />
-                        </div>
-                    )}
-                </div>
-            )}
         </article>
     )
 }

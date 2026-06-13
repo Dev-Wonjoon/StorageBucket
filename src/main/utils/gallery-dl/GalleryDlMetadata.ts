@@ -1,13 +1,13 @@
-import type { InstagramStructure } from "../../../shared/instagram_structure";
+import type { InstagramStructure } from '../../../shared/instagram_structure'
 
-export const GALLERY_DL_PRINT_PREFIX = 'STORAGEBUCKET_META';
+export const GALLERY_DL_PRINT_PREFIX = 'STORAGEBUCKET_META'
 
 const normalizePrintedValue = (value?: string): string | undefined => {
-    if(!value || value == 'None' || value == 'null' || value === 'undefined') {
-        return undefined;
-    };
+    if (!value || value == 'None' || value == 'null' || value === 'undefined') {
+        return undefined
+    }
 
-    return value;
+    return value
 }
 
 export const buildGalleryDlPrintFormat = (): string => {
@@ -24,13 +24,11 @@ export const buildGalleryDlPrintFormat = (): string => {
         '{display_url}',
         '{filename}',
         '{extension}'
-    ].join('\t');
+    ].join('\t')
 }
 
-export const parseGalleryDlPrintMetadata = (
-    line: string
-): Partial<InstagramStructure> | null => {
-    if(!line.startsWith(`${GALLERY_DL_PRINT_PREFIX}\t`)) return null;
+export const parseGalleryDlPrintMetadata = (line: string): Partial<InstagramStructure> | null => {
+    if (!line.startsWith(`${GALLERY_DL_PRINT_PREFIX}\t`)) return null
 
     const [
         ,
@@ -45,7 +43,7 @@ export const parseGalleryDlPrintMetadata = (
         display_url,
         filename,
         extension
-    ] = line.split('\t');
+    ] = line.split('\t')
 
     return {
         category: normalizePrintedValue(category),

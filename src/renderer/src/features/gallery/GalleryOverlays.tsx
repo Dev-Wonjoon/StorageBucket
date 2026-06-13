@@ -1,15 +1,15 @@
-import { type ReactElement } from "react";
-import { ContextMenu } from "@renderer/components/ui/ContextMenu";
-import { TagModal } from "@renderer/components/TagModal";
+import { type ReactElement } from 'react'
+import { ContextMenu } from '@renderer/components/ui/ContextMenu'
+import { TagModal } from '@renderer/components/TagModal'
 
 interface GalleryOverlaysProps {
-    contextMenu: { x: number; y: number; mediaId: number } | null;
-    tagModal: { mediaIds: number[] } | null;
-    selectedIds: Set<number>;
-    onCloseContextMenu: () => void;
-    onOpenTagModal: (mediaIds: number[]) => void;
-    onDeleteMedia: (id: number) => void;
-    onCloseTagModal: () => void;
+    contextMenu: { x: number; y: number; mediaId: number } | null
+    tagModal: { mediaIds: number[] } | null
+    selectedIds: Set<number>
+    onCloseContextMenu: () => void
+    onOpenTagModal: (mediaIds: number[]) => void
+    onDeleteMedia: (id: number) => void
+    onCloseTagModal: () => void
     onUpdated: () => void | Promise<void>
 }
 
@@ -35,9 +35,7 @@ export const GalleryOverlays = ({
                             label: '태그 관리',
                             onClick: () => {
                                 const ids =
-                                    selectedIds.size > 0
-                                        ? [...selectedIds]
-                                        : [contextMenu.mediaId]
+                                    selectedIds.size > 0 ? [...selectedIds] : [contextMenu.mediaId]
 
                                 onOpenTagModal(ids)
                             }

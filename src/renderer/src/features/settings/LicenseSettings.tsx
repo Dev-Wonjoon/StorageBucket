@@ -15,7 +15,9 @@ export const LicenseSettings = (): ReactElement => {
                     Responsible use
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                    Use external download engines only for media you own, are authorized to download, or that is licensed for download. You are responsible for complying with copyright law, platform terms, and content licenses.
+                    Use external download engines only for media you own, are authorized to
+                    download, or that is licensed for download. You are responsible for complying
+                    with copyright law, platform terms, and content licenses.
                 </p>
             </div>
             {licenses.map((license) => (
