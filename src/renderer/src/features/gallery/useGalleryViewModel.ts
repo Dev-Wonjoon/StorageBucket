@@ -109,11 +109,11 @@ export const useGalleryViewModel = (): GalleryViewModel => {
     const loadMedia = useCallback(async () => {
         try {
             setIsLoading(true)
-            if (!window.electron?.ipcRenderer) {
+            if (!window.api?.getMediaFiles) {
                 setMedias([])
                 return
             }
-            const items = await window.electron.ipcRenderer.invoke('media:get-all')
+            const items = await window.api.getMediaFiles()
             setMedias(items)
         } catch (error) {
             console.error('[GalleryViewModel] Failed to load media', error)
@@ -198,8 +198,8 @@ export const useGalleryViewModel = (): GalleryViewModel => {
     }, [])
 
     const toggleFavorite = useCallback(async (id: number) => {
-        if (!window.electron?.ipcRenderer) return
-        const isFav = await window.electron.ipcRenderer.invoke('favorite:toggle', id)
+        if (!window.api?.toggleFavorite) return
+        const isFav = await window.api.toggleFavorite(id)
         setMedias((prev) => prev.map((m) => (m.id === id ? { ...m, isFavorite: isFav } : m)))
     }, [])
 
@@ -207,8 +207,8 @@ export const useGalleryViewModel = (): GalleryViewModel => {
         const confirmed = window.confirm('정말 삭제하시겠습니까?')
         if (!confirmed) return
 
-        if (!window.electron?.ipcRenderer) return
-        await window.electron.ipcRenderer.invoke('media:delete', id)
+        if (!window.api?.deleteMedia) return
+        await window.api.deleteMedia(id)
         setMedias((prev) => prev.filter((m) => m.id !== id))
     }, [])
 

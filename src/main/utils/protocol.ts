@@ -1,8 +1,15 @@
 import { protocol, net } from 'electron'
+import path from 'path';
 import { pathToFileURL } from 'url'
+import { ConfigManager } from '../managers/ConfigManager';
 
 export function setupMediaProtocol() {
     protocol.handle('media', (request) => {
+        if(!request.url.startsWith('media://')) {
+            return new Response('Bad request', { status: 400 })
+        }
+
+
         // 1. 프로토콜 접두사 제거 (media://)
         let rawPath = request.url.replace(/^media:\/\//, '')
 
@@ -21,7 +28,24 @@ export function setupMediaProtocol() {
         }
 
         try {
-            return net.fetch(pathToFileURL(finalPath).toString())
+            const resolvedPath = path.resolve(finalPath)
+            const config = ConfigManager.getInstance()
+            const allowedRoots = [
+                path.resolve(config.getDownloadPath()),
+                path.resolve(config.getThumbnailPath())
+            ]
+
+            const isAllowed = allowedRoots.some((root) => {
+                const relative = path.relative(root, resolvedPath)
+                return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
+            })
+
+            if(!isAllowed) {
+                console.warn('[MediaProtocol] Blocked path outside media roots:', resolvedPath)
+                return new Response('Forbidden', { status: 403 })
+            }
+
+            return net.fetch(pathToFileURL(resolvedPath).toString())
         } catch (error) {
             console.error('[MediaService] Error loading:', finalPath, error)
             return new Response('Not found', { status: 404 })

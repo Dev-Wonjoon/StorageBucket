@@ -13,7 +13,6 @@ export const buildYtdlpArgs = (
 
     const args = [
         url,
-        '--no-check-certificates',
         '--no-warning',
         '--newline',
         '--no-write-thumbnail',

@@ -1,8 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
 import type { MediaSearchRequest } from '../shared/types'
 
 const api = {
+    getDownloadPath: () => ipcRenderer.invoke('get-download-path'),
+    setDownloadPath: () => ipcRenderer.invoke('set-download-path'),
+    showItemInFolder: (mediaId: number) => ipcRenderer.invoke('shell:show-item', mediaId),
+    getVersions: () => process.versions,
     downloadVideo: (url: string, options?: any) =>
         ipcRenderer.invoke('video:download', url, options),
     getDownloadQueue: () => ipcRenderer.invoke('download:get-queue'),
@@ -23,15 +26,15 @@ const api = {
     onBootstrapReady: (callback: () => void) => {
         const subscription = () => callback()
         ipcRenderer.on('app:bootstrap-ready', subscription)
-        return () => ipcRenderer.removeListener('app-bootstrap-ready', subscription)
+        return () => ipcRenderer.removeListener('app:bootstrap-ready', subscription)
     },
     onBootstrapError: (callback: (error: { message: string }) => void) => {
         const subscription = (_event: any, value: { message: string }) => callback(value)
         ipcRenderer.on('app:bootstrap-error', subscription)
-        return () => ipcRenderer.removeListener('app-bootstrap-error', subscription)
+        return () => ipcRenderer.removeListener('app:bootstrap-error', subscription)
     },
     getMediaFiles: () => ipcRenderer.invoke('media:get-all'),
-    deleteMedia: (id: string) => ipcRenderer.invoke('media:delete', id),
+    deleteMedia: (id: number) => ipcRenderer.invoke('media:delete', id),
     getEngineStatus: () => ipcRenderer.invoke('system:engine-status'),
     installEngine: (engine: string) => ipcRenderer.invoke('system:engine-install', engine),
     getEngineLicenses: () => ipcRenderer.invoke('system:engine-licenses'),
@@ -50,7 +53,7 @@ const api = {
     deleteTag: (tagId: number) => ipcRenderer.invoke('tag:delete', tagId),
     addTagsToMedia: (mediaId: number, tagNames: string[]) =>
         ipcRenderer.invoke('tag:add-to-media', mediaId, tagNames),
-    removeTagFromMedia: (mediaId: number, tagId: number[]) =>
+    removeTagFromMedia: (mediaId: number, tagId: number) =>
         ipcRenderer.invoke('tag:remove-from-media', mediaId, tagId),
     bulkAddTags: (mediaIds: number[], tagNames: string[]) =>
         ipcRenderer.invoke('tag:bulk-add', mediaIds, tagNames),
@@ -66,14 +69,8 @@ const api = {
 
 if (process.contextIsolated) {
     try {
-        contextBridge.exposeInMainWorld('electron', electronAPI)
         contextBridge.exposeInMainWorld('api', api)
     } catch (error) {
         console.error(error)
     }
-} else {
-    // @ts-ignore (define in dts)
-    window.electron = electronAPI
-    // @ts-ignore (define in dts)
-    window.api = api
 }

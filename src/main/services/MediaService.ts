@@ -63,6 +63,16 @@ export const MediaService = {
         deleteFtsEntry(id)
     },
 
+    getFilepathById(id: number): string | null {
+        const media = db
+            .select({ filepath: medias.filepath})
+            .from(medias)
+            .where(eq(medias.id, id))
+            .get()
+
+        return media?.filepath ?? null
+    },
+
     registerMedia(metadata: any, localFilepath: string, thumbnailPath: string | null): Media {
         return db.transaction((tx) => {
             const platformName = metadata.extractor_key || metadata.extractor || 'unknown'

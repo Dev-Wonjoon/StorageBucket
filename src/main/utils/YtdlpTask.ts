@@ -271,8 +271,7 @@ export function fetchVideoIds(url: string): Promise<string[]> {
         '--print',
         'id',
         '--no-download',
-        '--no-warning',
-        '--no-check-certificates'
+        '--no-warning'
     ]
 
     return new Promise((resolve, reject) => {

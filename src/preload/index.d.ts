@@ -1,11 +1,12 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
-import { ipcRenderer } from 'electron';
 import { MediaSearchRequest, MediaSearchResult } from 'src/shared/types';
 
 declare global {
   interface Window {
-    electron: ElectronAPI
     api: {
+      getDownloadPath: () => Promise<string>,
+      setDownloadPath: () => Promise<string | null>,
+      showItemInFolder: (mediaId: number) => Promise<void>,
+      getVersions: () => NodeJS.ProcessVersions,
       downloadVideo: (url: string, options?: any) => Promise<{
         success: boolean;
         data?: any;
@@ -15,7 +16,7 @@ declare global {
       onDuplicate: (callback: (data: { jobId: string; message: string }) => void) => () => void;
       onQueueUpdate: (callback: (queue: any[]) => void) => () => void
       getMediaFiles: () => Promise<any[]>,
-      deleteMedia: (id: string) => Promise<{ success: boolean; error?: string }>,
+      deleteMedia: (id: number) => Promise<{ success: boolean; error?: string }>,
       getEngineStatus: () => Promise<Record<string, { installed: boolean; version: string | null }>>,
       installEngine: (engine: string) => Promise<boolean>,
       getEngineLicenses: () => Promise<Array<{ name: string; url: string; notice: string }>>,

@@ -33,9 +33,7 @@ export const GalleryOverlays = ({
         : undefined
 
     const contextMedia = contextItem?.media
-    const isFailed = contextItem?.downloadStatus === 'failed'
     const isQueueItem = Boolean(contextItem?.downloadStatus)
-    const hasFile = Boolean(contextMedia?.filepath)
     const hasUrl = Boolean(contextMedia?.url)
     const hasLog = Boolean(contextItem?.downloadLog || contextItem?.errorMessage)
 

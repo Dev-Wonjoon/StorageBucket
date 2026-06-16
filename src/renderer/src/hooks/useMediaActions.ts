@@ -87,8 +87,8 @@ export const useMediaActions = (
 
     const toggleFavorite = useCallback(
         async (id: number) => {
-            if (!window.electron?.ipcRenderer) return
-            const isFavorite = await window.electron.ipcRenderer.invoke('favorite:toggle', id)
+            if (!window.api?.toggleFavorite) return
+            const isFavorite = await window.api.toggleFavorite(id)
             setItems((prev) =>
                 prev.map((item) => (item.id === id ? { ...item, isFavorite } : item))
             )
@@ -101,8 +101,8 @@ export const useMediaActions = (
             const confirmed = window.confirm('?뺣쭚 ??젣?섏떆寃좎뒿?덇퉴?')
             if (!confirmed) return
 
-            if (!window.electron?.ipcRenderer) return
-            await window.electron.ipcRenderer.invoke('media:delete', id)
+            if (!window.api?.deleteMedia) return
+            await window.api.deleteMedia(id)
             setItems((prev) => prev.filter((item) => item.id !== id))
             setSelectedId((prev) => (prev === id ? null : prev))
             setSelectedIds((prev) => {

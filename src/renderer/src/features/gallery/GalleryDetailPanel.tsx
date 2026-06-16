@@ -123,7 +123,7 @@ export const GalleryDetailPanel = ({
                     disabled={!media?.filepath}
                     onClick={() =>
                         media?.filepath &&
-                        window.electron?.ipcRenderer?.invoke('shell:show-item', media.filepath)
+                        window.api?.showItemInFolder?.(media.id)
                     }
                 >
                     <ExternalLink size={16} strokeWidth={1.8} />

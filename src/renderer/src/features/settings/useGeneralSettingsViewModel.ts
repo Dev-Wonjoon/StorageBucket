@@ -5,7 +5,7 @@ export const useGeneralSettingsViewModel = () => {
 
     const loadPath = useCallback(async () => {
         try {
-            const path = await window.electron.ipcRenderer.invoke('get-download-path')
+            const path = await window.api.getDownloadPath()
             setDownloadPath(path || '')
         } catch (error) {
             console.error('[GeneralSettingsVM] Failed to load path:', error)
@@ -18,7 +18,7 @@ export const useGeneralSettingsViewModel = () => {
 
     const changePath = useCallback(async () => {
         try {
-            const newPath = await window.electron.ipcRenderer.invoke('set-download-path')
+            const newPath = await window.api.setDownloadPath()
             if (newPath) setDownloadPath(newPath)
         } catch (error) {
             console.error('[GeneralSettingsVM] Failed to change path:', error)

@@ -10,10 +10,13 @@ export const mediaHandler = {
         return await MediaService.delete(id)
     },
 
-    'shell:show-item': (_: Electron.IpcMainInvokeEvent, filepath: string) => {
-        shell.showItemInFolder(filepath)
+    'shell:show-item': (_: Electron.IpcMainInvokeEvent, mediaId: number) => {
+        const filepath = MediaService.getFilepathById(mediaId)
+        if(!filepath) return false
 
         const win = BrowserWindow.getFocusedWindow()
         if (win) win.blur()
+
+        return true
     }
 }

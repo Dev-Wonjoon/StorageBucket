@@ -22,11 +22,11 @@ export const useFavoritesViewModel = (): FavoritesViewModel => {
     const loadFavorites = useCallback(async () => {
         try {
             setIsLoading(true)
-            if (!window.electron?.ipcRenderer) {
+            if (!window.api?.getFavorites) {
                 setMedias([])
                 return
             }
-            const items = await window.electron.ipcRenderer.invoke('favorite:get-all')
+            const items = await window.api.getFavorites()
             setMedias(items.map((item: FavoriteRow) => ({ ...item.media, isFavorite: true })))
         } catch (error) {
             console.error('[FavoritesViewModel] Failed to load favorites', error)
@@ -40,8 +40,8 @@ export const useFavoritesViewModel = (): FavoritesViewModel => {
     }, [])
 
     const toggleFavorite = useCallback(async (id: number) => {
-        if (!window.electron?.ipcRenderer) return
-        await window.electron.ipcRenderer.invoke('favorite:toggle', id)
+        if (!window.api?.toggleFavorite) return
+        await window.api.toggleFavorite(id)
         setMedias((prev) => prev.filter((m) => m.id !== id))
     }, [])
 
@@ -49,8 +49,8 @@ export const useFavoritesViewModel = (): FavoritesViewModel => {
         const confirmed = window.confirm('정말 삭제하시겠습니까?')
         if (!confirmed) return
 
-        if (!window.electron?.ipcRenderer) return
-        await window.electron.ipcRenderer.invoke('media:delete', id)
+        if (!window.api?.deleteMedia) return
+        await window.api.deleteMedia(id)
         setMedias((prev) => prev.filter((m) => m.id !== id))
     }, [])
 

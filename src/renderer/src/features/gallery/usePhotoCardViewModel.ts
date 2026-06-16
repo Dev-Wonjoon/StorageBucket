@@ -30,8 +30,8 @@ export const usePhotoCardViewModel = (data: Media): PhotoCardViewModel => {
 
     const openInFolder = useCallback(() => {
         if (!data.filepath) return
-        if (!window.electron?.ipcRenderer) return
-        window.electron.ipcRenderer.invoke('shell:show-item', data.filepath)
+        if (!window.api?.showItemInFolder) return
+        void window.api.showItemInFolder(data.id)
     }, [data.filepath])
 
     const handleClick = useCallback(

@@ -118,7 +118,10 @@ export class AppInitializer {
             icon: this.resolveWindowIconPath(),
             webPreferences: {
                 preload: join(__dirname, '../preload/index.js'),
-                sandbox: false
+                nodeIntegration: false,
+                contextIsolation: true,
+                sandbox: true,
+                webSecurity: true
             }
         })
 
@@ -127,7 +130,15 @@ export class AppInitializer {
         })
 
         this.mainWindow.webContents.setWindowOpenHandler((details) => {
-            shell.openExternal(details.url)
+            try {
+                const url = new URL(details.url)
+                if (url.protocol === 'https:') {
+                    void shell.openExternal(url.toString())
+                }
+            } catch {
+                console.warn('[WindowOpen] Blocked invalid URL:', details.url)
+            }
+
             return { action: 'deny' }
         })
 
