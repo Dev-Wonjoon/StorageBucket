@@ -1,61 +1,65 @@
-import type { InstagramStructure } from '../../../shared/instagram_structure'
+import type { GalleryDlRawMetadata } from '../../../shared/gallery_dl_raw_metadata'
+import { firstValidText } from '../MetadataValue'
 
 export const GALLERY_DL_PRINT_PREFIX = 'STORAGEBUCKET_META'
 
-const normalizePrintedValue = (value?: string): string | undefined => {
-    if (!value || value == 'None' || value == 'null' || value === 'undefined') {
-        return undefined
-    }
-
-    return value
-}
+const GALLERY_DL_PRINT_FIELDS = [
+    'extractor',
+    'category',
+    'subcategory',
+    '_archive',
+    'archive',
+    'archive_id',
+    'owner_id',
+    'user_id',
+    'uploader_id',
+    'username',
+    'fullname',
+    'uploader',
+    'uploader_url',
+    'post_id',
+    'post_url',
+    'shortcode',
+    'tweet_id',
+    'tweet_url',
+    'conversation_id',
+    'media_id',
+    'sidecar_media_id',
+    'id',
+    'webpage_url',
+    'url',
+    'display_url',
+    'video_url',
+    'thumbnail',
+    'filename',
+    'extension',
+    'filesize',
+    'title',
+    'description',
+    'caption',
+    'date',
+    'post_date'
+] as const
 
 export const buildGalleryDlPrintFormat = (): string => {
-    return [
-        GALLERY_DL_PRINT_PREFIX,
-        '{category}',
-        '{owner_id}',
-        '{username}',
-        '{fullname}',
-        '{post_id}',
-        '{media_id}',
-        '{shortcode}',
-        '{post_url}',
-        '{display_url}',
-        '{filename}',
-        '{extension}'
-    ].join('\t')
+    return [GALLERY_DL_PRINT_PREFIX, ...GALLERY_DL_PRINT_FIELDS.map((field) => `{${field}}`)].join(
+        '\t'
+    )
 }
 
-export const parseGalleryDlPrintMetadata = (line: string): Partial<InstagramStructure> | null => {
+export const parseGalleryDlPrintMetadata = (line: string): GalleryDlRawMetadata | null => {
     if (!line.startsWith(`${GALLERY_DL_PRINT_PREFIX}\t`)) return null
 
-    const [
-        ,
-        category,
-        owner_id,
-        username,
-        fullname,
-        post_id,
-        media_id,
-        shortcode,
-        post_url,
-        display_url,
-        filename,
-        extension
-    ] = line.split('\t')
+    const [, ...values] = line.split('\t')
+    const metadata: GalleryDlRawMetadata = {}
 
-    return {
-        category: normalizePrintedValue(category),
-        owner_id: normalizePrintedValue(owner_id),
-        username: normalizePrintedValue(username),
-        fullname: normalizePrintedValue(fullname),
-        post_id: normalizePrintedValue(post_id),
-        media_id: normalizePrintedValue(media_id),
-        shortcode: normalizePrintedValue(shortcode),
-        post_url: normalizePrintedValue(post_url),
-        display_url: normalizePrintedValue(display_url),
-        filename: normalizePrintedValue(filename),
-        extension: normalizePrintedValue(extension)
-    }
+    GALLERY_DL_PRINT_FIELDS.forEach((field, index) => {
+        const value = firstValidText(values[index])
+
+        if (value) {
+            metadata[field] = value
+        }
+    })
+
+    return metadata
 }

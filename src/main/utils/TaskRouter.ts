@@ -12,7 +12,7 @@ const GALLERY_DL_DOMAINS = [
     'x.com'
 ]
 
-function shouldUseGalleryDl(url: string): boolean {
+export function shouldUseGalleryDl(url: string): boolean {
     try {
         const hostname = new URL(url).hostname
         return GALLERY_DL_DOMAINS.includes(hostname)

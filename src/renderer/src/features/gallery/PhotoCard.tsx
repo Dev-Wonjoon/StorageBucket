@@ -106,7 +106,7 @@ export const PhotoCard = ({
                 if (!isQueueItem) handleClick(onClick, e)
             }}
             onContextMenu={(e) => {
-                if (!isQueueItem && onContextMenu) {
+                if (onContextMenu) {
                     e.preventDefault()
                     onContextMenu(e, data.id)
                 }

@@ -38,6 +38,8 @@ export interface DownloadJob {
     thumbnail?: string
     errorMessage?: string | null
     log?: DownloadLog
+    createdAt?: Date | string | null
+    updatedAt?: Date | string | null
 }
 
 export interface VideoInfo {

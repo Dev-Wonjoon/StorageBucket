@@ -1,6 +1,4 @@
-import type { ExternalMediaStructure } from './external_structure'
-
-export interface YtdlpStructure extends ExternalMediaStructure {
+export interface YtdlpStructure {
     downloader: 'yt-dlp'
 
     extractor?: string

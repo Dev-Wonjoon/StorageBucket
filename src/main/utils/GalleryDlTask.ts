@@ -1,9 +1,11 @@
 import { ChildProcess, spawn } from 'child_process'
 import fs from 'fs'
+import path from 'path'
 import { BinManager } from '../managers/BinManager'
 import { ConfigManager } from '../managers/ConfigManager'
 import { DownloadResult, DownloadResultItem, TaskCallbacks, TaskHandle } from '../../shared/types'
-import type { InstagramStructure } from '../../shared/instagram_structure'
+import type { ExternalMediaStructure } from '../../shared/external_structure'
+import type { GalleryDlRawMetadata } from '../../shared/gallery_dl_raw_metadata'
 import { cleanUrl } from './ArgsUtils'
 import {
     buildGalleryDlPrintFormat,
@@ -11,7 +13,64 @@ import {
 } from './gallery-dl/GalleryDlMetadata'
 import { buildGalleryDlDownloadedFilePath } from './gallery-dl/GalleryDlPath'
 import { createGalleryDlVideoThumbnail } from './gallery-dl/GalleryDlThumbnail'
-import { mapGalleryDlInstagramMetadata } from './gallery-dl/GalleryResultMapper'
+import {
+    mapExternalMediaToDownloadMetadata,
+    mapGalleryDlMetadata
+} from './gallery-dl/GalleryResultMapper'
+import { firstValidText } from './MetadataValue'
+
+const findFileByHints = (directory: string, hints: string[], depth = 0): string | null => {
+    if (depth > 3) return null
+    if (!fs.existsSync(directory)) return null
+
+    const entries = fs.readdirSync(directory, { withFileTypes: true })
+
+    for (const entry of entries) {
+        const fullPath = path.join(directory, entry.name)
+
+        if (entry.isFile()) {
+            const lowerName = entry.name.toLowerCase()
+            const matched = hints.some((hint) => lowerName.includes(hint.toLowerCase()))
+
+            if (matched) return fullPath
+        }
+
+        if (entry.isDirectory()) {
+            const found = findFileByHints(fullPath, hints, depth + 1)
+            if (found) return found
+        }
+    }
+    return null
+}
+
+const findExistingGalleryDlFile = (
+    expectedPath: string,
+    basePath: string,
+    info: GalleryDlRawMetadata,
+    url: string
+): string | null => {
+    if (fs.existsSync(expectedPath)) return expectedPath
+
+    const siteKey =
+        firstValidText(info.category) ?? new URL(url).hostname.replace(/^www\./, '').split('.')[0]
+    const filenameHints = [
+        firstValidText(info.media_id),
+        firstValidText(info.sidecar_media_id),
+        firstValidText(info.id),
+        firstValidText(info.filename)
+    ].filter((value): value is string => !!value)
+
+    const searchRoots = [path.dirname(expectedPath), path.join(basePath, siteKey), basePath]
+
+    for (const root of searchRoots) {
+        if (!fs.existsSync(root)) continue
+
+        const found = findFileByHints(root, filenameHints)
+        if (found) return found
+    }
+
+    return null
+}
 
 export function downloadGalleryDl(
     url: string,
@@ -31,7 +90,7 @@ export function downloadGalleryDl(
             '-d',
             basePath,
             '-o',
-            'directory=["{category}", "{owner_id}"]',
+            'directory=["{category}"]',
             '-o',
             'filename="{media_id}_{filename}.{extension}"',
             '--Print',
@@ -50,7 +109,7 @@ export function downloadGalleryDl(
 
         proc = spawn(galleryDlPath, args)
 
-        const downloadedItems: Partial<InstagramStructure>[] = []
+        const downloadedItems: GalleryDlRawMetadata[] = []
         let stdoutBuffer = ''
         let stderrBuffer = ''
 
@@ -92,31 +151,40 @@ export function downloadGalleryDl(
 
             if (code === 0 && downloadedItems.length > 0) {
                 // changed: 같은 포스트의 sidecar 이미지는 첫 번째 항목만 카드로 등록
-                const seenPostKeys = new Set<string>()
+                const seenContentKeys = new Set<string>()
+                const normalizedItems = downloadedItems.map((raw) => ({
+                    raw,
+                    item: mapGalleryDlMetadata(raw, cleanUrl(url))
+                }))
 
-                const firstItemsByPost = downloadedItems.filter((info) => {
-                    const postKey = info.post_id || info.post_url || info.shortcode || info.media_id
+                const firstItemsByContent = normalizedItems.filter(({ item }) => {
+                    const groupKey = getExternalContentGroupKey(item)
 
-                    if (!postKey) return true
-
-                    if (seenPostKeys.has(postKey)) {
+                    if (seenContentKeys.has(groupKey)) {
                         return false
                     }
 
-                    seenPostKeys.add(postKey)
+                    seenContentKeys.add(groupKey)
                     return true
                 })
 
-                const results: DownloadResultItem[] = firstItemsByPost
-                    .map((info) => {
-                        const file = buildGalleryDlDownloadedFilePath(basePath, info, url)
-                        if (!fs.existsSync(file)) return null
+                const results: DownloadResultItem[] = firstItemsByContent
+                    .map(({ raw, item }) => {
+                        const expectedFile = buildGalleryDlDownloadedFilePath(basePath, raw, url)
+                        const file = findExistingGalleryDlFile(expectedFile, basePath, raw, url)
+                        if (!file) {
+                            console.warn(
+                                '[GalleryDlTask] Downloaded file not found: ',
+                                expectedFile,
+                                raw
+                            )
+                            return null
+                        }
 
                         const isImage = !!file.match(/\.(jpg|jpeg|png|webp|gif|heic)$/i)
-                        const metadata = mapGalleryDlInstagramMetadata(
-                            info,
+                        const metadata = mapExternalMediaToDownloadMetadata(
+                            item,
                             file,
-                            url,
                             fs.statSync(file).size
                         )
 
@@ -169,4 +237,20 @@ export function downloadGalleryDl(
             proc?.kill()
         }
     }
+}
+
+const getExternalContentGroupKey = (item: ExternalMediaStructure): string => {
+    const contentKey = firstValidText(item.contentKey, item.contentUrl)
+
+    if (contentKey) {
+        return `${item.downloader}:${item.extractor}:content:${contentKey}`
+    }
+
+    const fileKey = firstValidText(item.fileKey, item.filename)
+
+    if (fileKey) {
+        return `${item.downloader}:${item.extractor}:file:${fileKey}`
+    }
+
+    return `${item.downloader}:${item.extractor}:source:${item.sourceUrl}`
 }

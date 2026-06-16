@@ -5,6 +5,7 @@ interface ContextMenuItem {
     label: string
     onClick: () => void
     danger?: boolean
+    disabled?: boolean
 }
 
 interface ContextMenuProps {
@@ -40,15 +41,20 @@ export const ContextMenu = ({ x, y, items, onClose }: ContextMenuProps): ReactEl
                 {items.map((item, i) => (
                     <button
                         key={i}
+                        type="button"
+                        disabled={item.disabled}
                         onClick={() => {
+                            if (item.disabled) return
                             item.onClick()
                             onClose()
                         }}
-                        className={`block w-full cursor-pointer border-none bg-transparent px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 ${
-                            item.danger
-                                ? 'text-rose-500 dark:text-rose-400'
-                                : 'text-slate-950 dark:text-slate-100'
-                        }`}
+                        className={`block w-full border-none bg-transparent px-4 py-2 text-left text-sm ${item.disabled
+                                ? 'cursor-not-allowed text-slate-400 opacity-60 dark:text-slate-600'
+                                : `cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 ${item.danger
+                                    ? 'text-rose-500 dark:text-rose-400'
+                                    : 'text-slate-950 dark:text-slate-100'
+                                }`
+                            }`}
                     >
                         {item.label}
                     </button>

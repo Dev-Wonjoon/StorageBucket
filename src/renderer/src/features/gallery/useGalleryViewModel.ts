@@ -4,6 +4,13 @@ import { type DownloadJob, type GalleryItem, type Media } from 'src/shared/types
 const hashStringToNumber = (str: string): number =>
     Math.abs(str.split('').reduce((acc, ch) => acc * 31 + ch.charCodeAt(0), 0)) || Date.now()
 
+const toDate = (value?: Date | string | null): Date => {
+    if(!value) return new Date(0)
+
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? new Date(0) : date
+}
+
 const jobToPlaceholder = (item: DownloadJob): Media => ({
     id: -hashStringToNumber(item.id),
     title: item.title || item.url || item.id || '다운로드 실패',
@@ -13,8 +20,8 @@ const jobToPlaceholder = (item: DownloadJob): Media => ({
     filesize: 0,
     platformId: null,
     profileId: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: toDate(item.createdAt),
+    updatedAt: toDate(item.updatedAt),
     author: '',
     platform: item.status === 'failed' ? 'Failed' : 'Queue',
     url: item.url || null
@@ -91,7 +98,12 @@ export const useGalleryViewModel = (): GalleryViewModel => {
                 downloadLog: completedJob?.log
             }
         })
-        return [...queueItems, ...mediaItems]
+        return [...queueItems, ...mediaItems].sort((a, b) => {
+            const aTime = new Date(a.media.createdAt).getTime()
+            const bTime = new Date(b.media.createdAt).getTime()
+
+            return bTime - aTime
+        })
     }, [downloadQueue, medias])
 
     const loadMedia = useCallback(async () => {

@@ -97,11 +97,13 @@ export const GalleryPage = (): ReactElement => {
 
             <GalleryOverlays
                 contextMenu={contextMenu}
+                galleryItems={galleryItems}
                 tagModal={tagModal}
                 selectedIds={selectedIds}
                 onCloseContextMenu={closeContextMenu}
                 onOpenTagModal={openTagModal}
                 onDeleteMedia={deleteMedia}
+                onOpenDownloadLog={setDownloadLog}
                 onCloseTagModal={closeTagModal}
                 onUpdated={refresh}
             />

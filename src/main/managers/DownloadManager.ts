@@ -4,10 +4,10 @@ import { DownloadOptions, DownloadJob } from '../../shared/types'
 import { downloadQueue } from '../../database/schema'
 import { eq } from 'drizzle-orm'
 import { db } from '../../database'
-import { resolveDownloadTask } from '../utils/TaskRouter'
+import { resolveDownloadTask, shouldUseGalleryDl } from '../utils/TaskRouter'
 import { ConfigManager } from './ConfigManager'
 import { MediaService } from '../services/MediaService'
-import { calculateJobDelay, isInstagramDomain } from '../utils/DelayStrategy'
+import { calculateJobDelay } from '../utils/DelayStrategy'
 import { cleanUrl } from '../utils/ArgsUtils'
 import { checkDuplicate, checkUrlDuplicate } from '../utils/DuplicateChecker'
 import { EngineManager } from './EngineManager'
@@ -32,13 +32,15 @@ export class DownloadManager {
             this.queue = savedJobs.map((job) => ({
                 id: job.id,
                 url: job.url,
-                status: job.status as any,
+                status: job.status as DownloadJob['status'],
                 progress: job.progress || 0,
                 options: JSON.parse((job.options as string) || '{}'),
                 title: job.title ?? undefined,
                 thumbnail: job.thumbnail ?? undefined,
                 errorMessage: job.errorMessage ?? undefined,
-                log: job.log as DownloadJob['log'] | undefined
+                log: job.log as DownloadJob['log'] | undefined,
+                createdAt: job.createdAt ?? undefined,
+                updatedAt: job.updatedAt ?? undefined
             }))
             this.queue.forEach((job) => {
                 if (job.status === 'downloading') {
@@ -89,7 +91,8 @@ export class DownloadManager {
         }
 
         const engineManager = EngineManager.getInstance()
-        const requiredEngines = isInstagramDomain(cleanedUrl)
+        const useGalleryDl = shouldUseGalleryDl(cleanedUrl)
+        const requiredEngines = useGalleryDl
             ? (['gallery-dl', 'ffmpeg'] as const)
             : (['yt-dlp', 'ffmpeg'] as const)
 
@@ -113,12 +116,15 @@ export class DownloadManager {
         }
 
         const id = randomUUID()
+        const now = new Date()
         const job: DownloadJob = {
             id,
             url: cleanedUrl,
             options,
             status: 'pending',
-            progress: 0
+            progress: 0,
+            createdAt: now,
+            updatedAt: now
         }
 
         this.queue.push(job)
@@ -133,8 +139,8 @@ export class DownloadManager {
                 title: null,
                 thumbnail: null,
                 errorMessage: null,
-                createdAt: new Date(),
-                updatedAt: new Date()
+                createdAt: now,
+                updatedAt: now
             })
         } catch (error) {
             console.error('[DownloadManager] DB Insert Failed:', error)
@@ -197,7 +203,7 @@ export class DownloadManager {
                 steps: ['작업이 시작되었습니다.', '중복 검사를 완료했습니다.'],
                 raw: '',
                 startedAt: new Date().toISOString(),
-                engine: isInstagramDomain(job.url) ? 'gallery-dl' : 'yt-dlp'
+                engine: shouldUseGalleryDl(job.url) ? 'gallery-dl' : 'yt-dlp'
             }
         })
         const config = ConfigManager.getInstance()
@@ -250,7 +256,6 @@ export class DownloadManager {
                         throw new Error('metadata is null')
                     }
 
-                    // changed: mark completed only after DB registration succeeds.
                     this.updateJobStatus(job.id, 'completed', 100, {
                         errorMessage: null,
                         log: {
@@ -342,11 +347,13 @@ export class DownloadManager {
         if (index === -1) return
 
         const current = this.queue[index]
+        const now = new Date()
         const next = {
             ...current,
             ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)),
             status,
-            progress: progress ?? current.progress
+            progress: progress ?? current.progress,
+            updatedAt: now
         }
 
         this.queue[index] = next
@@ -363,7 +370,7 @@ export class DownloadManager {
                     log: next.log ?? null,
                     startedAt: next.log?.startedAt ? new Date(next.log.startedAt) : null,
                     finishedAt: next.log?.finishedAt ? new Date(next.log.finishedAt) : null,
-                    updatedAt: new Date()
+                    updatedAt: now
                 })
                 .where(eq(downloadQueue.id, id))
                 .run()
