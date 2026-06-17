@@ -12,6 +12,27 @@ import { cleanUrl } from '../utils/ArgsUtils'
 import { checkDuplicate, checkUrlDuplicate } from '../utils/DuplicateChecker'
 import { EngineManager } from './EngineManager'
 
+const ALLOWED_DOWNLOAD_PROTOCOLS = new Set(['http:', 'https:'])
+
+const normalizeDownloadUrl = (rawUrl: string): string | null => {
+    if(typeof rawUrl !== 'string') return null
+
+    const trimmedUrl = rawUrl.trim()
+    if(!trimmedUrl) return null
+
+    try {
+        const parsedUrl = new URL(trimmedUrl)
+        if(!ALLOWED_DOWNLOAD_PROTOCOLS.has(parsedUrl.protocol)) {
+            return null
+        }
+        
+
+        return cleanUrl(parsedUrl.toString())
+    } catch {
+        return null
+    }
+}
+
 export class DownloadManager {
     private static instance: DownloadManager
 
@@ -84,7 +105,14 @@ export class DownloadManager {
     }
 
     public async addJob(url: string, options: DownloadOptions) {
-        const cleanedUrl = cleanUrl(url)
+        const cleanedUrl = normalizeDownloadUrl(url)
+
+        if(!cleanedUrl) {
+            return {
+                success: false,
+                message: '지원하지 않는 URL 형식입니다. http/https 주소만 다운로드할 수 있습니다.'
+            }
+        }
 
         if (checkUrlDuplicate(cleanedUrl)) {
             return { success: false, message: '이미 다운로드 된 미디어입니다.' }

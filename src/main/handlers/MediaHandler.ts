@@ -14,6 +14,8 @@ export const mediaHandler = {
         const filepath = MediaService.getFilepathById(mediaId)
         if(!filepath) return false
 
+        shell.showItemInFolder(filepath)
+
         const win = BrowserWindow.getFocusedWindow()
         if (win) win.blur()
 

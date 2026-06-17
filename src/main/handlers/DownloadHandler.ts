@@ -11,5 +11,9 @@ export const downloadHandler = {
 
     'download:get-queue': async () => {
         return DownloadManager.getInstance().getQueue()
+    },
+    'download:remove-job': async (_: IpcMainInvokeEvent, jobId: string) => {
+        DownloadManager.getInstance().removeJob(jobId)
+        return true
     }
 }

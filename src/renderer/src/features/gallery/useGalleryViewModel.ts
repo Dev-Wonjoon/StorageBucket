@@ -207,10 +207,21 @@ export const useGalleryViewModel = (): GalleryViewModel => {
         const confirmed = window.confirm('정말 삭제하시겠습니까?')
         if (!confirmed) return
 
+        const target = galleryItems.find((item) => item.media.id === id)
+
+        if(target?.downloadId && target.downloadStatus) {
+            if(!window.api?.removeDownloadJob) return
+            await window.api.removeDownloadJob(target.downloadId)
+            setDownloadQueue((prev) => prev.filter((job) => job.id !== target.downloadId))
+            setContextMenu(null)
+            return
+        }
+
         if (!window.api?.deleteMedia) return
         await window.api.deleteMedia(id)
         setMedias((prev) => prev.filter((m) => m.id !== id))
-    }, [])
+        setContextMenu(null)
+    }, [galleryItems])
 
     const selectAll = useCallback(() => {
         const allIds = medias.map((m) => m.id)
