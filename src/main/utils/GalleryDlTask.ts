@@ -19,6 +19,48 @@ import {
 } from './gallery-dl/GalleryResultMapper'
 import { firstValidText } from './MetadataValue'
 
+const MEDIA_EXTENSIONS = new Set([
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.webp',
+    '.gif',
+    '.heic',
+    '.mp4',
+    '.mov',
+    '.webm',
+    '.mkv',
+])
+
+const isMediaFile = (file: string): boolean => {
+    return MEDIA_EXTENSIONS.has(path.extname(file).toLowerCase())
+}
+
+const readGalleryDlSidecarMetadata = (file: string): GalleryDlRawMetadata | null => {
+    const parsed = path.parse(file)
+    const candidates = [
+        `${file}.json`,
+        path.join(parsed.dir, `${parsed.name}.json`),
+    ]
+
+    for(const candidate of candidates) {
+        if(!fs.existsSync(candidate)) continue
+
+        try {
+            const metadata = JSON.parse(fs.readFileSync(candidate, 'utf-8'))
+
+            if(metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+                return metadata as GalleryDlRawMetadata
+            }
+        } catch(error) {
+            console.warn('[GalleryDlTask] Failed to read metadata sidecar:', candidate, error)
+        }
+    }
+
+    return null
+}
+
+
 const findFileByHints = (directory: string, hints: string[], depth = 0): string | null => {
     if (depth > 3) return null
     if (!fs.existsSync(directory)) return null
@@ -28,7 +70,7 @@ const findFileByHints = (directory: string, hints: string[], depth = 0): string 
     for (const entry of entries) {
         const fullPath = path.join(directory, entry.name)
 
-        if (entry.isFile()) {
+        if (entry.isFile() && isMediaFile(fullPath)) {
             const lowerName = entry.name.toLowerCase()
             const matched = hints.some((hint) => lowerName.includes(hint.toLowerCase()))
 
@@ -93,6 +135,7 @@ export function downloadGalleryDl(
             'directory=["{category}"]',
             '-o',
             'filename="{media_id}_{filename}.{extension}"',
+            '--write-metadata',
             '--Print',
             metadataPrintFormat
         ]
@@ -107,7 +150,13 @@ export function downloadGalleryDl(
 
         console.log(`[GalleryDlTask] command: ${galleryDlPath} ${args.join(' ')}`)
 
-        proc = spawn(galleryDlPath, args)
+        proc = spawn(galleryDlPath, args, {
+            env: {
+                ...process.env,
+                PYTHONUTF8: '1',
+                PYTHONIOENCODING: 'utf-8'
+            }
+        })
 
         const downloadedItems: GalleryDlRawMetadata[] = []
         let stdoutBuffer = ''
@@ -129,6 +178,7 @@ export function downloadGalleryDl(
                 }
 
                 downloadedItems.push(info)
+                callbacks?.onLog?.(`[gallery-dl metadata] ${JSON.stringify(info)}`, 'raw')
                 callbacks.onProgress(50, {
                     status: 'downloading',
                     itemCount: downloadedItems.length
@@ -181,9 +231,16 @@ export function downloadGalleryDl(
                             return null
                         }
 
+                        const sidecarRaw = readGalleryDlSidecarMetadata(file)
+                        const mergedRaw = sidecarRaw ? { ...raw, ...sidecarRaw } : raw
+                        const mediaItem = sidecarRaw ? mapGalleryDlMetadata(mergedRaw, cleanUrl(url)) : item
+
+                        if(sidecarRaw) {
+                            callbacks.onLog?.(`[gallery-dl metadata] ${JSON.stringify(mergedRaw)}`, 'raw')
+                        }
                         const isImage = !!file.match(/\.(jpg|jpeg|png|webp|gif|heic)$/i)
                         const metadata = mapExternalMediaToDownloadMetadata(
-                            item,
+                            mediaItem,
                             file,
                             fs.statSync(file).size
                         )

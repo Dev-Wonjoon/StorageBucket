@@ -16,30 +16,98 @@ export type GalleryDlFieldMap = {
 }
 
 export const DEFAULT_GALLERY_DL_FIELD_MAP: GalleryDlFieldMap = {
-    contentKey: ['_archive', 'archive', 'archive_id'],
-    contentUrl: ['webpage_url', 'post_url', 'tweet_url', 'url'],
-    fileKey: ['media_id', 'sidecar_media_id', 'id'],
+    contentKey: ['_archive', 'archive', 'archive_id', 'post_id', 'id'],
+    contentUrl: ['webpage_url', 'post_url', 'tweet_url', 'permalink', 'link', 'url'],
+    fileKey: ['media_id', 'sidecar_media_id', 'image_id', 'file_id', 'id'],
     filename: ['filename', '_filename'],
     extension: ['extension', 'ext'],
     filesize: ['filesize', 'file_size'],
-    ownerKey: ['owner_id', 'user_id', 'uploader_id', 'channel_id'],
-    ownerName: ['username', 'fullname', 'uploader', 'author', 'channel'],
-    ownerUrl: ['uploader_url', 'channel_url', 'user_url'],
-    thumbnailUrl: ['thumbnail', 'display_url'],
-    mediaUrl: ['video_url', 'display_url', 'url'],
-    title: ['title'],
-    description: ['description', 'caption'],
-    date: ['date', 'post_date', 'created_at']
+    ownerKey: ['owner_id', 'user_id', 'uploader_id', 'author_id', 'channel_id', 'user.id'],
+    ownerName: [
+        'username',
+        'fullname',
+        'uploader',
+        'author',
+        'channel',
+        'user.nick',
+        'user.name',
+        'user.screen_name',
+        'user',
+        'account',
+        'name'
+    ],
+    ownerUrl: ['uploader_url', 'author_url', 'channel_url', 'user_url', 'profile_url'],
+    thumbnailUrl: ['thumbnail', 'preview', 'preview_url', 'display_url'],
+    mediaUrl: ['video_url', 'image_url', 'file_url', 'display_url', 'url'],
+    title: ['title', 'description', 'caption', 'content', 'text'],
+    description: ['description', 'caption', 'content', 'text', 'comment', 'alt'],
+    date: ['date', 'post_date', 'created_at', 'created', 'timestamp', 'datetime']
 }
 
 const GALLERY_DL_EXTRACTOR_FIELD_MAP: Partial<Record<string, Partial<GalleryDlFieldMap>>> = {
     twitter: {
-        contentKey: ['tweet_id', 'conversation_id'],
-        contentUrl: ['tweet_url']
+        contentKey: ['tweet_id', 'conversation_id', 'post_id'],
+        contentUrl: ['tweet_url', 'post_url'],
+        fileKey: ['media_id', 'id'],
+        ownerKey: ['user_id', 'owner_id'],
+        ownerName: ['username', 'fullname', 'author'],
+        title: ['content', 'text', 'description'],
+        description: ['content', 'text', 'description']
     },
     instagram: {
         contentKey: ['post_id', 'shortcode'],
-        contentUrl: ['post_url']
+        contentUrl: ['post_url', 'webpage_url'],
+        fileKey: ['sidecar_media_id', 'media_id', 'id'],
+        ownerKey: ['owner_id', 'user_id'],
+        ownerName: ['username', 'fullname'],
+        title: ['caption', 'description'],
+        description: ['caption', 'description']
+    },
+    pixiv: {
+        contentKey: ['illust_id', 'pixiv_id', 'id'],
+        contentUrl: ['post_url', 'webpage_url'],
+        fileKey: ['image_id', 'file_id', 'id'],
+        ownerKey: ['user_id', 'owner_id', 'author_id'],
+        ownerName: ['user', 'username', 'author', 'fullname'],
+        ownerUrl: ['user_url', 'author_url'],
+        title: ['title', 'caption', 'description'],
+        description: ['description', 'caption', 'comment']
+    },
+    danbooru: {
+        contentKey: ['danbooru_id', 'post_id', 'id'],
+        contentUrl: ['post_url', 'webpage_url'],
+        fileKey: ['md5', 'file_id', 'id'],
+        ownerKey: ['uploader_id', 'owner_id'],
+        ownerName: ['uploader', 'author'],
+        mediaUrl: ['file_url', 'large_file_url', 'url'],
+        thumbnailUrl: ['preview_url', 'thumbnail'],
+        title: ['tag_string', 'title'],
+        description: ['tag_string', 'description']
+    },
+    reddit: {
+        contentKey: ['submission_id', 'reddit_id', 'id'],
+        contentUrl: ['permalink', 'post_url', 'webpage_url'],
+        fileKey: ['media_id', 'id'],
+        ownerName: ['author', 'username'],
+        title: ['title', 'selftext', 'description'],
+        description: ['selftext', 'description', 'caption']
+    },
+    tumblr: {
+        contentKey: ['post_id', 'id'],
+        contentUrl: ['post_url', 'webpage_url'],
+        fileKey: ['media_id', 'id'],
+        ownerName: ['blog_name', 'username', 'name'],
+        title: ['summary', 'title', 'caption'],
+        description: ['caption', 'summary', 'description']
+    },
+    deviantart: {
+        contentKey: ['deviation_id', 'id'],
+        contentUrl: ['deviation_url', 'webpage_url', 'url'],
+        fileKey: ['media_id', 'id'],
+        ownerName: ['author', 'username'],
+        ownerUrl: ['author_url', 'user_url'],
+        title: ['title'],
+        description: ['description', 'caption']
     }
 }
 
@@ -49,8 +117,16 @@ const mergeFields = (base: readonly string[], override?: readonly string[]): rea
     return [...override, ...base.filter((field) => !override.includes(field))]
 }
 
-export const mergeGalleryDlFieldMap = (extractor: string): GalleryDlFieldMap => {
+const normalizeExtractorKey = (extractor: string): string => {
     const key = extractor.toLowerCase()
+
+    if (key === 'x') return 'twitter'
+
+    return key
+}
+
+export const mergeGalleryDlFieldMap = (extractor: string): GalleryDlFieldMap => {
+    const key = normalizeExtractorKey(extractor)
     const override = GALLERY_DL_EXTRACTOR_FIELD_MAP[key] ?? {}
 
     return {

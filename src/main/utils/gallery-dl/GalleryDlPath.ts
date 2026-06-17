@@ -12,10 +12,6 @@ export const buildGalleryDlDownloadedFilePath = (
         firstValidText(info.category, extractSiteKey(url)),
         'unknown-site'
     )
-    const ownerId = safePathSegment(
-        firstValidText(info.owner_id, info.username, info.fullname, info.uploader),
-        'unknown-owner'
-    )
     const filename = safeFileStem(
         firstValidText(info.filename, info.media_id, info.sidecar_media_id, info.id),
         'unknown'
@@ -25,5 +21,5 @@ export const buildGalleryDlDownloadedFilePath = (
 
     const outputName = mediaId ? `${mediaId}_${filename}.${extension}` : `${filename}.${extension}`
 
-    return path.join(basePath, category, ownerId, outputName)
+    return path.join(basePath, category, outputName)
 }

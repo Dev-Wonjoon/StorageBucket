@@ -4,9 +4,17 @@ import type { GalleryDlRawMetadata } from '../../../shared/gallery_dl_raw_metada
 import { firstValidText } from '../MetadataValue'
 import { mergeGalleryDlFieldMap } from './GalleryDlFieldMap'
 
+const pickRawValue = (raw: GalleryDlRawMetadata, field: string): unknown => {
+    return field.split('.').reduce<unknown>((value, key) => {
+        if(!value || typeof value !== 'object') return undefined
+
+        return (value as Record<string, unknown>)[key]
+    }, raw)
+}
+
 const pickText = (raw: GalleryDlRawMetadata, fields: readonly string[]): string | undefined => {
     for (const field of fields) {
-        const value = raw[field]
+        const value = pickRawValue(raw, field)
 
         if (typeof value === 'string') {
             const text = firstValidText(value)
@@ -21,9 +29,17 @@ const pickText = (raw: GalleryDlRawMetadata, fields: readonly string[]): string 
     return undefined
 }
 
+const truncateTitle = (value: string, maxLength = 100): string => {
+    const text = value.replace(/\s+/g, ' ').trim()
+
+    if(text.length <= maxLength) return text
+
+    return `${text.slice(0, maxLength).trimEnd()}...`
+}
+
 const pickNumber = (raw: GalleryDlRawMetadata, fields: readonly string[]): number | undefined => {
     for (const field of fields) {
-        const value = raw[field]
+        const value = pickRawValue(raw, field)
 
         if (typeof value === 'number' && Number.isFinite(value)) {
             return value
@@ -81,9 +97,11 @@ export const mapExternalMediaToDownloadMetadata = (
     file: string,
     filesize: number
 ): DownloadResultMetadata => {
+    const title = firstValidText(item.title, item.description, item.filename, item.contentKey, item.fileKey, file) ?? file
+
     return {
         id: firstValidText(item.contentKey, item.fileKey, file) ?? file,
-        title: firstValidText(item.title, item.contentKey, item.filename, file) ?? file,
+        title: truncateTitle(title),
         extractor_key: item.extractor,
         filename: file,
         filesize,
