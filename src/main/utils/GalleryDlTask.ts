@@ -29,37 +29,39 @@ const MEDIA_EXTENSIONS = new Set([
     '.mp4',
     '.mov',
     '.webm',
-    '.mkv',
+    '.mkv'
 ])
 
 const isMediaFile = (file: string): boolean => {
     return MEDIA_EXTENSIONS.has(path.extname(file).toLowerCase())
 }
 
+const stringifyLogMetadata = (metadata: GalleryDlRawMetadata): string => {
+    const text = JSON.stringify(metadata)
+
+    return text.length > 5000 ? `${text.slice(0, 5000)}...` : text
+}
+
 const readGalleryDlSidecarMetadata = (file: string): GalleryDlRawMetadata | null => {
     const parsed = path.parse(file)
-    const candidates = [
-        `${file}.json`,
-        path.join(parsed.dir, `${parsed.name}.json`),
-    ]
+    const candidates = [`${file}.json`, path.join(parsed.dir, `${parsed.name}.json`)]
 
-    for(const candidate of candidates) {
-        if(!fs.existsSync(candidate)) continue
+    for (const candidate of candidates) {
+        if (!fs.existsSync(candidate)) continue
 
         try {
             const metadata = JSON.parse(fs.readFileSync(candidate, 'utf-8'))
 
-            if(metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+            if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
                 return metadata as GalleryDlRawMetadata
             }
-        } catch(error) {
+        } catch (error) {
             console.warn('[GalleryDlTask] Failed to read metadata sidecar:', candidate, error)
         }
     }
 
     return null
 }
-
 
 const findFileByHints = (directory: string, hints: string[], depth = 0): string | null => {
     if (depth > 3) return null
@@ -159,6 +161,7 @@ export function downloadGalleryDl(
         })
 
         const downloadedItems: GalleryDlRawMetadata[] = []
+        const downloadedFiles: string[] = []
         let stdoutBuffer = ''
         let stderrBuffer = ''
 
@@ -173,12 +176,20 @@ export function downloadGalleryDl(
 
                 const info = parseGalleryDlPrintMetadata(trimmed)
                 if (!info) {
+                    const outputFile = path.isAbsolute(trimmed)
+                        ? trimmed
+                        : path.join(basePath, trimmed)
+
+                    if (!trimmed.includes('://') && isMediaFile(outputFile)) {
+                        downloadedFiles.push(outputFile)
+                    }
+
                     console.log(`[gallery-dl stdout] ${trimmed.substring(0, 300)}`)
                     return
                 }
 
                 downloadedItems.push(info)
-                callbacks?.onLog?.(`[gallery-dl metadata] ${JSON.stringify(info)}`, 'raw')
+                callbacks?.onLog?.(`[gallery-dl metadata] ${stringifyLogMetadata(info)}`, 'raw')
                 callbacks.onProgress(50, {
                     status: 'downloading',
                     itemCount: downloadedItems.length
@@ -201,11 +212,55 @@ export function downloadGalleryDl(
 
             if (code === 0 && downloadedItems.length > 0) {
                 // changed: 같은 포스트의 sidecar 이미지는 첫 번째 항목만 카드로 등록
+                const normalizedItems = downloadedItems
+                    .map((raw, index) => {
+                        const stdoutFile = downloadedFiles[index]
+                        const fileFromStdout =
+                            stdoutFile && fs.existsSync(stdoutFile) && isMediaFile(stdoutFile)
+                                ? stdoutFile
+                                : null
+                        const expectedFile = buildGalleryDlDownloadedFilePath(basePath, raw, url)
+                        const file =
+                            fileFromStdout ??
+                            findExistingGalleryDlFile(expectedFile, basePath, raw, url)
+
+                        if (!file) {
+                            console.warn(
+                                '[GalleryDlTask] Downloaded file not found: ',
+                                expectedFile,
+                                raw
+                            )
+                            return null
+                        }
+
+                        const sidecarRaw = readGalleryDlSidecarMetadata(file)
+                        const mergedRaw = sidecarRaw ? { ...raw, ...sidecarRaw } : raw
+                        const item = mapGalleryDlMetadata(mergedRaw, cleanUrl(url))
+
+                        if (sidecarRaw) {
+                            callbacks.onLog?.(
+                                `[gallery-dl metadata] ${stringifyLogMetadata(mergedRaw)}`,
+                                'raw'
+                            )
+                        }
+
+                        return {
+                            raw: mergedRaw,
+                            item,
+                            file
+                        }
+                    })
+                    .filter(
+                        (
+                            item
+                        ): item is {
+                            raw: GalleryDlRawMetadata
+                            item: ExternalMediaStructure
+                            file: string
+                        } => item !== null
+                    )
+
                 const seenContentKeys = new Set<string>()
-                const normalizedItems = downloadedItems.map((raw) => ({
-                    raw,
-                    item: mapGalleryDlMetadata(raw, cleanUrl(url))
-                }))
 
                 const firstItemsByContent = normalizedItems.filter(({ item }) => {
                     const groupKey = getExternalContentGroupKey(item)
@@ -218,40 +273,20 @@ export function downloadGalleryDl(
                     return true
                 })
 
-                const results: DownloadResultItem[] = firstItemsByContent
-                    .map(({ raw, item }) => {
-                        const expectedFile = buildGalleryDlDownloadedFilePath(basePath, raw, url)
-                        const file = findExistingGalleryDlFile(expectedFile, basePath, raw, url)
-                        if (!file) {
-                            console.warn(
-                                '[GalleryDlTask] Downloaded file not found: ',
-                                expectedFile,
-                                raw
-                            )
-                            return null
-                        }
+                const results: DownloadResultItem[] = firstItemsByContent.map(({ item, file }) => {
+                    const isImage = !!file.match(/\.(jpg|jpeg|png|webp|gif|heic)$/i)
+                    const metadata = mapExternalMediaToDownloadMetadata(
+                        item,
+                        file,
+                        fs.statSync(file).size
+                    )
 
-                        const sidecarRaw = readGalleryDlSidecarMetadata(file)
-                        const mergedRaw = sidecarRaw ? { ...raw, ...sidecarRaw } : raw
-                        const mediaItem = sidecarRaw ? mapGalleryDlMetadata(mergedRaw, cleanUrl(url)) : item
-
-                        if(sidecarRaw) {
-                            callbacks.onLog?.(`[gallery-dl metadata] ${JSON.stringify(mergedRaw)}`, 'raw')
-                        }
-                        const isImage = !!file.match(/\.(jpg|jpeg|png|webp|gif|heic)$/i)
-                        const metadata = mapExternalMediaToDownloadMetadata(
-                            mediaItem,
-                            file,
-                            fs.statSync(file).size
-                        )
-
-                        return {
-                            metadata,
-                            videoPath: file,
-                            thumbnailPath: isImage ? file : createGalleryDlVideoThumbnail(file)
-                        }
-                    })
-                    .filter((item): item is DownloadResultItem => item !== null)
+                    return {
+                        metadata,
+                        videoPath: file,
+                        thumbnailPath: isImage ? file : createGalleryDlVideoThumbnail(file)
+                    }
+                })
 
                 if (results.length === 0) {
                     callbacks.onProgress(0, { status: 'failed' })
