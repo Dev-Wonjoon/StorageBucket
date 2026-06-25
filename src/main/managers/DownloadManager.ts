@@ -271,14 +271,16 @@ export class DownloadManager {
                             MediaService.registerMedia(
                                 item.metadata,
                                 item.videoPath,
-                                item.thumbnailPath
+                                item.thumbnailPath,
+                                job.createdAt
                             )
                         }
                     } else if (result.metadata) {
                         MediaService.registerMedia(
                             result.metadata,
                             result.videoPath,
-                            result.thumbnailPath
+                            result.thumbnailPath,
+                            job.createdAt
                         )
                     } else {
                         throw new Error('metadata is null')
@@ -411,6 +413,58 @@ export class DownloadManager {
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
             this.mainWindow.webContents.send('download:queue-update', this.queue)
         }
+    }
+
+    public retryJob(jobId: string) {
+        const job = this.queue.find((item) => item.id === jobId)
+
+        if(!job) {
+            return { success: false, message: '재시도할 다운로드를 찾을 수 없습니다.' }
+        }
+
+        if(job.status !== 'failed') {
+            return { success: false, message: '실패한 다운로드만 재시도할 수 있습니다.' }
+        }
+        const originalCreatedAt = job.createdAt
+        const now = new Date()
+        job.status = 'pending'
+        job.progress = 0
+        job.errorMessage = null
+        job.updatedAt = now
+        job.createdAt = originalCreatedAt
+        job.log = {
+            summary: '다운로드를 재시도합니다.',
+            steps: ['재시도가 요청되었습니다.'],
+            raw: '',
+            startedAt: now.toISOString(),
+            engine: shouldUseGalleryDl(job.url) ? 'gallery-dl' : 'yt-dlp'
+        }
+
+        try {
+            db.update(downloadQueue)
+                .set({
+                    status: 'pending',
+                    progress: 0,
+                    errorMessage: null,
+                    log: job.log,
+                    startedAt: now,
+                    finishedAt: null,
+                    updatedAt: now
+                })
+                .where(eq(downloadQueue.id, job.id))
+                .run()
+        } catch(error) {
+            console.error('[DownloadManager] Retry DB update failed:', error)
+            return { success: false, message: '재시도 상태 저장에 실패했습니다.' }
+        }
+
+        this.notifyQueueUpdate()
+
+        if(!this.isProcessing) {
+            this.processQueue()
+        }
+
+        return { success: true, message: '다운로드를 재시도합니다..' }
     }
 
     public removeJob(jobId: string) {

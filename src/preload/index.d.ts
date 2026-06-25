@@ -46,6 +46,10 @@ declare global {
       onBootstrapError: (callback: (error: { message: string }) => void) => () => void,
       getDownloadQueue: () => Promise<any[]>,
       removeDownloadJob: (jobId: string) => Promise<boolean>,
+      retryDownloadJob: (jobId: string) => Promise<{
+        success: boolean,
+        message?: string
+      }>,
     }
   }
 }

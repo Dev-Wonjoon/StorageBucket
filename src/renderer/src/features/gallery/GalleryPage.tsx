@@ -3,7 +3,7 @@ import { FolderOpen } from 'lucide-react'
 import { type DownloadLog } from 'src/shared/types'
 import { useGalleryViewModel } from './useGalleryViewModel'
 import { GalleryDetailPanel } from './GalleryDetailPanel'
-import { GalleryToolbar, type GalleryViewMode } from './GalleryToolbar'
+import { GalleryToolbar, type GallerySortMode, type GalleryViewMode } from './GalleryToolbar'
 import { useGalleryFilter } from './useGalleryFilter'
 import { GalleryMediaList } from './GalleryMediaList'
 import { GalleryOverlays } from './GalleryOverlays'
@@ -12,6 +12,7 @@ import { DownloadLogModal } from './DownloadLogModal'
 export const GalleryPage = (): ReactElement => {
     const [query, setQuery] = useState('')
     const [viewMode, setViewMode] = useState<GalleryViewMode>('grid')
+    const [sortMode, setSortMode] = useState<GallerySortMode>('recent')
     const [downloadLog, setDownloadLog] = useState<DownloadLog | null>(null)
     const {
         galleryItems,
@@ -35,6 +36,7 @@ export const GalleryPage = (): ReactElement => {
         galleryItems,
         query,
         viewMode,
+        sortMode,
         selectedId,
         selectedIds
     })
@@ -69,8 +71,10 @@ export const GalleryPage = (): ReactElement => {
                 <GalleryToolbar
                     query={query}
                     viewMode={viewMode}
+                    sortMode={sortMode}
                     onQueryChange={setQuery}
                     onViewModeChange={setViewMode}
+                    onSortModeChange={setSortMode}
                 />
 
                 <GalleryMediaList

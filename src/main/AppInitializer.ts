@@ -82,6 +82,8 @@ const lazyHandlers: Record<string, () => Promise<IpcHandler>> = {
         import('./handlers/DownloadHandler').then((m) => m.downloadHandler['download:get-queue']),
     'download:remove-job': () =>
         import ('./handlers/DownloadHandler').then((m) => m.downloadHandler['download:remove-job']),
+    'download:retry-job': () =>
+        import ('./handlers/DownloadHandler').then((m) => m.downloadHandler['download:retry-job']),
 }
 
 const APP_USER_MODEL_ID = 'com.storagebucket.app'

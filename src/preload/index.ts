@@ -10,6 +10,7 @@ const api = {
         ipcRenderer.invoke('video:download', url, options),
     getDownloadQueue: () => ipcRenderer.invoke('download:get-queue'),
     removeDownloadJob: (jobId: string) => ipcRenderer.invoke('download:remove-job', jobId),
+    retryDownloadJob: (jobId: string) => ipcRenderer.invoke('download:retry-job', jobId),
     onQueueUpdate: (callback: (queue: any[]) => void) => {
         const subscription = (_event: any, value: any[]) => callback(value)
         ipcRenderer.on('download:queue-update', subscription)

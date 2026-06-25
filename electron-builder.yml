@@ -21,6 +21,7 @@ win:
   icon: build/icon.ico
   target:
     - zip
+    - portable
   executableName: storagebucket
 portable:
   artifactName: "${productName}-${version}.${ext}"

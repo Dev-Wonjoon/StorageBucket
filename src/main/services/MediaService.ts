@@ -5,7 +5,25 @@ import { Media } from '../../shared/types'
 import { cleanUrl } from '../utils/ArgsUtils'
 import fs from 'fs'
 
+    const deleteFileIfExists = async(filepath?: string | null): Promise<void> => {
+        if(!filepath) return
+
+        const fs = await import('fs/promises')
+
+        try {
+            await fs.unlink(filepath)
+        } catch(error) {
+            if(error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+                return
+            }
+
+            console.warn('[MediaService] File delete failed:', error)
+        }
+    }
+
 export const MediaService = {
+
+
     async getAll() {
         const rows = db
             .select({
@@ -36,13 +54,8 @@ export const MediaService = {
         const media = db.select().from(medias).where(eq(medias.id, id)).get()
         if (!media) return
 
-        const fs = await import('fs/promises')
-        try {
-            await fs.unlink(media.filepath)
-            if (media.thumbnailPath) await fs.unlink(media.thumbnailPath)
-        } catch (error) {
-            console.warn('[MediaService] File delete failed:', error)
-        }
+        await deleteFileIfExists(media.filepath)
+        await deleteFileIfExists(media.thumbnailPath)
 
         db.transaction((tx) => {
             tx.delete(medias).where(eq(medias.id, id)).run()
@@ -73,7 +86,12 @@ export const MediaService = {
         return media?.filepath ?? null
     },
 
-    registerMedia(metadata: any, localFilepath: string, thumbnailPath: string | null): Media {
+    registerMedia(
+        metadata: any, 
+        localFilepath: string, 
+        thumbnailPath: string | null,
+        createdAtValue?: Date | string | null
+    ): Media {
         return db.transaction((tx) => {
             const platformName = metadata.extractor_key || metadata.extractor || 'unknown'
             let platformId: number
@@ -166,6 +184,7 @@ export const MediaService = {
             }
 
             const fileSize = metadata.filesize || fs.statSync(localFilepath).size
+            const createdAt = createdAtValue ? new Date(createdAtValue) : new Date()
 
             const newMedia = tx
                 .insert(medias)
@@ -177,7 +196,7 @@ export const MediaService = {
                     urlId: urlId,
                     platformId: platformId,
                     profileId: profileId,
-                    createdAt: new Date(),
+                    createdAt,
                     updatedAt: new Date()
                 })
                 .returning()

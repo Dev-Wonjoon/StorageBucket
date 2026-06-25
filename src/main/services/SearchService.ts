@@ -26,11 +26,11 @@ export const SearchService = {
 
         // FTS5 MATCH (제목, 작성자, URL, 태그명 통합 검색)
         if (keyword && keyword.trim()) {
-            const escaped = keyword.trim().replace(/"/g, '""')
+            const ftsQuery = `"${keyword.trim().replace(/"/g, '""')}"`
             conditions.push(
                 inArray(
                     medias.id,
-                    sql`(SELECT rowid FROM media_fts WHERE media_fts MATCH '"${sql.raw(escaped)}"')`
+                    sql`(SELECT rowid FROM media_fts WHERE media_fts MATCH ${ftsQuery})`
                 )
             )
         }

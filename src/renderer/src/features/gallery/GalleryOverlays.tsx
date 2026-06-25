@@ -67,6 +67,11 @@ export const GalleryOverlays = ({
                             label: '다운로드 재시도',
                             disabled: !hasUrl,
                             onClick: () => {
+                                if(contextItem?.downloadStatus === 'failed' && contextItem.downloadId) {
+                                    void window.api?.retryDownloadJob?.(contextItem.downloadId)
+                                    return
+                                }
+
                                 if(!contextMedia?.url) return
                                 void window.api?.downloadVideo?.(contextMedia.url)
                             }

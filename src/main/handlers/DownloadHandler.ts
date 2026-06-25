@@ -15,5 +15,8 @@ export const downloadHandler = {
     'download:remove-job': async (_: IpcMainInvokeEvent, jobId: string) => {
         DownloadManager.getInstance().removeJob(jobId)
         return true
+    },
+    'download:retry-job': async (_: IpcMainInvokeEvent, jobId: string) => {
+        return DownloadManager.getInstance().retryJob(jobId)
     }
 }

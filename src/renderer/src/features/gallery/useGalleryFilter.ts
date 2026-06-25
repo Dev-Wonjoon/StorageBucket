@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { GalleryItem } from 'src/shared/types'
-import { GalleryViewMode } from './GalleryToolbar'
+import { GallerySortMode, GalleryViewMode } from './GalleryToolbar'
 
 interface UseGalleryFilterParams {
     galleryItems: GalleryItem[]
     query: string
     viewMode: GalleryViewMode
+    sortMode: GallerySortMode
     selectedId: number | null
     selectedIds: Set<number>
 }
@@ -14,6 +15,7 @@ export const useGalleryFilter = ({
     galleryItems,
     query,
     viewMode,
+    sortMode,
     selectedId,
     selectedIds
 }: UseGalleryFilterParams) => {
@@ -22,14 +24,22 @@ export const useGalleryFilter = ({
         const source =
             viewMode === 'queue' ? galleryItems.filter((item) => item.downloadStatus) : galleryItems
 
-        if (!keyword) return source
+        const filteredItems = keyword
+            ? source.filter(({ media }) => {
+                  return [media.title, media.author, media.platform, media.url, media.filepath]
+                      .filter(Boolean)
+                      .some((value) => String(value).toLowerCase().includes(keyword))
+              })
+            : source
 
-        return source.filter(({ media }) => {
-            return [media.title, media.author, media.platform, media.url, media.filepath]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(keyword))
+        return [...filteredItems].sort((a, b) => {
+            if (sortMode === 'titleAsc') {
+                return a.media.title.localeCompare(b.media.title, 'ko-KR')
+            }
+
+            return new Date(b.media.createdAt).getTime() - new Date(a.media.createdAt).getTime()
         })
-    }, [galleryItems, query, viewMode])
+    }, [galleryItems, query, sortMode, viewMode])
 
     const selectedMedia = useMemo(() => {
         if (selectedId === null) return null

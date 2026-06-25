@@ -1,9 +1,9 @@
 {
   "name": "storagebucket",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Just Media downloader.",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "dev_wonjoon",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",
@@ -23,13 +23,13 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
-    "@tailwindcss/vite": "^4.1.18",
+    "@tailwindcss/vite": "^4.3.1",
     "better-sqlite3": "^12.6.2",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "^0.45.2",
     "electron-store": "^11.0.2",
-    "electron-updater": "^6.3.9",
+    "electron-updater": "^6.8.9",
     "lucide-react": "^0.563.0",
-    "tailwindcss": "^4.1.18",
+    "tailwindcss": "^4.3.1",
     "yt-dlp-wrap": "^2.3.12"
   },
   "devDependencies": {
@@ -40,10 +40,10 @@
     "@types/node": "^22.19.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
+    "@vitejs/plugin-react": "^5.2.0",
     "drizzle-kit": "^0.31.8",
-    "electron": "^39.2.6",
-    "electron-builder": "^26.0.12",
+    "electron": "^39.8.10",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react": "^7.37.5",
@@ -53,6 +53,6 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "typescript": "^5.9.3",
-    "vite": "^7.2.6"
+    "vite": "^7.3.5"
   }
 }
