@@ -5,7 +5,7 @@ interface PhotoCardProps {
     data: Media;
     isSelected: boolean;
     onClick: (id: number, e: React.MouseEvent) => void;
-    onContextMenu: (e: React.MouseEvent, mediaId: number) => void;
+    onContextMenu?: (e: React.MouseEvent, mediaId: number) => void;
     onToggleFavorite: (id: number) => void;
     onDelete: (id: number) => void;
     isDownloading?: boolean;
@@ -21,7 +21,7 @@ export const PhotoCard = ({ data, isSelected, onClick, onContextMenu, onToggleFa
         <div
             onClick={(e) => !isDownloading && handleClick(onClick, e)}
             onContextMenu={(e) => {
-                if(!isDownloading) {
+                if(!isDownloading && onContextMenu) {
                     e.preventDefault();
                     onContextMenu(e, data.id);
                 }

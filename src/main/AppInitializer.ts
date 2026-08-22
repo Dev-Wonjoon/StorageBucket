@@ -13,6 +13,7 @@ import { mediaHandler } from './handlers/MediaHandler';
 import { systemHandler } from './handlers/SystemHandler';
 import { tagHandler } from './handlers/TagHandler';
 import { searchHandler } from './handlers/SearchHandler';
+import { getAppDataPath } from './utils/portablePath';
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any>;
 
@@ -23,7 +24,7 @@ export class AppInitializer {
         this.setupDataPaths();
 
         try {
-            initDB();
+            await initDB();
         } catch(error) {
             console.error('DB Initialization Failed:', error);
         }
@@ -89,10 +90,7 @@ export class AppInitializer {
     }
 
     private setupDataPaths(): void {
-        const basePath = app.getAppPath();
-        const rootPath = app.isPackaged ? basePath : process.cwd();
-
-        const portableDataPath = join(rootPath, 'data');
+        const portableDataPath = getAppDataPath()
         if(!fs.existsSync(portableDataPath)) {
             fs.mkdirSync(portableDataPath, { recursive: true });
         }

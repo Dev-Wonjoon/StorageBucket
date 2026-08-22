@@ -5,15 +5,9 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from './schema';
 import { existsSync, mkdirSync } from "fs";
+import { getDatabasePath } from "../main/utils/portablePath";
 
-const getDbPath = () => {
-    if(app.isPackaged) {
-        return join(dirname(app.getPath('exe')), 'storagebucket.db');
-    }
-    return join(process.cwd(), 'storagebucket.db');
-}
-
-const dbPath = getDbPath();
+const dbPath = getDatabasePath();
 const dbFolder = dirname(dbPath);
 
 if(!existsSync(dbFolder)) {
@@ -22,7 +16,7 @@ if(!existsSync(dbFolder)) {
 }
 console.log(`[Database] File path: ${dbPath}`);
 
-let sqlite;
+let sqlite: Database.Database
 try {
     sqlite = new Database(dbPath, {
         verbose: console.log
@@ -34,19 +28,51 @@ try {
 
 export const db = drizzle(sqlite, { schema });
 
-export const initDB = () => {
+const createPreMigrationBackup = async (): Promise<string | null> => {
+    const hasExistingSchema = sqlite
+        .prepare(`
+            SELECT 1
+            FROM sqlite_master
+            WHERE type = 'table'
+                AND name NOT LIKE 'sqlite_%'
+            LIMIT 1    
+        `).get()
+
+    if(!hasExistingSchema) {
+        return null
+    }
+
+    const backupFolder = join(dbFolder, 'backups')
+    mkdirSync(backupFolder, { recursive: true })
+
+    const backupPath = join(
+        backupFolder,
+        `storagebucket.pre-migration.v${app.getVersion()}.db`
+    )
+
+    if(!existsSync(backupPath)) {
+        await sqlite.backup(backupPath)
+    }
+
+    return backupPath
+}
+
+export const initDB = async (): Promise<void> => {
     const migrationsFolder = app.isPackaged
         ? join(process.resourcesPath, 'drizzle')
-        : join(app.getAppPath(), 'drizzle');
-    
-    console.log(`[Database] Running migrations from: ${migrationsFolder}`);
+        : join(app.getAppPath(), 'drizzle')
 
-    try {
-        migrate(db, { migrationsFolder });
-        console.log('[Database] Migration Completed.');
-    } catch(error) {
-        console.error('[Database] Migration failed:', error);
+    console.log(`[Database] Running migrations from: ${migrationsFolder}`)
+
+    const backupPath = await createPreMigrationBackup()
+
+    if(backupPath) {
+        console.log(`[Database] Backup ready: ${backupPath}`)
     }
+    
+    migrate(db, { migrationsFolder })
+    
+    console.log('[Database] Migration Completed.')
 }
 
 app.on('before-quit', () => {
