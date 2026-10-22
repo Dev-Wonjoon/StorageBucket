@@ -1,20 +1,20 @@
-import { SettingSection } from "@renderer/components/ui/SettingSection";
-import { useEngineSettingsViewModel } from "./useEngineSettingsViewModel";
-import { SettingRow } from "@renderer/components/ui/SettingRow";
-import { Button } from "@renderer/components/ui/Button";
+import { SettingSection } from '@renderer/shared/components/ui/SettingSection'
+import { useEngineSettingsViewModel } from '@renderer/features/settings/useEngineSettingsViewModel'
+import { SettingRow } from '@renderer/shared/components/ui/SettingRow'
+import { Button } from '@renderer/shared/components/ui/Button'
 
 const ENGINE_LABELS: Record<string, string> = {
     'yt-dlp': 'yt-dlp',
     'gallery-dl': 'gallery-dl',
-    'ffmpeg': 'FFmpeg',
-};
+    ffmpeg: 'FFmpeg'
+}
 
-export const EngineSettings = () => {
-    const { engines, installing, loading, install } = useEngineSettingsViewModel();
+export const EngineSettings = (): React.JSX.Element => {
+    const { engines, installing, loading, install } = useEngineSettingsViewModel()
 
-    if(loading) {
+    if (loading) {
         return (
-            <div className="flex items-center justify-center h-32 text-[--text-muted] text-sm">
+            <div className="flex items-center justify-center h-32 text-[var(--text-muted)] text-sm">
                 엔진 상태 확인 중...
             </div>
         )
@@ -36,8 +36,9 @@ export const EngineSettings = () => {
                         >
                             {installing === name
                                 ? '설치 중...'
-                                : status.installed ? '업데이트' : '설치'
-                            }
+                                : status.installed
+                                  ? '업데이트'
+                                  : '설치'}
                         </Button>
                     }
                 />

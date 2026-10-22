@@ -1,14 +1,14 @@
 // src/renderer/src/features/gallery/GalleryPage.tsx
 
-import { PhotoCard } from "./PhotoCard";
-import { useGalleryViewModel } from "./useGalleryViewModel";
-import { ContextMenu } from "@renderer/components/ui/ContextMenu";
-import { TagModal } from "@renderer/components/TagModal";
+import { MediaCard } from '@renderer/shared/components/media/MediaCard'
+import { useGalleryViewModel } from '@renderer/features/gallery/useGalleryViewModel'
+import { ContextMenu } from '@renderer/shared/components/ui/ContextMenu'
+import { TagModal } from '@renderer/features/tags/components/TagModal'
 
-export const GalleryPage = () => {
-    const { 
-        galleryItems, 
-        selectedId, 
+export const GalleryPage = (): React.JSX.Element => {
+    const {
+        galleryItems,
+        selectedId,
         selectedIds,
         contextMenu,
         tagModal,
@@ -21,28 +21,30 @@ export const GalleryPage = () => {
         openTagModal,
         closeTagModal,
         refresh
-    } = useGalleryViewModel();
+    } = useGalleryViewModel()
 
     if (isLoading && galleryItems.length === 0) {
         return (
-            <div className="flex h-full items-center justify-center text-[--text-muted]">
+            <div className="flex h-full items-center justify-center text-[var(--text-muted)]">
                 <div className="flex flex-col items-center gap-2">
                     <p>미디어를 불러오는 중...</p>
                 </div>
             </div>
-        );
+        )
     }
 
     return (
         <div className="w-full h-full pb-10">
             <div className="flex items-center justify-end mb-6">
-                <span className="text-sm text-[--text-muted]">총 {galleryItems.length}개 항목</span>
+                <span className="text-sm text-[var(--text-muted)]">
+                    총 {galleryItems.length}개 항목
+                </span>
             </div>
             {galleryItems.length > 0 ? (
-                <div className="grid grid-col-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 isolate">
-                    {galleryItems.map(({media, isDownloading, progress, speed, eta}) => (
-                        <PhotoCard
-                            key={media.id}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 isolate">
+                    {galleryItems.map(({ media, isDownloading, progress, downloadId }) => (
+                        <MediaCard
+                            key={downloadId ?? media.id}
                             data={media}
                             isSelected={selectedId === media.id || selectedIds.has(media.id)}
                             onClick={handleSelect}
@@ -51,18 +53,32 @@ export const GalleryPage = () => {
                             onDelete={deleteMedia}
                             isDownloading={isDownloading}
                             progress={progress}
-                            speed={speed}
-                            eta={eta}
                         />
                     ))}
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center h-[60vh] border-2 border-dashed rounded-2xl
-                                border-[--border-line] text-[--text-muted]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+                <div
+                    className="flex flex-col items-center justify-center h-[60vh] border-2 border-dashed rounded-2xl
+                                border-[var(--border-line)] text-[var(--text-muted)]"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+                        <path d="M12 9v4" />
+                        <path d="M12 17h.01" />
                     </svg>
-                    <p className="text-lg font-medium text-[--text-main]">표시할 미디어가 없습니다.</p>
+                    <p className="text-lg font-medium text-[var(--text-main)]">
+                        표시할 미디어가 없습니다.
+                    </p>
                     <p className="text-sm mt-1">URL을 입력하여 다운로드를 시작해보세요</p>
                 </div>
             )}
@@ -74,19 +90,18 @@ export const GalleryPage = () => {
                     onClose={closeContextMenu}
                     items={[
                         {
-                            label: "태그 관리",
+                            label: '태그 관리',
                             onClick: () => {
-                                const ids = selectedIds.size > 0
-                                    ? [...selectedIds]
-                                    : [contextMenu.mediaId];
-                                openTagModal(ids);
-                            },
+                                const ids =
+                                    selectedIds.size > 0 ? [...selectedIds] : [contextMenu.mediaId]
+                                openTagModal(ids)
+                            }
                         },
                         {
-                            label: "삭제",
+                            label: '삭제',
                             danger: true,
-                            onClick: () => deleteMedia(contextMenu.mediaId),
-                        },
+                            onClick: () => deleteMedia(contextMenu.mediaId)
+                        }
                     ]}
                 />
             )}
@@ -100,5 +115,5 @@ export const GalleryPage = () => {
                 />
             )}
         </div>
-    );
-};
+    )
+}

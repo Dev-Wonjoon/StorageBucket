@@ -1,50 +1,64 @@
-import { useState, useCallback, useEffect } from "react";
-import { Media } from "src/shared/types";
+import { useState, useCallback, useEffect, useRef } from 'react'
+import type { Media } from '../../../../shared/types'
+import { getApi } from '@renderer/shared/api'
+import { useMediaActions } from '@renderer/shared/hooks/useMediaActions'
+import { useDownloadViewModel } from '@renderer/features/download/useDownloadViewModel'
 
-export const useFavoritesViewModel = () => {
-    const [medias, setMedias] = useState<Media[]>([]);
-    const [selectedId, setSelectedId] = useState<number | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+interface FavoritesViewModel {
+    galleryItems: Media[]
+    selectedId: number | null
+    isLoading: boolean
+    toggleFavorite(id: number): Promise<void>
+    deleteMedia(id: number): Promise<void>
+    toggleSelect(id: number): void
+}
 
-    const loadFavorites = useCallback(async () => {
+export function useFavoritesViewModel(): FavoritesViewModel {
+    const [medias, setMedias] = useState<Media[]>([])
+    const [selectedId, setSelectedId] = useState<number | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
+    const requestId = useRef(0)
+    const { mediaRevision } = useDownloadViewModel()
+    const loadFavorites = useCallback(async (): Promise<void> => {
+        const current = ++requestId.current
+        setIsLoading(true)
         try {
-            setIsLoading(true);
-            const items = await window.electron.ipcRenderer.invoke('favorite:get-all');
-            setMedias(items.map((item: any) => ({ ...item.media, isFavorite: true})));
-        } catch(error) {
-            console.error('[FavoritesViewModel] Failed to load favorites', error);
+            const items = await getApi().getFavorites()
+            if (current === requestId.current)
+                setMedias(items.map((item) => ({ ...item.media, isFavorite: true })))
+        } catch (error) {
+            if (current === requestId.current)
+                console.error('[Favorites] Failed to load favorites:', error)
         } finally {
-            setIsLoading(false);
+            if (current === requestId.current) setIsLoading(false)
         }
-    }, []);
-
-    const toggleSelect = useCallback((id: number) => {
-        setSelectedId(prev => prev === id ? null : id);
-    }, []);
-
-    const toggleFavorite = useCallback(async (id: number) => {
-        await window.electron.ipcRenderer.invoke('favorite:toggle', id);
-        setMedias(prev => prev.filter(m => m.id !== id));
-    }, []);
-
-    const deleteMedia = useCallback(async (id: number) => {
-        const confirmed = window.confirm('정말 삭제하시겠습니까?');
-        if(!confirmed) return;
-
-        await window.electron.ipcRenderer.invoke('media:delete', id);
-        setMedias(prev => prev.filter(m => m.id !== id));
-    }, []);
-
+    }, [])
     useEffect(() => {
-        loadFavorites();
-    }, [loadFavorites]);
-
+        const requests = requestId
+        void loadFavorites()
+        return () => {
+            requests.current++
+        }
+    }, [loadFavorites, mediaRevision])
+    const onDeleted = useCallback((id: number): void => {
+        requestId.current++
+        setIsLoading(false)
+        setMedias((previous) => previous.filter((media) => media.id !== id))
+        setSelectedId((previous) => (previous === id ? null : previous))
+    }, [])
+    const onFavoriteChanged = useCallback(
+        (id: number, isFavorite: boolean): void => {
+            if (!isFavorite) onDeleted(id)
+        },
+        [onDeleted]
+    )
+    const { toggleFavorite, deleteMedia } = useMediaActions({ onDeleted, onFavoriteChanged })
     return {
         galleryItems: medias,
         selectedId,
         isLoading,
-        toggleSelect,
         toggleFavorite,
         deleteMedia,
-    };
-};
+        toggleSelect: (id: number) => setSelectedId((previous) => (previous === id ? null : id))
+    }
+}

@@ -1,31 +1,31 @@
-import { useCallback, useEffect, useState } from "react";
+import { getApi } from '@renderer/shared/api'
+import type { LicenseInfo } from '../../../../shared/types'
+import { useCallback, useEffect, useState } from 'react'
 
-
-interface LicenseInfo {
-    name: string;
-    url: string;
-    notice: string;
-}
-
-export const useLicenseSettingsViewModel = () => {
-    const [licenses, setLicenses] = useState<LicenseInfo[]>([]);
-    const [expanded, setExpanded] = useState<string | null>(null);
+export const useLicenseSettingsViewModel = (): {
+    licenses: LicenseInfo[]
+    expanded: string | null
+    toggle(name: string): void
+} => {
+    const [licenses, setLicenses] = useState<LicenseInfo[]>([])
+    const [expanded, setExpanded] = useState<string | null>(null)
 
     useEffect(() => {
-        window.api.getEngineLicenses()
+        getApi()
+            .getEngineLicenses()
             .then(setLicenses)
             .catch((error) => {
-                console.error('[LicenseSettingsVM] Failed to fetch licenses:', error);
+                console.error('[LicenseSettingsVM] Failed to fetch licenses:', error)
             })
-    }, []);
+    }, [])
 
     const toggle = useCallback((name: string) => {
-        setExpanded(prev => prev === name ? null : name);
-    }, []);
+        setExpanded((prev) => (prev === name ? null : name))
+    }, [])
 
     return {
         licenses,
         expanded,
-        toggle,
-    };
-};
+        toggle
+    }
+}
