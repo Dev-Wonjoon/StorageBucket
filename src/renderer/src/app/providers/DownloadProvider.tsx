@@ -6,7 +6,10 @@ import { createDownloadStore } from '@renderer/features/download/downloadStore'
 
 export function DownloadProvider({ children }: { children: ReactNode }): React.JSX.Element {
     const { showToast } = useToast()
-    const [store] = useState(() => createDownloadStore(getApi()))
-    useEffect(() => store.connect((notice) => showToast(notice.message)), [store, showToast])
+    const [store] = useState(() => createDownloadStore(getApi().downloads))
+    useEffect(
+        () => store.connect((notice) => showToast(notice.message, notice.type)),
+        [store, showToast]
+    )
     return <DownloadContext.Provider value={store}>{children}</DownloadContext.Provider>
 }

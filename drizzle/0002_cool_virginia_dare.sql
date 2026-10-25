@@ -1,0 +1,1 @@
+DROP INDEX `idx_profile_owner_id`;

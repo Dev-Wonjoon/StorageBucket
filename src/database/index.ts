@@ -1,159 +1,103 @@
-import { app } from "electron";
-import { join, dirname } from 'path';
-import Database from "better-sqlite3";
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import * as schema from './schema';
-import { existsSync, mkdirSync } from "fs";
-import { getDatabasePath } from "../main/utils/portablePath";
+import { app } from 'electron'
+import { dirname, join } from 'node:path'
+import { mkdirSync } from 'node:fs'
+import Database from 'better-sqlite3'
+import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
+import { readMigrationFiles } from 'drizzle-orm/migrator'
+import * as schema from './schema-v2'
+import { schemaV2Sql } from './schema-v2.sql'
+import { legacyNumericTimeUnit, migrateDatabase } from './migrate'
+import { getDatabasePath } from '../main/utils/portablePath'
 
-const dbPath = getDatabasePath();
-const dbFolder = dirname(dbPath);
+let sqlite: Database.Database | undefined
+let db: BetterSQLite3Database<typeof schema> | undefined
+let initializing: Promise<void> | undefined
+let shuttingDown = false
 
-if(!existsSync(dbFolder)) {
-    console.log(`[Database] Creating folder: ${dbFolder}`);
-    mkdirSync(dbFolder, { recursive: true });
-}
-console.log(`[Database] File path: ${dbPath}`);
-
-let sqlite: Database.Database
-try {
-    sqlite = new Database(dbPath, {
-        verbose: console.log
-    });
-} catch(error) {
-    console.error('[Database] Connection Failed. Check if file is locked.');
-    throw error;
-}
-
-export const db = drizzle(sqlite, { schema });
-
-const createPreMigrationBackup = async (): Promise<string | null> => {
-    const hasExistingSchema = sqlite
-        .prepare(`
-            SELECT 1
-            FROM sqlite_master
-            WHERE type = 'table'
-                AND name NOT LIKE 'sqlite_%'
-            LIMIT 1    
-        `).get()
-
-    if(!hasExistingSchema) {
-        return null
+export function getDB(): BetterSQLite3Database<typeof schema> {
+    if (!sqlite?.open || !db) {
+        throw new Error('DATABASE_NOT_READY')
     }
 
-    const backupFolder = join(dbFolder, 'backups')
-    mkdirSync(backupFolder, { recursive: true })
-
-    const backupPath = join(
-        backupFolder,
-        `storagebucket.pre-migration.v${app.getVersion()}.db`
-    )
-
-    if(!existsSync(backupPath)) {
-        await sqlite.backup(backupPath)
-    }
-
-    return backupPath
+    return db
 }
 
-export const initDB = async (): Promise<void> => {
-    const migrationsFolder = app.isPackaged
-        ? join(process.resourcesPath, 'drizzle')
-        : join(app.getAppPath(), 'drizzle')
-
-    console.log(`[Database] Running migrations from: ${migrationsFolder}`)
-
-    const backupPath = await createPreMigrationBackup()
-
-    if(backupPath) {
-        console.log(`[Database] Backup ready: ${backupPath}`)
+export function initDB({ legacyStorageRoot }: { legacyStorageRoot?: string } = {}): Promise<void> {
+    if (shuttingDown) {
+        return Promise.reject(new Error('DATABASE_SHUTTING_DOWN'))
     }
-    
-    migrate(db, { migrationsFolder })
-    
-    console.log('[Database] Migration Completed.')
+
+    if (sqlite?.open && db) return Promise.resolve()
+    if (initializing) return initializing
+
+    initializing = (async () => {
+        const databasePath = getDatabasePath()
+
+        mkdirSync(dirname(databasePath), { recursive: true })
+
+        const connection = new Database(databasePath)
+
+        try {
+            connection.pragma('foreign_keys = ON')
+            connection.pragma('busy_timeout = 5000')
+
+            const migrationsFolder = app.isPackaged
+                ? join(process.resourcesPath, 'drizzle')
+                : join(app.getAppPath(), 'drizzle')
+
+            const result = await migrateDatabase(connection, {
+                targetVersion: 3,
+                legacyStorageRoot,
+                legacyMigrations: readMigrationFiles({ migrationsFolder }),
+                schemaSql: [...schemaV2Sql],
+                numericTimeUnit: legacyNumericTimeUnit,
+                backupDirectory: join(dirname(databasePath), 'backups')
+            })
+
+            if (shuttingDown) {
+                throw new Error('DATABASE_SHUTTING_DOWN')
+            }
+
+            const client = drizzle(connection, { schema })
+
+            sqlite = connection
+            db = client
+
+            if (result.version === 3) {
+                if (result.legacyBackupPath) {
+                    console.log('[Database] Legacy backup ready:', result.legacyBackupPath)
+                }
+
+                if (result.version2BackupPath) {
+                    console.log('[Database] Version 2 backup available:', result.version2BackupPath)
+                }
+
+                if (result.backupPath) {
+                    console.log('[Database] Migration backup ready:', result.backupPath)
+                }
+
+                if (result.maintenancePending) {
+                    console.warn('[Database] Pending maintenance tasks remain.')
+                }
+            }
+        } catch (error) {
+            if (connection.open) connection.close()
+            throw error
+        }
+    })().finally(() => {
+        initializing = undefined
+    })
+
+    return initializing
 }
 
 app.on('before-quit', () => {
-    sqlite.close();
+    shuttingDown = true
+
+    const connection = sqlite
+
+    sqlite = undefined
+    db = undefined
+
+    if (connection?.open) connection.close()
 })
-
-
-// ----------------------------------------------------------------------
-// FTS5 유틸
-// ----------------------------------------------------------------------
-export const createFtsTable = () => {
-    sqlite.exec(`
-        CREATE VIRTUAL TABLE IF NOT EXISTS media_fts USING fts5(
-            title,
-            owner_name,
-            url,
-            tag_names
-        );
-    `);
-};
-
-
-// FTS 인덱스 전체 재구축
-export const rebuildFtsIndex = () => {
-    sqlite.exec('DELETE FROM media_fts');
-    sqlite.exec(`
-        INSERT INTO media_fts(rowid, title, owner_name, url, tag_names)
-        SELECT
-            m.id,
-            m.title,
-            COALESCE(p.owner_name, ''),
-            COALESCE(u.url, ''),
-            COALESCE(
-                (SELECT GROUP_CONCAT(t.name, ' ')
-                FROM media_tag mt
-                JOIN tag t ON mt.tag_id = t.id
-                WHERE mt.media_id = m.id),
-                ''
-            )
-            FROM media m
-            LEFT JOIN profiles p ON m.profile_id = p.id
-            LEFT JOIN download_urls u ON m.url_id = u.id
-    `);
-};
-
-// FTS 단건 갱신
-export const upsertFtsEntry = (mediaId: number) => {
-    sqlite.prepare('DELETE FROM media_fts WHERE rowid = ?').run(mediaId);
-    sqlite.prepare(`
-        INSERT INTO media_fts(rowid, title, owner_name, url, tag_names)
-        SELECT
-            m.id,
-            m.title,
-            COALESCE(p.owner_name, ''),
-            COALESCE(u.url, ''),
-            COALESCE(
-                (SELECT GROUP_CONCAT(t.name, ' ')
-                    FROM media_tag mt
-                    JOIN tag t ON mt.tag_id = t.id
-                    WHERE mt.media_id = m.id),
-                ''
-            )
-        FROM media m
-        LEFT JOIN profiles p ON m.profile_id = p.id
-        LEFT JOIN download_urls u ON m.url_id = u.id
-        WHERE m.id = ?
-    `).run(mediaId);
-};
-
-// FTS 단건 삭제
-export const deleteFtsEntry = (mediaId: number) => {
-    sqlite.prepare('DELETE FROM media_fts WHERE rowid = ?').run(mediaId);
-};
-
-export const getFtsCount = (): number => {
-    const result = sqlite.prepare('SELECT COUNT(*) as cnt FROM media_fts').get() as { cnt: number };
-    return result.cnt;
-};
-
-export const getMediaCount = (): number => {
-    const result = sqlite.prepare('SELECT COUNT(*) as cnt FROM media').get() as { cnt: number };
-    return result.cnt;
-};
-

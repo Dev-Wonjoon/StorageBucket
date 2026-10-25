@@ -1,19 +1,22 @@
+electronFuses:
+  runAsNode: true
 appId: com.electron.app
 productName: storagebucket
 directories:
   buildResources: build
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - 'out/**/*'
+  - 'package.json'
+  - 'THIRD_PARTY_LICENSES.md'
 extraResources:
-  - from: "resources/bin"
-    to: "bin"
+  - from: bin
+    to: bin
     filter:
-      - "**/*"
+      - yt-dlp.exe
+      - ffmpeg.exe
+      - gallery-dl.exe
+  - from: resources/engine-host.ps1
+    to: engine-host.ps1
   - from: drizzle
     to: drizzle
 asarUnpack:

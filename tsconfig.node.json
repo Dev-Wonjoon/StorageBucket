@@ -1,6 +1,16 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
-  "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*", "src/database/**/*", "src/shared/**/*"],
+  "include": [
+    "electron.vite.config.*",
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/database/**/*",
+    "src/shared/**/*",
+    "tests/database/**/*",
+    "tests/main/**/*",
+    "tests/preload/**/*",
+    "src/renderer/src/features/gallery/galleryStore.ts"
+  ],
   "compilerOptions": {
     "composite": true,
     "types": ["electron-vite/node"]

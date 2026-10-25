@@ -1,4 +1,4 @@
-import { MediaCard } from '@renderer/shared/components/media/MediaCard'
+import { GalleryPage } from '@renderer/features/gallery/GalleryPage'
 import { useState } from 'react'
 import { useSearchViewModel } from '@renderer/features/search/useSearchViewModel'
 
@@ -54,6 +54,7 @@ export const SearchPage = (): React.JSX.Element => {
                 {/* 키워드 검색 */}
                 <input
                     type="text"
+                    maxLength={1000}
                     value={vm.keyword}
                     onChange={(e) => vm.setKeyword(e.target.value)}
                     placeholder="제목, 작성자, URL, 태그로 검색..."
@@ -72,6 +73,7 @@ export const SearchPage = (): React.JSX.Element => {
                             <input
                                 type="text"
                                 value={tagInput}
+                                maxLength={200}
                                 onChange={(e) => handleTagInput(e.target.value)}
                                 onKeyDown={handleTagKeyDown}
                                 placeholder="태그 추가..."
@@ -121,6 +123,7 @@ export const SearchPage = (): React.JSX.Element => {
                     <div className="flex-1 relative">
                         <input
                             type="text"
+                            maxLength={200}
                             value={platformInput}
                             onChange={(e) => handlePlatformInput(e.target.value)}
                             onKeyDown={handlePlatformKeyDown}
@@ -153,6 +156,7 @@ export const SearchPage = (): React.JSX.Element => {
                     <div className="flex-1 relative">
                         <input
                             type="text"
+                            maxLength={200}
                             value={authorInput}
                             onChange={(e) => handleAuthorInput(e.target.value)}
                             onKeyDown={handleAuthorKeyDown}
@@ -240,41 +244,19 @@ export const SearchPage = (): React.JSX.Element => {
             </div>
 
             {/* 결과 헤더 */}
-            <div className="px-4 py-2 text-sm text-[var(--text-muted)]">
-                {vm.isLoading ? '검색 중...' : `${vm.total}개 결과`}
-            </div>
+            {vm.suggestionError && (
+                <p role="status" className="px-4 py-2 text-sm text-[var(--text-muted)]">
+                    {vm.suggestionError}
+                </p>
+            )}
 
-            {/* 결과 그리드 */}
-            <div className="flex-1 overflow-y-auto p-4">
-                {vm.results.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                        {vm.results.map((media) => (
-                            <MediaCard key={media.id} data={media} variant="compact" />
-                        ))}
-                    </div>
-                ) : !vm.isLoading ? (
-                    <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
-                        {vm.keyword ||
-                        vm.selectedTags.length > 0 ||
-                        vm.selectedPlatforms.length > 0 ||
-                        vm.selectedAuthors.length > 0
-                            ? '검색 결과가 없습니다'
-                            : '검색어를 입력하세요'}
-                    </div>
-                ) : null}
-
-                {vm.hasNextPage && (
-                    <div className="flex justify-center mt-4">
-                        <button
-                            onClick={vm.loadMore}
-                            className="px-4 py-2 text-sm rounded-lg
-                                bg-[var(--bg-hover)] text-[var(--text-main)]
-                                hover:bg-[var(--bg-active)]"
-                        >
-                            더 보기
-                        </button>
-                    </div>
-                )}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4">
+                <GalleryPage
+                    title="검색 결과"
+                    filter={vm.filter}
+                    showDownloads={false}
+                    emptyMessage="검색 결과가 없습니다."
+                />
             </div>
         </div>
     )

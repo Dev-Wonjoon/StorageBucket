@@ -8,7 +8,7 @@ export function DownloadBar(): React.JSX.Element {
     const [url, setUrl] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const pending = useRef(false)
-    const { startDownload } = useDownloadViewModel()
+    const { startDownload, ready, halted } = useDownloadViewModel()
 
     const submit = async (value: string): Promise<void> => {
         const trimmed = value.trim()
@@ -47,7 +47,7 @@ export function DownloadBar(): React.JSX.Element {
                     value={url}
                     onChange={(event) => setUrl(event.target.value)}
                     onPaste={handlePaste}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !ready || Boolean(halted)}
                     placeholder="다운로드할 링크를 붙여넣으세요..."
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border transition-all shadow-sm outline-none
             bg-[var(--bg-sidebar)] border-[var(--border-line)] text-[var(--text-main)]
@@ -58,7 +58,7 @@ export function DownloadBar(): React.JSX.Element {
             <Button
                 type="submit"
                 size="md"
-                disabled={isSubmitting || !url.trim()}
+                disabled={isSubmitting || !url.trim() || !ready || Boolean(halted)}
                 className="rounded-xl flex items-center gap-2 shadow-lg active:scale-95"
             >
                 {isSubmitting ? (
