@@ -807,3 +807,85 @@ describe('download store', () => {
     expect(f.api.get).not.toHaveBeenCalled()
   })
 })
+
+describe('download detail selection', () => {
+    it('이전 페이지 항목도 선택한 작업 ID로 계속 갱신한다', async () => {
+        const f = fixture()
+        for (let i = 0; i < 51; i++) f.rows.push(job('job-' + i))
+        const { store } = open(f)
+        await flush()
+        await store.openDetail('job-0')
+        await store.refresh(50)
+        f.rows[0].state = 'cancelled'
+        await vi.advanceTimersByTimeAsync(1000)
+        expect(store.getSnapshot().queue).toHaveLength(1)
+        expect(store.getSnapshot().detail.data?.id).toBe('job-0')
+        expect(store.getSnapshot().detail.data?.state).toBe('cancelled')
+        const revision = store.getSnapshot().mediaRevision
+        f.rows[0].state = 'completed'
+        f.rows[0].currentAttemptId = 'finished-off-page'
+        await vi.advanceTimersByTimeAsync(1000)
+        expect(store.getSnapshot().mediaRevision).toBe(revision + 1)
+    })
+
+    it('다른 작업 선택 뒤 도착한 응답은 현재 상세를 덮어쓰지 않는다', async () => {
+        const f = fixture()
+        f.rows.push(job('first'), job('second'))
+        const { store } = open(f)
+        await flush()
+        const pending = deferred<DownloadResponse<DownloadJobDto>>()
+        f.api.get.mockReturnValueOnce(pending.promise)
+        const first = store.openDetail('first')
+        await store.openDetail('second')
+        pending.resolve(ok(job('first')))
+        await first
+        expect(store.getSnapshot().detail.data?.id).toBe('second')
+    })
+
+    it('닫은 뒤 늦은 응답이 도착해도 패널을 다시 열지 않는다', async () => {
+        const f = fixture()
+        const { store } = open(f)
+        await flush()
+        const pending = deferred<DownloadResponse<DownloadJobDto>>()
+        f.api.get.mockReturnValueOnce(pending.promise)
+        const read = store.openDetail('first')
+        store.closeDetail()
+        pending.resolve(ok(job('first')))
+        await read
+        expect(store.getSnapshot().detail).toEqual({
+            jobId: null,
+            data: null,
+            loading: false,
+            error: null
+        })
+    })
+
+    it('상세 조회 실패는 오래된 조작 버튼 대신 오류를 표시하고 재조회할 수 있다', async () => {
+        const f = fixture()
+        f.rows.push(job('first'))
+        const { store } = open(f)
+        await flush()
+        await store.openDetail('first')
+        f.api.get.mockRejectedValueOnce(new Error('offline'))
+        await store.refresh()
+        expect(store.getSnapshot().detail.data).toBeNull()
+        expect(store.getSnapshot().detail.error?.code).toBe('TRANSPORT_ERROR')
+        await store.openDetail('first')
+        expect(store.getSnapshot().detail.error).toBeNull()
+        expect(store.getSnapshot().detail.data?.id).toBe('first')
+    })
+
+    it('구독 해제 후 도착한 상세 응답은 반영하지 않는다', async () => {
+        const f = fixture()
+        const { store, stop } = open(f)
+        await flush()
+        const pending = deferred<DownloadResponse<DownloadJobDto>>()
+        f.api.get.mockReturnValueOnce(pending.promise)
+        const read = store.openDetail('first')
+        stop()
+        const snapshot = store.getSnapshot()
+        pending.resolve(ok(job('first')))
+        await read
+        expect(store.getSnapshot()).toBe(snapshot)
+    })
+})

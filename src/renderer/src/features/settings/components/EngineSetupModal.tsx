@@ -2,6 +2,7 @@ import { getApi } from '@renderer/shared/api'
 import type { EngineStatus } from '../../../../../shared/types'
 import { useState, useEffect } from 'react'
 import { BaseModal } from '@renderer/shared/components/ui/BaseModal'
+import { useToast } from '@renderer/shared/hooks/useToast'
 
 interface EngineStatusProps {
     onComplete: () => void
@@ -11,6 +12,7 @@ export function EngineSetupModal({ onComplete }: EngineStatusProps): React.JSX.E
     const [engines, setEngines] = useState<Record<string, EngineStatus>>({})
     const [installing, setInstalling] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
+    const { showToast } = useToast()
 
     useEffect(() => {
         getApi()
@@ -28,11 +30,18 @@ export function EngineSetupModal({ onComplete }: EngineStatusProps): React.JSX.E
         setInstalling(name)
 
         try {
-            await getApi().installEngine(name)
+            const success = await getApi().installEngine(name)
+
+            if (!success) {
+                showToast(`${name} 설치에 실패했습니다. 다시 시도해 주세요.`, 'error')
+                return
+            }
+
             const status = await getApi().getEngineStatus()
             setEngines(status)
         } catch (error) {
             console.error(`Failed to install ${name}:`, error)
+            showToast(`${name} 설치 상태를 확인하지 못했습니다.`, 'error')
         } finally {
             setInstalling(null)
         }

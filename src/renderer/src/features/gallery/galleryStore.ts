@@ -23,8 +23,11 @@ export interface GallerySnapshot {
     list: {
         status: Status
         page: MediaPage<MediaSummaryDto>
-        offset: number
+        nextOffset: number
+        refreshing: boolean
+        loadingMore: boolean
         error: MediaViewError | null
+        moreError: MediaViewError | null
     }
     detail: {
         mediaId: number | null
@@ -46,6 +49,22 @@ const transportError: MediaViewError = {
     message: '응답을 확인하지 못했습니다. 새로고침으로 현재 상태를 확인하세요.'
 }
 
+function emptyList(): GallerySnapshot['list'] {
+    return {
+        status: 'idle',
+        page: {
+            data: [],
+            total: 0,
+            hasNextPage: false
+        },
+        nextOffset: 0,
+        refreshing: false,
+        loadingMore: false,
+        error: null,
+        moreError: null
+    }
+}
+
 export function createGalleryStore(
     api: MediaApi,
     options: {
@@ -55,16 +74,7 @@ export function createGalleryStore(
     const favoritesOnly = options.favoritesOnly ?? false
     let filter: MediaFilter = {}
     let snapshot: GallerySnapshot = {
-        list: {
-            status: 'idle',
-            page: {
-                data: [],
-                total: 0,
-                hasNextPage: false
-            },
-            offset: 0,
-            error: null
-        },
+        list: emptyList(),
         detail: {
             mediaId: null,
             status: 'idle',
@@ -109,10 +119,12 @@ export function createGalleryStore(
 
         publish({
             ...snapshot,
-            list:
-                snapshot.list.status === 'loading'
-                    ? { ...snapshot.list, status: 'idle' }
-                    : snapshot.list,
+            list: {
+                ...snapshot.list,
+                status: snapshot.list.status === 'loading' ? 'idle' : snapshot.list.status,
+                refreshing: false,
+                loadingMore: false
+            },
             detail:
                 snapshot.detail.status === 'loading'
                     ? { ...snapshot.detail, status: 'idle' }
@@ -120,62 +132,128 @@ export function createGalleryStore(
         })
     }
 
-    async function loadList(offset = snapshot.list.offset, internal = false): Promise<boolean> {
+    async function loadList(
+        mode: 'refresh' | 'append' = 'refresh',
+        internal = false
+    ): Promise<boolean> {
+        const append = mode === 'append'
+        const previous = snapshot.list
+
         if (snapshot.busy && !internal) {
-            refreshQueued = true
+            if (!append) refreshQueued = true
+            return false
+        }
+
+        if (
+            append &&
+            (snapshot.needsRefresh ||
+                previous.status !== 'ready' ||
+                previous.refreshing ||
+                previous.loadingMore ||
+                previous.error !== null ||
+                !previous.page.hasNextPage)
+        ) {
             return false
         }
 
         const token = ++listToken
+        const requestedFilter = structuredClone(filter)
+
+        // 변경 후 재조회할 때 이미 불러온 범위를 유지한다.
+        const refreshCount = Math.max(MEDIA_PAGE_SIZE, previous.nextOffset)
+
+        let offset = append ? previous.nextOffset : 0
+        const rows = append ? [...previous.page.data] : []
+
+        let total = previous.page.total
+        let hasNextPage = false
 
         publish({
             ...snapshot,
             list: {
-                ...snapshot.list,
-                status: 'loading',
-                offset,
-                error: null
+                ...previous,
+                status: previous.page.data.length > 0 ? 'ready' : 'loading',
+                refreshing: !append,
+                loadingMore: append,
+                error: null,
+                moreError: null
             }
         })
 
-        const result = await request(() =>
-            api.list({
-                limit: MEDIA_PAGE_SIZE,
-                favoritesOnly,
-                filter: structuredClone(filter),
-                offset
-            })
-        )
-
-        if (token !== listToken) return false
-
-        if (!result.ok) {
+        function failList(error: MediaViewError): false {
             publish({
                 ...snapshot,
                 list: {
                     ...snapshot.list,
-                    status: result.error.code === 'NOT_READY' ? 'not_ready' : 'error',
-                    error: result.error
+                    status:
+                        snapshot.list.page.data.length > 0
+                            ? 'ready'
+                            : error.code === 'NOT_READY'
+                              ? 'not_ready'
+                              : 'error',
+                    refreshing: false,
+                    loadingMore: false,
+                    error: append ? null : error,
+                    moreError: append ? error : null
                 }
             })
+
             return false
         }
 
-        if (offset > 0 && offset >= result.data.total) {
-            const last = Math.max(
-                0,
-                Math.floor((result.data.total - 1) / MEDIA_PAGE_SIZE) * MEDIA_PAGE_SIZE
+        do {
+            const result = await request(() =>
+                api.list({
+                    limit: MEDIA_PAGE_SIZE,
+                    offset,
+                    favoritesOnly,
+                    filter: requestedFilter
+                })
             )
-            return loadList(last, internal)
+
+            // 검색 변경·새로고침·편집 이후 도착한 이전 응답은 무시한다.
+            if (token !== listToken) return false
+
+            if (!result.ok) {
+                return failList(result.error)
+            }
+
+            const page = result.data
+
+            if (page.hasNextPage && page.data.length === 0) {
+                return failList({
+                    code: 'INVARIANT_VIOLATION',
+                    message: '다음 목록을 확인하지 못했습니다. 새로고침하세요.'
+                })
+            }
+
+            rows.push(...page.data)
+            offset += page.data.length
+
+            total = page.total
+            hasNextPage = page.hasNextPage
+        } while (!append && hasNextPage && offset < refreshCount)
+
+        const byId = new Map<number, MediaSummaryDto>()
+
+        for (const media of rows) {
+            byId.set(media.id, media)
         }
 
         publish({
             ...snapshot,
             list: {
                 status: 'ready',
-                page: result.data,
-                offset,
-                error: null
+                page: {
+                    data: [...byId.values()],
+                    total,
+                    hasNextPage
+                },
+                nextOffset: offset,
+                refreshing: false,
+                loadingMore: false,
+                error: null,
+                moreError: null
             }
         })
 
@@ -254,7 +332,7 @@ export function createGalleryStore(
         }
 
         const results = await Promise.all([
-            loadList(snapshot.list.offset, internal),
+            loadList('refresh', internal),
             snapshot.detail.mediaId === null
                 ? Promise.resolve(true)
                 : loadDetail(snapshot.detail.offset, internal)
@@ -275,7 +353,8 @@ export function createGalleryStore(
 
     async function mutate<T>(
         action: () => Promise<MediaResult<T>>,
-        apply: (data: T) => void
+        apply: (data: T) => void,
+        successNotice: string | null = '변경을 반영했습니다.'
     ): Promise<boolean> {
         if (snapshot.busy || snapshot.needsRefresh) {
             return false
@@ -314,7 +393,7 @@ export function createGalleryStore(
             // 성공한 변경과 후속 조회 실패를 구분한다.
             publish({
                 ...snapshot,
-                notice: '변경을 반영했습니다.',
+                notice: successNotice,
                 detail: {
                     ...snapshot.detail,
                     data: null
@@ -365,7 +444,7 @@ export function createGalleryStore(
                 page: {
                     data,
                     total,
-                    hasNextPage: snapshot.list.offset + data.length < total
+                    hasNextPage: data.length < total
                 }
             }
         })
@@ -393,7 +472,7 @@ export function createGalleryStore(
                     page: {
                         data,
                         total,
-                        hasNextPage: snapshot.list.offset + data.length < total
+                        hasNextPage: data.length < total
                     }
                 }
             })
@@ -439,22 +518,13 @@ export function createGalleryStore(
 
             publish({
                 ...snapshot,
-                list: {
-                    status: 'idle',
-                    page: {
-                        data: [],
-                        total: 0,
-                        hasNextPage: false
-                    },
-                    offset: 0,
-                    error: null
-                }
+                list: emptyList()
             })
         },
 
         refresh: () => refresh(),
 
-        loadList: (offset: number) => loadList(offset),
+        loadMore: () => loadList('append'),
 
         loadDetail: (offset: number) => loadDetail(offset),
 
@@ -495,7 +565,14 @@ export function createGalleryStore(
             })
         },
 
-        edit: (input: MediaEditRequest) => mutate(() => api.edit(input), edited),
+        edit: (input: MediaEditRequest): Promise<boolean> => {
+            const favoriteOnly =
+                input.isFavorite !== undefined &&
+                Object.keys(input).every((key) =>
+                    ['mediaId', 'expectedRevision', 'isFavorite'].includes(key)
+                )
+            return mutate(() => api.edit(input), edited, favoriteOnly ? null : undefined)
+        },
 
         unregisterFiles: (input: MediaUnregisterFilesRequest) =>
             mutate(() => api.unregisterFiles(input), removed),

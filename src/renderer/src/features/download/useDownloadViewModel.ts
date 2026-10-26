@@ -49,6 +49,8 @@ export function useDownloadViewModel() {
         startDownload,
         runJob,
         cancelDownload,
-        refresh: store.refresh
+        refresh: store.refresh,
+        openDetail: store.openDetail,
+        closeDetail: store.closeDetail
     }
 }

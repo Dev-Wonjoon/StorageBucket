@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
+import { statSync } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -90,6 +91,24 @@ async function fake(request: EngineProcessRequest) {
         stdout: JSON.stringify(path) + '\n',
         stderr: ''
     }
+}
+
+function realEnginePath(name: 'yt-dlp' | 'ffmpeg'): string {
+    const filename = `${name}.exe`
+
+    const candidates = [resolve('bin', filename), resolve('resources/bin', filename)]
+
+    for (const candidate of candidates) {
+        try {
+            if (statSync(candidate).isFile()) {
+                return candidate
+            }
+        } catch {
+            // 다음 후보 확인
+        }
+    }
+
+    throw new Error(`테스트용 ${name} 실행 파일이 없습니다.\n${candidates.join('\n')}`)
 }
 
 beforeEach(async () => {
@@ -480,7 +499,7 @@ describe.skipIf(process.platform !== 'win32')('YtdlpAdapter 실제 엔진', () =
         const source = join(root, 'source.mp4')
 
         await engine.run({
-            executable: resolve('bin/ffmpeg.exe'),
+            executable: realEnginePath('ffmpeg'),
             cwd: root,
             arguments: [
                 '-hide_banner',
@@ -597,8 +616,8 @@ describe.skipIf(process.platform !== 'win32')('YtdlpAdapter 실제 엔진', () =
                 }
             },
             root,
-            resolve('bin/yt-dlp.exe'),
-            resolve('bin/ffmpeg.exe'),
+            realEnginePath('yt-dlp'),
+            realEnginePath('ffmpeg'),
             localPolicy
         )
 
@@ -683,7 +702,7 @@ describe.skipIf(process.platform !== 'win32')('YtdlpAdapter 실제 엔진', () =
         assert.ok(results[0].stagedPath.endsWith('.mp3'))
 
         await engine.run({
-            executable: resolve('bin/ffmpeg.exe'),
+            executable: realEnginePath('ffmpeg'),
             cwd: root,
             arguments: [
                 '-hide_banner',
@@ -715,7 +734,7 @@ describe.skipIf(process.platform !== 'win32')('YtdlpAdapter 실제 엔진', () =
         assert.ok(requests.includes('GET /media.mp4?stream=audio'))
 
         await engine.run({
-            executable: resolve('bin/ffmpeg.exe'),
+            executable: realEnginePath('ffmpeg'),
             cwd: root,
             arguments: [
                 '-hide_banner',

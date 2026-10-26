@@ -347,10 +347,26 @@ function schemaSignature(sqlite: Database.Database): string {
       WHERE name NOT LIKE 'sqlite_%'
       ORDER BY type, name
     `
-        ).map((row) => ({
-            ...row,
-            sql: sqlTokens(row.sql)
-        }))
+        ).map((row) => {
+            let normalizedSql = sqlTokens(row.sql)
+
+            // 기존 Drizzle이 기록한 이 테이블 이름의 따옴표만 정규화한다.
+            if (
+                row.type === 'table' &&
+                row.name === '__drizzle_migrations' &&
+                row.tbl_name === '__drizzle_migrations'
+            ) {
+                normalizedSql = normalizedSql.replace(
+                    /^create table "__drizzle_migrations" (?=\()/,
+                    'create table __drizzle_migrations '
+                )
+            }
+
+            return {
+                ...row,
+                sql: normalizedSql
+            }
+        })
     )
 }
 
@@ -1561,4 +1577,3 @@ async function migrateDownloadStorage(
         maintenancePending: pending()
     }
 }
-

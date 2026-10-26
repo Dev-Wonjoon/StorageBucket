@@ -11,8 +11,7 @@ export function createAppApi(transport: IpcTransport): AppApi {
             list: (request = {}) => transport.invoke('media:list', request),
             get: (request) => transport.invoke('media:get', request),
             edit: (request) => transport.invoke('media:edit', request),
-            unregisterFiles: (request) =>
-                transport.invoke('media:unregister-files', request),
+            unregisterFiles: (request) => transport.invoke('media:unregister-files', request),
             unregisterMedia: (request) => transport.invoke('media:unregister', request),
             suggest: (request) => transport.invoke('media:suggest', request)
         },
@@ -26,6 +25,7 @@ export function createAppApi(transport: IpcTransport): AppApi {
         },
 
         showItemInFolder: (filepath) => transport.invoke('shell:show-item', filepath),
+        getDoubleClickInterval: () => transport.invoke('system:double-click-interval'),
 
         getDownloadPath: () => transport.invoke('get-download-path'),
         setDownloadPath: () => transport.invoke('set-download-path'),
@@ -35,8 +35,7 @@ export function createAppApi(transport: IpcTransport): AppApi {
         getEngineLicenses: () => transport.invoke('system:engine-licenses'),
 
         getCookieBrowser: () => transport.invoke('system:get-cookie-browser'),
-        setCookieBrowser: (browser) =>
-            transport.invoke('system:set-cookie-browser', browser),
+        setCookieBrowser: (browser) => transport.invoke('system:set-cookie-browser', browser),
 
         getCookieFilePath: () => transport.invoke('system:get-cookie-file'),
         setCookieFilePath: () => transport.invoke('system:set-cookie-file'),

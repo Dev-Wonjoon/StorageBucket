@@ -225,35 +225,37 @@ describe('gallery store', () => {
         assert.equal(empty.store.getSnapshot().list.page.total, 0)
     })
 
-    it('목록의 늦은 응답이 새 페이지를 덮어쓰지 않는다', async () => {
+    it('이전 목록 응답이 새로고침 결과를 덮어쓰지 않는다', async () => {
         const old = deferred<Awaited<ReturnType<MediaApi['list']>>>()
+        let reads = 0
 
         const { store } = fixture({
-            list: (request) =>
-                request?.offset === 0
-                    ? old.promise
-                    : Promise.resolve(
-                          ok({
-                              data: [summary(2)],
-                              total: 51,
-                              hasNextPage: false
-                          })
-                      )
+            list: async () => {
+                reads++
+
+                if (reads === 1) return old.promise
+
+                return ok({
+                    data: [summary(2)],
+                    total: 1,
+                    hasNextPage: false
+                })
+            }
         })
 
-        const first = store.loadList(0)
-        await store.loadList(50)
+        const first = store.refresh()
+        await store.refresh()
 
         old.resolve(
             ok({
                 data: [summary(1)],
-                total: 51,
-                hasNextPage: true
+                total: 1,
+                hasNextPage: false
             })
         )
 
         assert.equal(await first, false)
-        assert.equal(store.getSnapshot().list.offset, 50)
+        assert.equal(store.getSnapshot().list.nextOffset, 1)
         assert.equal(store.getSnapshot().list.page.data[0].id, 2)
     })
 
@@ -579,22 +581,30 @@ describe('gallery store', () => {
     })
 
     describe('gallery search filters', () => {
-        it('검색 조건을 복사해 전달하고 새 조건은 첫 페이지부터 조회한다', async () => {
+        it('검색 조건을 복사하고 변경 시 목록을 처음부터 조회한다', async () => {
             const requests: unknown[] = []
+            const rows = Array.from({ length: 100 }, (_, index) => summary(index + 1))
 
             const { store } = fixture({
-                list: async (request) => {
+                list: async (request = {}) => {
                     requests.push(structuredClone(request))
 
+                    const offset = request.offset ?? 0
+                    const limit = request.limit ?? 50
+                    const data = rows.slice(offset, offset + limit)
+
                     return ok({
-                        data: [summary()],
-                        total: 100,
-                        hasNextPage: true
+                        data,
+                        total: rows.length,
+                        hasNextPage: offset + data.length < rows.length
                     })
                 }
             })
 
-            await store.loadList(50)
+            await store.refresh()
+            await store.loadMore()
+
+            assert.equal(store.getSnapshot().list.nextOffset, 100)
 
             const filter = {
                 tags: ['red'],
@@ -604,13 +614,12 @@ describe('gallery store', () => {
             store.setFilter(filter)
             filter.tags.push('blue')
 
-            assert.equal(store.getSnapshot().list.offset, 0)
-
+            assert.equal(store.getSnapshot().list.nextOffset, 0)
             assert.deepEqual(store.getSnapshot().list.page.data, [])
 
             await store.refresh()
 
-            assert.deepEqual(requests[1], {
+            assert.deepEqual(requests.at(-1), {
                 limit: 50,
                 offset: 0,
                 favoritesOnly: false,
@@ -793,5 +802,44 @@ describe('gallery store', () => {
 
             assert.equal(store.getSnapshot().needsRefresh, true)
         })
+    })
+})
+
+describe('favorite feedback', () => {
+    it('즐겨찾기는 상태만 바꾸고 일반 성공 문구를 표시하지 않는다', async () => {
+        const { store } = fixture()
+        await store.refresh()
+        assert.equal(await store.edit({ mediaId: 1, expectedRevision: 0, isFavorite: true }), true)
+        assert.equal(store.getSnapshot().list.page.data[0].isFavorite, true)
+        assert.equal(store.getSnapshot().notice, null)
+        assert.equal(
+            await store.edit({ mediaId: 1, expectedRevision: 1, customTitle: '편집한 제목' }),
+            true
+        )
+        assert.equal(store.getSnapshot().notice, '변경을 반영했습니다.')
+    })
+    it('즐겨찾기 실패와 재조회 필요 상태는 그대로 안내한다', async () => {
+        const { store } = fixture({ edit: async () => fail('REVISION_CONFLICT') })
+        await store.refresh()
+        assert.equal(await store.edit({ mediaId: 1, expectedRevision: 0, isFavorite: true }), false)
+        assert.equal(store.getSnapshot().writeError?.code, 'REVISION_CONFLICT')
+        assert.equal(store.getSnapshot().needsRefresh, true)
+    })
+    it('즐겨찾기 저장 후 조회만 실패한 경우의 안내를 숨기지 않는다', async () => {
+        let saved = false
+        const { store } = fixture({
+            edit: async () => {
+                saved = true
+                return ok({ ...summary(1, 1), isFavorite: true })
+            },
+            list: async () =>
+                saved
+                    ? fail('INTERNAL_ERROR')
+                    : ok({ data: [summary()], total: 1, hasNextPage: false })
+        })
+        await store.refresh()
+        assert.equal(await store.edit({ mediaId: 1, expectedRevision: 0, isFavorite: true }), true)
+        assert.equal(store.getSnapshot().needsRefresh, true)
+        assert.match(store.getSnapshot().notice!, /변경은 반영됐지만/)
     })
 })

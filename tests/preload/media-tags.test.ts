@@ -552,16 +552,25 @@ describe('favorites and tag changes', () => {
         assert.equal(store.getSnapshot().list.page.total, 0)
     })
 
-    it('즐겨찾기의 마지막 페이지에서 해제하면 앞 페이지로 이동한다', async () => {
+    it('추가 로드 후 즐겨찾기를 해제해도 나머지 목록과 상세를 유지한다', async () => {
         for (let i = 0; i < 51; i++) {
             seed(true)
         }
 
-        const store = createGalleryStore(api.media, { favoritesOnly: true })
+        const store = createGalleryStore(api.media, {
+            favoritesOnly: true
+        })
 
-        await store.loadList(50)
+        // 첫 50개 조회
+        await store.refresh()
+        assert.equal(store.getSnapshot().list.page.data.length, 50)
 
-        const media = store.getSnapshot().list.page.data[0]
+        // 나머지 1개 추가 조회
+        await store.loadMore()
+        assert.equal(store.getSnapshot().list.page.data.length, 51)
+        assert.equal(store.getSnapshot().list.nextOffset, 51)
+
+        const media = store.getSnapshot().list.page.data.at(-1)!
 
         await store.openDetail(media.id)
 
@@ -574,9 +583,21 @@ describe('favorites and tag changes', () => {
             true
         )
 
-        assert.equal(store.getSnapshot().list.offset, 0)
-        assert.equal(store.getSnapshot().list.page.total, 50)
-        assert.equal(store.getSnapshot().list.page.data.length, 50)
+        const state = store.getSnapshot()
+
+        assert.equal(state.list.page.total, 50)
+        assert.equal(state.list.page.data.length, 50)
+        assert.equal(state.list.nextOffset, 50)
+        assert.equal(state.list.page.hasNextPage, false)
+
+        assert.equal(
+            state.list.page.data.some((item) => item.id === media.id),
+            false
+        )
+
+        // 목록에서 빠져도 열린 상세는 유지
+        assert.equal(state.detail.data?.id, media.id)
+        assert.equal(state.detail.data?.isFavorite, false)
     })
 
     it('화면 저장소의 태그 변경도 기존 태그를 보존하며 IPC를 통과한다', async () => {

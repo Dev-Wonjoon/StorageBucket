@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Sidebar } from './layouts/Sidebar'
 import { DownloadBar } from '@renderer/features/download/components/DownloadBar'
 import { GalleryPage } from '@renderer/features/gallery/GalleryPage'
@@ -10,20 +10,27 @@ import { useDownloadViewModel } from '@renderer/features/download/useDownloadVie
 import { useEngineSetup } from './hooks/useEngineSetup'
 import { useGlobalPaste } from './hooks/useGlobalPaste'
 import type { AppMenu } from './navigation'
-import { DownloadQueue } from '@renderer/features/download/components/DownloadQueue'
+import { DownloadPage } from '@renderer/features/download/DownloadPage'
+import { LeaveGuardProvider } from './providers/LeaveGuardProvider'
 
 export default function App(): React.JSX.Element {
     const [activeMenu, setActiveMenu] = useState<AppMenu>('gallery')
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const leaveGuard = useRef<(() => boolean) | null>(null)
     const { startDownload } = useDownloadViewModel()
     const { showSetup, closeSetup } = useEngineSetup()
     useGlobalPaste(startDownload)
 
     const pages: Record<AppMenu, React.JSX.Element> = {
         gallery: <GalleryPage />,
+        downloads: <DownloadPage />,
         search: <SearchPage />,
         favorites: <FavoritesPage />,
-        settings: <SettingsPage />
+        settings: (
+            <div className="h-full overflow-y-auto p-6">
+                <SettingsPage />
+            </div>
+        )
     }
 
     return (
@@ -35,7 +42,11 @@ export default function App(): React.JSX.Element {
             >
                 <Sidebar
                     activeMenu={activeMenu}
-                    onMenuClick={setActiveMenu}
+                    onMenuClick={(menu) => {
+                        if (menu === activeMenu || (leaveGuard.current && !leaveGuard.current()))
+                            return
+                        setActiveMenu(menu)
+                    }}
                     collapsed={sidebarCollapsed}
                     onToggle={() => setSidebarCollapsed((previous) => !previous)}
                 />
@@ -44,9 +55,8 @@ export default function App(): React.JSX.Element {
                 <div className="flex-none p-4 h-20 border-b border-[var(--border-line)] bg-[var(--bg-app)]/95 backdrop-blur-sm z-10">
                     <DownloadBar />
                 </div>
-                <main className="flex-1 overflow-y-auto p-6">
-                    <DownloadQueue />
-                    {pages[activeMenu]}
+                <main className="min-h-0 flex-1 overflow-hidden">
+                    <LeaveGuardProvider guard={leaveGuard}>{pages[activeMenu]}</LeaveGuardProvider>
                 </main>
             </div>
             {showSetup && <EngineSetupModal onComplete={closeSetup} />}

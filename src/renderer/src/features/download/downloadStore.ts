@@ -26,6 +26,12 @@ export interface DownloadSnapshot {
     hasNextPage: boolean
     requestedIds: string[]
     cancellingIds: string[]
+    detail: {
+        jobId: string | null
+        data: DownloadJobDto | null
+        loading: boolean
+        error: DownloadError | null
+    }
 }
 
 export interface DownloadStore {
@@ -36,6 +42,8 @@ export interface DownloadStore {
     startDownload(url: string): Promise<DownloadResponse<DownloadJobDto>>
     runJob(jobId: string, trigger: ManualDownloadTrigger): Promise<void>
     cancelDownload(jobId: string): Promise<void>
+    openDetail(jobId: string): Promise<void>
+    closeDetail(): void
 }
 
 function failure(code: string, message: string): DownloadResponse<never> {
@@ -56,7 +64,8 @@ export function createDownloadStore(api: DownloadApi, pollMs = 2000): DownloadSt
         offset: 0,
         hasNextPage: false,
         requestedIds: [],
-        cancellingIds: []
+        cancellingIds: [],
+        detail: { jobId: null, data: null, loading: false, error: null }
     }
 
     const listeners = new Set<() => void>()
@@ -75,6 +84,7 @@ export function createDownloadStore(api: DownloadApi, pollMs = 2000): DownloadSt
     let connected = false
     let generation = 0
     let readSerial = 0
+    let detailSerial = 0
     let timer: ReturnType<typeof setTimeout> | undefined
     let notify: ((notice: DownloadNotice) => void) | undefined
 
@@ -140,6 +150,68 @@ export function createDownloadStore(api: DownloadApi, pollMs = 2000): DownloadSt
         })
     }
 
+    async function refreshDetail(): Promise<void> {
+        const id = snapshot.detail.jobId
+        if (!connected || id === null) return
+        const ownGeneration = generation
+        const serial = ++detailSerial
+        try {
+            const result = await api.get({ jobId: id })
+            if (
+                !connected ||
+                generation !== ownGeneration ||
+                serial !== detailSerial ||
+                snapshot.detail.jobId !== id
+            )
+                return
+            if (result.ok) {
+                const job = structuredClone(result.data)
+                observe(job)
+                publish({ detail: { jobId: id, data: job, loading: false, error: null } })
+            } else {
+                publish({
+                    detail: {
+                        jobId: id,
+                        data: null,
+                        loading: false,
+                        error: structuredClone(result.error)
+                    }
+                })
+            }
+        } catch {
+            if (
+                !connected ||
+                generation !== ownGeneration ||
+                serial !== detailSerial ||
+                snapshot.detail.jobId !== id
+            )
+                return
+            publish({
+                detail: {
+                    jobId: id,
+                    data: null,
+                    loading: false,
+                    error: {
+                        code: 'TRANSPORT_ERROR',
+                        message: '작업 상세를 불러오지 못했습니다. 새로고침하세요.',
+                        context: {}
+                    }
+                }
+            })
+        }
+    }
+
+    async function openDetail(jobId: string): Promise<void> {
+        ++detailSerial
+        publish({ detail: { jobId, data: null, loading: true, error: null } })
+        await refreshDetail()
+    }
+
+    function closeDetail(): void {
+        ++detailSerial
+        publish({ detail: { jobId: null, data: null, loading: false, error: null } })
+    }
+
     async function refresh(offset = snapshot.offset) {
         if (!connected) return
 
@@ -173,7 +245,11 @@ export function createDownloadStore(api: DownloadApi, pollMs = 2000): DownloadSt
                 observe(job)
             }
 
-            const keep = new Set([...page.data.map((job) => job.id), ...requested])
+            const keep = new Set([
+                ...page.data.map((job) => job.id),
+                ...requested,
+                ...(snapshot.detail.jobId ? [snapshot.detail.jobId] : [])
+            ])
 
             for (const id of observed.keys()) {
                 if (!keep.has(id)) observed.delete(id)
@@ -187,6 +263,7 @@ export function createDownloadStore(api: DownloadApi, pollMs = 2000): DownloadSt
                 ready: true,
                 error: null
             })
+            await refreshDetail()
         } catch {
             if (!connected || generation !== ownGeneration || serial !== readSerial) {
                 return
@@ -369,6 +446,7 @@ export function createDownloadStore(api: DownloadApi, pollMs = 2000): DownloadSt
                 notify = undefined
                 ++generation
                 ++readSerial
+                ++detailSerial
 
                 if (timer !== undefined) {
                     clearTimeout(timer)
@@ -386,6 +464,8 @@ export function createDownloadStore(api: DownloadApi, pollMs = 2000): DownloadSt
         refresh,
         startDownload,
         runJob,
-        cancelDownload
+        cancelDownload,
+        openDetail,
+        closeDetail
     }
 }

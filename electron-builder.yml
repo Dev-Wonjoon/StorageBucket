@@ -9,12 +9,6 @@ files:
   - 'package.json'
   - 'THIRD_PARTY_LICENSES.md'
 extraResources:
-  - from: bin
-    to: bin
-    filter:
-      - yt-dlp.exe
-      - ffmpeg.exe
-      - gallery-dl.exe
   - from: resources/engine-host.ps1
     to: engine-host.ps1
   - from: drizzle

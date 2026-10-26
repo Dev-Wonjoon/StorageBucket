@@ -62,6 +62,7 @@ describe('preload contract', () => {
             api.downloads.cancel({ jobId: 'job' }),
 
             api.showItemInFolder('C:/fixture/a.png'),
+            api.getDoubleClickInterval(),
             api.getDownloadPath(),
             api.setDownloadPath(),
             api.getEngineStatus(),
@@ -86,6 +87,7 @@ describe('preload contract', () => {
                 'media',
                 'downloads',
                 'showItemInFolder',
+                'getDoubleClickInterval',
                 'getDownloadPath',
                 'setDownloadPath',
                 'getEngineStatus',

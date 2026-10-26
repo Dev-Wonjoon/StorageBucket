@@ -1,17 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { getApi } from '@renderer/shared/api'
 import { useToast } from '@renderer/shared/hooks/useToast'
 import { MediaPreview } from '@renderer/shared/components/media/MediaPreview'
 import { MEDIA_PAGE_SIZE, type GallerySnapshot, type GalleryStore } from '../gallery/galleryStore'
 
+export interface MediaDetailFocusRequest {
+    mediaId: number
+    field: 'title' | 'tags'
+    sequence: number
+}
+
 export function MediaDetailPane({
     state,
     store,
-    onDirtyChange
+    onDirtyChange,
+    focusRequest
 }: {
     state: GallerySnapshot
     store: GalleryStore
     onDirtyChange: (dirty: boolean) => void
+    focusRequest?: MediaDetailFocusRequest | null
 }) {
     const { showToast } = useToast()
     const detail = state.detail
@@ -22,6 +30,24 @@ export function MediaDetailPane({
     )
 
     const [newTagName, setNewTagName] = useState('')
+    const titleInput = useRef<HTMLInputElement>(null)
+    const tagInput = useRef<HTMLInputElement>(null)
+    const handledFocus = useRef<number | null>(null)
+    useEffect(() => {
+        if (
+            !focusRequest ||
+            focusRequest.mediaId !== data?.id ||
+            detail.status !== 'ready' ||
+            !draft ||
+            handledFocus.current === focusRequest.sequence
+        )
+            return
+        const input = focusRequest.field === 'title' ? titleInput.current : tagInput.current
+        if (!input || input.disabled) return
+        handledFocus.current = focusRequest.sequence
+        input.focus({ preventScroll: true })
+        input.scrollIntoView({ block: 'center' })
+    }, [focusRequest, data?.id, detail.status, draft])
 
     const hasDraft = Boolean(draft?.dirty || newTagName.trim())
 
@@ -39,7 +65,7 @@ export function MediaDetailPane({
         )
     }, [data])
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         onDirtyChange(hasDraft)
         return () => onDirtyChange(false)
     }, [hasDraft, onDirtyChange])
@@ -123,32 +149,7 @@ export function MediaDetailPane({
         'rounded-lg border border-[var(--border-line)] px-3 py-2 text-sm disabled:opacity-40'
 
     return (
-        <section
-            aria-label="묶음 상세"
-            className="mt-6 rounded-xl border border-[var(--border-line)] p-5 space-y-4"
-        >
-            <header className="flex items-center justify-between gap-3">
-                <h2 className="font-semibold">묶음 상세</h2>
-
-                <button
-                    type="button"
-                    className={button}
-                    disabled={state.busy}
-                    onClick={() => {
-                        if (
-                            draft?.dirty &&
-                            !window.confirm('작성 중인 제목을 버리고 상세를 닫을까요?')
-                        ) {
-                            return
-                        }
-
-                        store.closeDetail()
-                    }}
-                >
-                    닫기
-                </button>
-            </header>
-
+        <section aria-label="묶음 상세" className="space-y-5">
             {detail.status === 'loading' && <p role="status">상세 정보를 불러오는 중...</p>}
 
             {detail.error && <p role="alert">{detail.error.message}</p>}
@@ -157,11 +158,11 @@ export function MediaDetailPane({
 
             {data && (
                 <>
-                    <div className="flex flex-col gap-4 sm:flex-row">
+                    <div className="flex flex-col gap-4">
                         <MediaPreview
                             path={data.cover?.path ?? null}
                             title={data.title}
-                            className="aspect-video w-full rounded-lg bg-[var(--bg-active)] object-contain sm:w-64"
+                            className="aspect-video w-full rounded-lg bg-[var(--bg-active)] object-contain"
                         />
 
                         <div className="min-w-0 flex-1 space-y-2">
@@ -229,6 +230,7 @@ export function MediaDetailPane({
                         <label className="block text-sm">
                             사용자 지정 제목
                             <input
+                                ref={titleInput}
                                 value={draft?.title ?? ''}
                                 disabled={state.busy || !draft}
                                 onChange={(event) => {
@@ -360,6 +362,7 @@ export function MediaDetailPane({
 
                         <div className="flex gap-2">
                             <input
+                                ref={tagInput}
                                 aria-label="추가할 태그 이름"
                                 value={newTagName}
                                 disabled={state.busy}
@@ -384,7 +387,7 @@ export function MediaDetailPane({
                         {data.files.data.map((file) => (
                             <article
                                 key={file.id}
-                                className="flex flex-col gap-3 rounded-lg border border-[var(--border-line)] p-3 sm:flex-row"
+                                className="flex flex-col gap-3 rounded-lg border border-[var(--border-line)] p-3"
                             >
                                 <MediaPreview
                                     path={
@@ -393,7 +396,7 @@ export function MediaDetailPane({
                                         (file.kind === 'image' ? file.filepath : null)
                                     }
                                     title={file.title ?? file.fileKey}
-                                    className="aspect-video w-full rounded bg-[var(--bg-active)] object-contain sm:w-32"
+                                    className="aspect-video w-full rounded bg-[var(--bg-active)] object-contain"
                                 />
 
                                 <div className="min-w-0 flex-1 space-y-1">
@@ -458,9 +461,9 @@ export function MediaDetailPane({
                                             }
 
                                             if (
-                                                draft?.dirty &&
+                                                hasDraft &&
                                                 !window.confirm(
-                                                    '파일 등록 해제로 묶음이 제거되면 작성 중인 제목도 닫힙니다. 계속할까요?'
+                                                    '파일 등록 해제로 묶음이 제거되면 작성 중인 제목·태그도 닫힙니다. 계속할까요?'
                                                 )
                                             ) {
                                                 return
@@ -525,8 +528,8 @@ export function MediaDetailPane({
                             }
 
                             if (
-                                draft?.dirty &&
-                                !window.confirm('작성 중인 제목이 닫힙니다. 계속할까요?')
+                                hasDraft &&
+                                !window.confirm('작성 중인 제목·태그가 닫힙니다. 계속할까요?')
                             ) {
                                 return
                             }

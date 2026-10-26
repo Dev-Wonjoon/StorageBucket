@@ -3,7 +3,8 @@ import type { ReactNode } from 'react'
 import { SidebarItem } from '@renderer/app/layouts/SidebarItem'
 import { useTheme } from '@renderer/shared/hooks/useTheme'
 import appIcon from '@renderer/assets/icon.ico?url'
-import { Moon, PanelLeftClose, PanelLeftOpen, Settings, Sun } from 'lucide-react'
+import { Download, Moon, PanelLeftClose, PanelLeftOpen, Settings, Sun } from 'lucide-react'
+import { useDownloadViewModel } from '@renderer/features/download/useDownloadViewModel'
 
 const SIDEBAR_MENUS: Array<{ id: AppMenu; label: string; icon: ReactNode }> = [
     {
@@ -25,6 +26,11 @@ const SIDEBAR_MENUS: Array<{ id: AppMenu; label: string; icon: ReactNode }> = [
                 />
             </svg>
         )
+    },
+    {
+        id: 'downloads',
+        label: '다운로드',
+        icon: <Download className="size-6" />
     },
     {
         id: 'search',
@@ -82,6 +88,7 @@ export const Sidebar = ({
     onToggle
 }: SidebarProps): React.JSX.Element => {
     const { theme, toggleTheme } = useTheme()
+    const { requestedIds } = useDownloadViewModel()
     const themeLabel = theme === 'dark' ? '라이트모드 전환' : '다크모드 전환'
     const toggleLabel = collapsed ? '사이드바 펼치기' : '사이드바 접기'
 
@@ -135,7 +142,11 @@ export const Sidebar = ({
                 {SIDEBAR_MENUS.map((menu) => (
                     <SidebarItem
                         key={menu.id}
-                        label={menu.label}
+                        label={
+                            menu.id === 'downloads' && requestedIds.length > 0
+                                ? `다운로드 · 요청 ${requestedIds.length}`
+                                : menu.label
+                        }
                         icon={menu.icon}
                         isActive={activeMenu === menu.id}
                         collapsed={collapsed}

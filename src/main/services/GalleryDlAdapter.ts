@@ -17,6 +17,8 @@ type JsonObject = Record<string, unknown>
 type Discovery = Parameters<FrozenDownloadAdapter['discover']>[0]
 type Execution = Parameters<FrozenDownloadAdapter['downloadFrozen']>[0]
 
+export const GALLERYDL_VERSION = '1.32.1'
+
 export interface GalleryDlFile {
     readonly url: string
     readonly metadata: Readonly<JsonObject>
@@ -284,7 +286,7 @@ export class GalleryDlAdapter implements FrozenDownloadAdapter {
             retries: 0,
             skip: true,
             part: false,
-            'user-agent': 'StorageBucket/2.0 gallery-dl/1.32.1',
+            'user-agent': `StorageBucket/2.0 gallery-dl/${GALLERYDL_VERSION}`,
             'output.stdout': 'utf-8',
             'output.stderr': 'utf-8',
             'output.mode': 'null',
@@ -311,7 +313,7 @@ export class GalleryDlAdapter implements FrozenDownloadAdapter {
             maxStdoutBytes: 1024
         })
 
-        if (result.stdout.trim() !== '1.32.1') {
+        if (result.stdout.trim() !== GALLERYDL_VERSION) {
             fail('UNSUPPORTED_TARGET_DISCOVERY')
         }
     }

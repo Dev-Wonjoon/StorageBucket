@@ -250,11 +250,10 @@ export const SearchPage = (): React.JSX.Element => {
                 </p>
             )}
 
-            <div className="flex-1 min-h-0 overflow-y-auto p-4">
+            <div className="flex-1 min-h-0 overflow-hidden">
                 <GalleryPage
                     title="검색 결과"
                     filter={vm.filter}
-                    showDownloads={false}
                     emptyMessage="검색 결과가 없습니다."
                 />
             </div>

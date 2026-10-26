@@ -9,6 +9,7 @@ export interface AppApi {
     downloads: DownloadApi
 
     showItemInFolder(filepath: string): Promise<void>
+    getDoubleClickInterval(): Promise<number | null>
 
     getDownloadPath(): Promise<string>
     setDownloadPath(): Promise<string | null>
