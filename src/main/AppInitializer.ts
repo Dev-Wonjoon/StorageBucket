@@ -7,15 +7,19 @@ import { MediaRepository } from '@features/media/MediaRepository'
 import { MediaService } from '@features/media/MediaService'
 import { setupMediaProtocol } from './infrastructure/protocol'
 import { createDownloadHandlers } from '@features/download/DownloadHandler'
-import { shellHandler, createMediaHandlers, type MediaServicePort } from '@features/media/MediaHandler'
+import {
+    shellHandler,
+    createMediaHandlers,
+    type MediaServicePort
+} from '@features/media/MediaHandler'
 import { systemHandler } from './SystemHandler'
 import type { DownloadServicePort } from '../shared/download-api'
 import { BinManager } from '@features/engines/BinManager'
 import { ConfigManager } from '@features/settings/ConfigManager'
-import { createYouTubeDownloadRuntime } from '@features/download/YouTubeDownload'
 import { startDownloadThumbnailWorker } from '@features/thumbnail/DownloadThumbnailRuntime'
 import { createThumbnailHandlers } from '@features/thumbnail/ThumbnailHandler'
 import { DownloadThumbnailRepository } from '@features/thumbnail/DownloadThumbnailRepository'
+import { createDownloadRuntime } from '@features/download/DownloadRuntime'
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any>
 
@@ -36,25 +40,30 @@ export class AppInitializer {
         }
 
         this.mediaService = new MediaService(new MediaRepository(getDB()))
-        this.downloadService = createYouTubeDownloadRuntime(getDB(), {
+        this.downloadService = createDownloadRuntime(getDB(), {
             getStorageRoot: () => ConfigManager.getInstance().getDownloadPath(),
 
-            getBinaries: () => {
-                const bin = BinManager.getInstance()
+            engines: {
+                getBinaries: () => {
+                    const bin = BinManager.getInstance()
 
-                return {
-                    ytDlp: bin.getBinaryPath('yt-dlp'),
-                    ffmpeg: bin.getBinaryPath('ffmpeg')
-                }
-            },
+                    return {
+                        ytDlp: bin.getBinaryPath('yt-dlp'),
+                        ffmpeg: bin.getBinaryPath('ffmpeg'),
+                        galleryDl: bin.getBinaryPath('gallery-dl')
+                    }
+                },
+                getGalleryDlAuthentication: () => ({
+                    cookieFilePath: ConfigManager.getInstance().getCookieFilePath()
+                }),
 
-            hostScript: app.isPackaged
-                ? join(process.resourcesPath, 'engine-host.ps1')
-                : join(app.getAppPath(), 'resources', 'engine-host.ps1'),
+                hostScript: app.isPackaged
+                    ? join(process.resourcesPath, 'engine-host.ps1')
+                    : join(app.getAppPath(), 'resources', 'engine-host.ps1'),
 
-            nodeExecutable: process.execPath,
-
-            workingDirectory: app.getPath('userData')
+                nodeExecutable: process.execPath,
+                workingDirectory: app.getPath('userData')
+            }
         }).service
 
         electronApp.setAppUserModelId('com.storagebucket')

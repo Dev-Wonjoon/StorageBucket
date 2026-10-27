@@ -1,6 +1,11 @@
 import { sql } from 'drizzle-orm'
 import type { V2Database } from '../media/MediaRepository'
-import { DownloadRepository, DownloadRepositoryError } from './DownloadRepository'
+import {
+    DownloadRepository,
+    DownloadRepositoryError,
+    parseDownloadJobOptions,
+    type DownloadJobOptions
+} from './DownloadRepository'
 import { DownloadRootRepository } from './DownloadRootRepository'
 import { DownloadCommitRepository } from './DownloadCommitRepository'
 import { DownloadRecoveryRepository } from './DownloadRecoveryRepository'
@@ -9,14 +14,26 @@ import { DownloadCleanupRepository } from './DownloadCleanupRepository'
 import type { DownloadAdapterSelector } from './DownloadAdapter'
 import { DownloadWorkspaceService } from './DownloadWorkspaceService'
 import { DownloadVerificationService } from './DownloadVerificationService'
-import { DownloadStorageService } from './DownloadStorageService'
+import {
+    DownloadStorageService,
+    StorageDirectories,
+    nodeStorageFileSystem
+} from './DownloadStorageService'
 import { DownloadCleanupService } from './DownloadCleanupService'
 import { DownloadRunner } from './DownloadRunner'
 import { DownloadService } from './DownloadService'
+import { dirname } from 'node:path'
+import { EngineProcess } from './EngineProcess'
+import { YtdlpAdapter, YTDLP_VERSION } from './YtdlpAdapter'
+import {
+    GalleryDlAdapter,
+    GALLERYDL_VERSION,
+    type GalleryDlAuthentication
+} from './GalleryDlAdapter'
+import { createYouTubePolicy } from './YouTubePolicy'
+import { createMappedGalleryDlPolicy } from './GalleryDlPolicy'
 
-export interface DownloadRuntimeOptions {
-    getStorageRoot: () => string
-
+export interface DownloadRuntimePorts {
     acceptsRequest?: (...args: Parameters<DownloadAdapterSelector>) => boolean
 
     beforeRun?: (jobId: string) => Promise<void>
@@ -27,6 +44,33 @@ export interface DownloadRuntimeOptions {
     ) => ReturnType<DownloadAdapterSelector>
 }
 
+export interface DownloadEngineOptions {
+    getBinaries: () => {
+        ytDlp: string
+        ffmpeg: string
+        galleryDl?: string
+    }
+    getGalleryDlAuthentication?: () => Readonly<GalleryDlAuthentication>
+    hostScript: string
+    nodeExecutable: string
+    workingDirectory: string
+    engine?: Pick<EngineProcess, 'run'>
+}
+
+export type DownloadRuntimeOptions = {
+    getStorageRoot: () => string
+} & (
+    | {
+          engines: DownloadEngineOptions
+          acceptsRequest?: never
+          beforeRun?: never
+          selectAdapter?: never
+      }
+    | (DownloadRuntimePorts & {
+          engines?: never
+      })
+)
+
 export interface DownloadRuntime {
     readonly service: DownloadService
 
@@ -35,12 +79,192 @@ export interface DownloadRuntime {
     readonly cleanup: Pick<DownloadCleanupService, 'runAtStartup'>
 }
 
+function createEnginePorts(
+    db: V2Database,
+    roots: DownloadRootRepository,
+    config: DownloadEngineOptions
+): DownloadRuntimePorts {
+    const engine =
+        config.engine ??
+        new EngineProcess(config.hostScript, {
+            electronAsNode: true
+        })
+
+    const jobs = new DownloadRepository(db)
+
+    // 이전 프로세스의 종료를 확인하지 못했다면 실행을 차단한다.
+    const startupBlocked =
+        db.get<{ blocked: number }>(sql`
+            SELECT (
+                EXISTS (
+                    SELECT 1
+                    FROM download_queue
+                    WHERE state = 'running'
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM download_attempt
+                    WHERE outcome IS NULL
+                )
+            ) AS blocked
+        `)?.blocked !== 0
+
+    function checkStartup(): void {
+        if (startupBlocked) {
+            throw new DownloadRepositoryError('ENGINE_STOP_UNCONFIRMED')
+        }
+    }
+
+    function selectPolicy(url: string, options: Readonly<DownloadJobOptions>) {
+        const youtube = createYouTubePolicy(url)
+
+        if (youtube?.accepts(url, options)) {
+            return {
+                kind: 'yt-dlp' as const,
+                policy: youtube
+            }
+        }
+
+        const gallery = createMappedGalleryDlPolicy(url)
+
+        if (gallery?.accepts(url, options) && config.getBinaries().galleryDl) {
+            return {
+                kind: 'gallery-dl' as const,
+                policy: gallery
+            }
+        }
+
+        return undefined
+    }
+
+    async function version(executable: string, args: string[]): Promise<string> {
+        const result = await engine.run({
+            executable,
+            arguments: args,
+            cwd: config.workingDirectory,
+            timeoutMs: 30_000,
+            maxStdoutBytes: 64 * 1024,
+            maxStderrBytes: 64 * 1024
+        })
+
+        return result.stdout.trim()
+    }
+
+    return {
+        acceptsRequest: (url, options) => {
+            checkStartup()
+
+            return selectPolicy(url, options) !== undefined
+        },
+
+        beforeRun: async (jobId) => {
+            checkStartup()
+
+            const job = jobs.get(jobId)
+
+            if (!job) {
+                throw new DownloadRepositoryError('NOT_FOUND')
+            }
+
+            const options = parseDownloadJobOptions(job.optionsJson)
+
+            const route = selectPolicy(job.originalUrl, options)
+
+            if (!route) {
+                throw new DownloadRepositoryError('UNSUPPORTED_TARGET_DISCOVERY')
+            }
+
+            const binaries = config.getBinaries()
+
+            if (route.kind === 'yt-dlp') {
+                const installed = await version(binaries.ytDlp, ['--ignore-config', '--version'])
+
+                if (installed !== YTDLP_VERSION) {
+                    throw new DownloadRepositoryError('UNSUPPORTED_TARGET_DISCOVERY')
+                }
+
+                const nodeVersion = await version(config.nodeExecutable, ['--version'])
+
+                const major = /^v(\d+)\.\d+\.\d+$/.exec(nodeVersion)?.[1]
+
+                if (!major || Number(major) < 22) {
+                    throw new DownloadRepositoryError('DOWNLOAD_ENGINE_FAILED')
+                }
+
+                const ffmpegVersion = await version(binaries.ffmpeg, ['-version'])
+
+                if (!ffmpegVersion.startsWith('ffmpeg version ')) {
+                    throw new DownloadRepositoryError('DOWNLOAD_ENGINE_FAILED')
+                }
+            } else {
+                if (!binaries.galleryDl) {
+                    throw new DownloadRepositoryError('DOWNLOAD_ENGINE_FAILED')
+                }
+
+                const installed = await version(binaries.galleryDl, [
+                    '--config-ignore',
+                    '--version'
+                ])
+
+                if (installed !== GALLERYDL_VERSION) {
+                    throw new DownloadRepositoryError('UNSUPPORTED_TARGET_DISCOVERY')
+                }
+            }
+
+            // 설정 변경과 무관하게 작업에 고정한 저장 경로를 사용한다.
+            const root = roots.get(jobId)
+
+            try {
+                await new StorageDirectories(dirname(root), nodeStorageFileSystem).check(root, true)
+            } catch (error) {
+                if (error instanceof DownloadRepositoryError) {
+                    throw error
+                }
+
+                throw new DownloadRepositoryError('FILE_IO_ERROR')
+            }
+        },
+
+        selectAdapter: (root, url, options) => {
+            const route = selectPolicy(url, options)
+
+            if (!route) return
+
+            const binaries = config.getBinaries()
+
+            if (route.kind === 'yt-dlp') {
+                return new YtdlpAdapter(
+                    engine,
+                    root,
+                    binaries.ytDlp,
+                    binaries.ffmpeg,
+                    route.policy,
+                    config.nodeExecutable
+                )
+            }
+
+            if (!binaries.galleryDl) return
+
+            return new GalleryDlAdapter(
+                engine,
+                root,
+                binaries.galleryDl,
+                route.policy,
+                config.getGalleryDlAuthentication?.() ?? {}
+            )
+        }
+    }
+}
+
 // 복구·정리는 프로세스·다운로드·미디어 편집이 멈춘 시작 단계에서만 호출한다.
 export function createDownloadRuntime(
     db: V2Database,
     options: DownloadRuntimeOptions
 ): DownloadRuntime {
     const roots = new DownloadRootRepository(db)
+
+    const ports: DownloadRuntimePorts =
+        options.engines !== undefined ? createEnginePorts(db, roots, options.engines) : options
 
     function forRoot(storageRoot: string) {
         const jobs = new DownloadRepository(db)
@@ -70,7 +294,7 @@ export function createDownloadRuntime(
                 verification,
                 storage,
                 selectAdapter: (url, jobOptions) =>
-                    options.selectAdapter(storageRoot, url, jobOptions)
+                    ports.selectAdapter(storageRoot, url, jobOptions)
             },
             storageRoot
         )
@@ -84,7 +308,7 @@ export function createDownloadRuntime(
             run: async (jobId, trigger) => {
                 const root = roots.get(jobId)
 
-                await options.beforeRun?.(jobId)
+                await ports.beforeRun?.(jobId)
 
                 return forRoot(root).runner.run(jobId, trigger)
             },
@@ -92,7 +316,7 @@ export function createDownloadRuntime(
             cancel: (jobId) => forRoot(roots.get(jobId)).runner.cancel(jobId)
         },
         options.getStorageRoot,
-        options.acceptsRequest
+        ports.acceptsRequest
     )
 
     return {

@@ -1,20 +1,30 @@
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { basename, dirname, join, resolve } from 'node:path'
+import { writeFile } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import * as s from '../../../src/database/schema-v2'
 import { schemaV2Sql } from '../../../src/database/schema-v2.sql'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
 import { downloadStorageSql } from '../../../src/database/migrate'
 import { DownloadRepository } from '@features/download/DownloadRepository'
-import { EngineProcess, type EngineProcessRequest } from '../../../src/main/features/download/EngineProcess'
+import {
+    EngineProcess,
+    type EngineProcessRequest
+} from '../../../src/main/features/download/EngineProcess'
 import { YTDLP_VERSION } from '../../../src/main/features/download/YtdlpAdapter'
 import {
     createYouTubePolicy,
     createYouTubeDownloadRuntime
 } from '../../../src/main/features/download/YouTubeDownload'
+import {
+    createTestWorkspace,
+    cleanupTestWorkspace,
+    requireTestWorkspace,
+    testPath
+} from '../../helpers/test-workspace.cjs'
+
+requireTestWorkspace()
 
 // 기본 테스트에서는 네트워크에 접속하지 않는 합성 데이터다.
 const id = 'BaW_jenozKc'
@@ -115,7 +125,6 @@ describe('YouTube 단일 영상 정책', () => {
 
 describe('YouTube 다운로드 연결', () => {
     let root: string | undefined
-    let parent: string
     let sqlite: Database.Database | undefined
     let calls: EngineProcessRequest[]
     let nodeVersion: string
@@ -133,8 +142,7 @@ describe('YouTube 다운로드 연결', () => {
         root = undefined
         sqlite = undefined
 
-        parent = await realpath(tmpdir())
-        root = await mkdtemp(join(parent, 'storagebucket-youtube-'))
+        root = createTestWorkspace('youtube-download')
 
         sqlite = new Database(':memory:')
         sqlite.pragma('foreign_keys = ON')
@@ -159,11 +167,7 @@ describe('YouTube 다운로드 연결', () => {
             root = undefined
 
             if (owned) {
-                expect(resolve(owned)).toBe(owned)
-                expect(dirname(owned)).toBe(parent)
-                expect(basename(owned).startsWith('storagebucket-youtube-')).toBe(true)
-
-                await rm(owned, { recursive: true, force: true })
+                cleanupTestWorkspace(owned)
             }
         }
     })
@@ -202,7 +206,7 @@ describe('YouTube 다운로드 연결', () => {
 
         const output = request.arguments[request.arguments.indexOf('--output') + 1]
 
-        const file = join(request.cwd, output.replace('%(ext)s', 'mp4'))
+        const file = testPath(root!, request.cwd, output.replace('%(ext)s', 'mp4'))
 
         await writeFile(file, 'synthetic-video', { flag: 'wx' })
 
@@ -334,7 +338,7 @@ describe('YouTube 다운로드 연결', () => {
         expect(calls).toEqual([])
     })
 
-    it.skipIf(process.platform !== 'win32')(
+    it.skipIf(process.platform !== 'win32' || process.env.STORAGEBUCKET_ENGINE_HOST_SMOKE !== '1')(
         'Electron의 Node 모드를 종료 확인 호스트에서 실행한다',
         async () => {
             const before = process.env.ELECTRON_RUN_AS_NODE

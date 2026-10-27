@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { basename, dirname, join, resolve } from 'node:path'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -11,14 +10,19 @@ import { schemaV2Sql } from '../../../src/database/schema-v2.sql'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
 import type { V2Database } from '@features/media/MediaRepository'
 import { DownloadRepository } from '@features/download/DownloadRepository'
-import {
-    createDownloadRuntime,
-    type DownloadRuntime
-} from '@features/download/DownloadRuntime'
+import { createDownloadRuntime, type DownloadRuntime } from '@features/download/DownloadRuntime'
 import type { FrozenDownloadAdapter } from '@features/download/DownloadAdapter'
 import type { DownloadResponse } from '../../../src/shared/download-api'
 import { downloadStorageSql } from '../../../src/database/migrate'
 import { DownloadRootRepository } from '@features/download/DownloadRootRepository'
+import {
+    createTestWorkspace,
+    cleanupTestWorkspace,
+    requireTestWorkspace,
+    testPath
+} from '../../helpers/test-workspace.cjs'
+
+requireTestWorkspace()
 
 vi.mock('../../../src/database/index', () => {
     throw new Error('USER_DATABASE_IMPORTED')
@@ -37,7 +41,6 @@ let db: V2Database
 let jobs: DownloadRepository
 let runtime: DownloadRuntime
 let root: string | undefined
-let tempParent: string
 let adapter: FrozenDownloadAdapter
 let calls: string[]
 let failDiscovery: boolean
@@ -53,8 +56,7 @@ beforeEach(async () => {
     root = undefined
     sqlite = undefined
 
-    tempParent = await realpath(tmpdir())
-    root = await mkdtemp(join(tempParent, 'storagebucket-runtime-'))
+    root = createTestWorkspace('download-runtime')
     currentStorageRoot = root
 
     sqlite = new Database(':memory:')
@@ -98,7 +100,11 @@ beforeEach(async () => {
             }[] = []
 
             for (const target of input.targets) {
-                const stagedPath = join(input.stagingDirectory, target.targetKey + '.bin')
+                const stagedPath = testPath(
+                    root!,
+                    input.stagingDirectory,
+                    target.targetKey + '.bin'
+                )
 
                 await writeFile(stagedPath, 'fixture-' + target.targetKey, { flag: 'wx' })
 
@@ -130,14 +136,9 @@ afterEach(async () => {
         root = undefined
 
         if (owned) {
-            assert.equal(resolve(owned), owned)
-            assert.equal(dirname(owned), tempParent)
-            assert.ok(basename(owned).startsWith('storagebucket-runtime-'))
-
-            await rm(owned, {
-                recursive: true,
-                force: true
-            })
+            if (owned) {
+                cleanupTestWorkspace(owned)
+            }
         }
     }
 })
@@ -154,7 +155,7 @@ async function enqueue(url = 'https://example.invalid/post') {
 describe('DownloadRuntime integration', () => {
     it('설정이 B로 바뀌어도 기존 작업은 A에서 실행하고 새 작업은 B에서 실행한다', async () => {
         const rootA = root!
-        const rootB = join(rootA, 'B')
+        const rootB = testPath(rootA, 'B')
 
         await mkdir(rootB)
 
@@ -225,7 +226,7 @@ describe('DownloadRuntime integration', () => {
 
     it('B로 설정을 바꾼 뒤에도 A 작업의 실패 정리는 A에서 수행한다', async () => {
         const rootA = root!
-        const rootB = join(rootA, 'B')
+        const rootB = testPath(rootA, 'B')
 
         await mkdir(rootB)
 
@@ -256,6 +257,7 @@ describe('DownloadRuntime integration', () => {
 
     it('조립·큐 조회만으로 파일을 만들거나 작업을 자동 실행하지 않는다', async () => {
         const job = await enqueue()
+        const filesBefore = (await readdir(root!)).sort()
 
         const restored = createDownloadRuntime(db, {
             getStorageRoot: () => currentStorageRoot,
@@ -267,7 +269,7 @@ describe('DownloadRuntime integration', () => {
         expect(page.data.map((row) => row.id)).toEqual([job.id])
         expect(jobs.get(job.id)!.state).toBe('pending')
         expect(db.select().from(s.downloadAttempts).all()).toEqual([])
-        expect(await readdir(root!)).toEqual([])
+        expect((await readdir(root!)).sort()).toEqual(filesBefore)
         expect(calls).toEqual([])
     })
 
@@ -358,7 +360,7 @@ describe('DownloadRuntime integration', () => {
         const job = await enqueue()
 
         adapter.downloadFrozen = async (input) => {
-            partialPath = join(input.stagingDirectory, 'partial.bin')
+            partialPath = testPath(root!, input.stagingDirectory, 'partial.bin')
 
             await writeFile(partialPath, 'keep-partial', { flag: 'wx' })
 

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { readdir } from 'node:fs/promises'
+import { readdir, lstat } from 'node:fs/promises'
 import { extname, isAbsolute, join, resolve } from 'node:path'
 import {
     DownloadRepositoryError,
@@ -19,12 +19,20 @@ type Execution = Parameters<FrozenDownloadAdapter['downloadFrozen']>[0]
 
 export const GALLERYDL_VERSION = '1.32.1'
 
+export interface GalleryDlAuthentication {
+    readonly cookieFilePath?: string
+}
+
 export interface GalleryDlFile {
     readonly url: string
     readonly metadata: Readonly<JsonObject>
 }
 
 export interface GalleryDlDiscoveryPolicy {
+    readonly discoveryOptions?: Readonly<Record<string, unknown>>
+
+    readonly rejectDiscoveryDiagnostics?: boolean
+
     accepts(url: string, options: Readonly<DownloadJobOptions>): boolean
 
     // 전체 목록·영구 파일 키를 검증하고 files와 같은 순서로 반환한다.
@@ -217,6 +225,7 @@ function abort(signal: AbortSignal) {
 }
 
 export class GalleryDlAdapter implements FrozenDownloadAdapter {
+    private readonly cookieFilePath: string | null
     private readonly root: string
     private busy = false
     private poisoned = false
@@ -226,7 +235,8 @@ export class GalleryDlAdapter implements FrozenDownloadAdapter {
         private engine: Pick<EngineProcess, 'run'>,
         storageRoot: string,
         private executable: string,
-        private policy: GalleryDlDiscoveryPolicy
+        private policy: GalleryDlDiscoveryPolicy,
+        authentication: Readonly<GalleryDlAuthentication> = {}
     ) {
         for (const path of [storageRoot, executable]) {
             if (!isAbsolute(path) || path.includes('\0')) {
@@ -234,7 +244,33 @@ export class GalleryDlAdapter implements FrozenDownloadAdapter {
             }
         }
 
+        const cookieFilePath = authentication.cookieFilePath
+
+        if (
+            cookieFilePath !== undefined &&
+            cookieFilePath !== '' &&
+            (typeof cookieFilePath !== 'string' ||
+                !isAbsolute(cookieFilePath) ||
+                cookieFilePath.includes('\0'))
+        ) {
+            fail('INVALID_ARGUMENT')
+        }
+
+        // 외부 설정 객체가 바뀌어도 이번 어댑터의 선택은 유지한다.
+        this.cookieFilePath = cookieFilePath || null
         this.root = resolve(storageRoot)
+    }
+
+    private discoveryArgs(): string[] {
+        const settings = Object.entries(this.policy.discoveryOptions ?? {}).flatMap(
+            ([key, value]) => ['-o', key + '=' + JSON.stringify(value)]
+        )
+
+        return [
+            ...this.args(this.cookieFilePath),
+            ...(this.policy.rejectDiscoveryDiagnostics ? ['-q'] : []),
+            ...settings
+        ]
     }
 
     private async locked<T>(action: () => Promise<T>): Promise<T> {
@@ -274,11 +310,11 @@ export class GalleryDlAdapter implements FrozenDownloadAdapter {
         }
     }
 
-    private args() {
+    private args(cookieFilePath: string | null = null) {
         const settings: Record<string, unknown> = {
             'extractor.module-sources': [null],
             'cache.file': null,
-            cookies: null,
+            cookies: cookieFilePath,
             'cookies-update': false,
             netrc: false,
             postprocessors: [],
@@ -286,7 +322,6 @@ export class GalleryDlAdapter implements FrozenDownloadAdapter {
             retries: 0,
             skip: true,
             part: false,
-            'user-agent': `StorageBucket/2.0 gallery-dl/${GALLERYDL_VERSION}`,
             'output.stdout': 'utf-8',
             'output.stderr': 'utf-8',
             'output.mode': 'null',
@@ -349,11 +384,21 @@ export class GalleryDlAdapter implements FrozenDownloadAdapter {
                 fail('UNSAFE_STAGING_PATH')
             }
 
+            const cookieFilePath = this.cookieFilePath
+
+            if (cookieFilePath !== null) {
+                const info = await this.io(() => lstat(cookieFilePath))
+
+                if (!info.isFile()) {
+                    fail('FILE_IO_ERROR')
+                }
+            }
+
             await this.version(stage, input.signal)
 
             const result = await this.engine.run({
                 executable: this.executable,
-                arguments: [...this.args(), '-J', '--', url],
+                arguments: [...this.discoveryArgs(), '-J', '--', url],
                 cwd: stage,
                 signal: input.signal,
                 timeoutMs: 120_000,
@@ -363,6 +408,10 @@ export class GalleryDlAdapter implements FrozenDownloadAdapter {
             abort(input.signal)
 
             const { messages, files } = parse(result.stdout)
+
+            if (this.policy.rejectDiscoveryDiagnostics && result.stderr.trim()) {
+                fail('TARGET_INCOMPLETE')
+            }
 
             const targets = this.policy.identify(structuredClone(messages), structuredClone(files))
 

@@ -27,6 +27,22 @@ const targets = {
             'tests/main/repositories/MediaRepository.test.ts',
             'tests/preload/api.test.ts'
         ]
+    },
+    'download-unit': {
+        type: 'vitest',
+        files: [
+            'tests/main/services/DownloadRuntime.test.ts',
+            'tests/main/services/YouTubeDownload.test.ts',
+            'tests/main/services/DownloadEngineRouting.test.ts'
+        ]
+    },
+    'gallery-dl-smoke': {
+        type: 'vitest',
+        files: ['tests/main/services/GalleryDlAdapter.test.ts']
+    },
+    'instagram-smoke': {
+        type: 'vitest',
+        files: ['tests/main/services/InstagramDownload.smoke.test.ts']
     }
 }
 
@@ -35,12 +51,46 @@ const target = targets[name]
 
 if (!target) {
     throw new Error(
-        '사용법: node tests/run-isolated.cjs ' + '[thumbnail-unit|thumbnail-smoke|ui-smoke]'
+        '사용법: node tests/run-isolated.cjs ' +
+            '[thumbnail-unit|thumbnail-smoke|ui-smoke|download-unit|gallery-dl-smoke|instagram-smoke]'
     )
 }
 
 const workspace = createTestWorkspace(name)
 const environment = testEnvironment(workspace)
+
+const realEngineSmoke = name === 'gallery-dl-smoke' || name === 'instagram-smoke'
+
+if (realEngineSmoke) {
+    if (process.platform !== 'win32') {
+        throw new Error('실제 엔진 테스트는 Windows에서 실행해 주세요.')
+    }
+
+    const testProfile = testPath(workspace, 'profile')
+    fs.mkdirSync(testProfile)
+
+    // 실제 사용자 프로필을 사용하지 않는다.
+    environment.USERPROFILE = testProfile
+    environment.HOME = testProfile
+    environment.HOMEDRIVE = path.parse(testProfile).root.replace(/[\\/]$/, '')
+    environment.HOMEPATH = testProfile.slice(environment.HOMEDRIVE.length)
+    environment.PYTHONDONTWRITEBYTECODE = '1'
+}
+
+if (name === 'gallery-dl-smoke') {
+    environment.STORAGEBUCKET_GALLERYDL_SMOKE = '1'
+
+    // 로컬 서버 테스트에만 적용한다.
+    environment.NO_PROXY = '*'
+    environment.no_proxy = '*'
+} else {
+    delete environment.STORAGEBUCKET_GALLERYDL_SMOKE
+}
+
+if (name === 'download-unit') {
+    delete environment.STORAGEBUCKET_LIVE_YOUTUBE
+    delete environment.STORAGEBUCKET_ENGINE_HOST_SMOKE
+}
 
 let executable
 let args
