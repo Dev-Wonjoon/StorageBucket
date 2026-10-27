@@ -7,11 +7,11 @@ import {
     type DownloadJobOptions,
     type DownloadTargetInput,
     type DownloadResultInput
-} from '../repositories/DownloadRepository'
-import type { FrozenDownloadAdapter } from './DownloadAdapter'
-import type { EngineProcess } from './EngineProcess'
-import { downloadStagingDirectory } from './DownloadVerificationService'
-import { StorageDirectories, nodeStorageFileSystem } from './DownloadStorageService'
+} from '@features/download/DownloadRepository'
+import type { FrozenDownloadAdapter } from '@features/download/DownloadAdapter'
+import type { EngineProcess } from '../features/download/EngineProcess'
+import { downloadStagingDirectory } from '@features/download/DownloadVerificationService'
+import { StorageDirectories, nodeStorageFileSystem } from '@features/download/DownloadStorageService'
 
 type JsonObject = Record<string, unknown>
 type Discovery = Parameters<FrozenDownloadAdapter['discover']>[0]

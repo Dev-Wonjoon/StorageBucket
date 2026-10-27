@@ -1,17 +1,17 @@
 import { sql } from 'drizzle-orm'
 import { dirname } from 'node:path'
-import type { V2Database } from '../repositories/MediaRepository'
-import { DownloadRootRepository } from '../repositories/DownloadRootRepository'
+import type { V2Database } from '@features/media/MediaRepository'
+import { DownloadRootRepository } from '@features/download/DownloadRootRepository'
 import {
     DownloadRepository,
     DownloadRepositoryError,
     parseDownloadJobOptions,
     type DownloadJobOptions
-} from '../repositories/DownloadRepository'
-import { StorageDirectories, nodeStorageFileSystem } from './DownloadStorageService'
-import { EngineProcess } from './EngineProcess'
-import { YtdlpAdapter, YTDLP_VERSION, type YtdlpDiscoveryPolicy } from './YtdlpAdapter'
-import { createDownloadRuntime } from './DownloadRuntime'
+} from '@features/download/DownloadRepository'
+import { StorageDirectories, nodeStorageFileSystem } from '@features/download/DownloadStorageService'
+import { EngineProcess } from '../features/download/EngineProcess'
+import { YtdlpAdapter, YTDLP_VERSION, type YtdlpDiscoveryPolicy } from '@features/download/YtdlpAdapter'
+import { createDownloadRuntime } from '@features/download/DownloadRuntime'
 
 const videoIdPattern = /^[A-Za-z0-9_-]{11}$/
 

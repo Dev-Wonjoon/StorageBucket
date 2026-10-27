@@ -5,6 +5,11 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   main: {
+    resolve: {
+      alias: {
+        '@features': resolve(__dirname, 'src/main/features')
+      }
+    },
     build: {
       lib: {
         entry: resolve(__dirname, 'src/main/index.ts')

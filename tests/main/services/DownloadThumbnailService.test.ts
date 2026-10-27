@@ -6,30 +6,30 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createThumbnailHandlers } from '../../../src/main/handlers/ThumbnailHandler'
+import { createThumbnailHandlers } from '../../../src/main/features/thumbnail/ThumbnailHandler'
 
 import * as s from '../../../src/database/schema-v2'
 import { schemaV2Sql } from '../../../src/database/schema-v2.sql'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
 import { downloadStorageSql } from '../../../src/database/migrate'
-import { MediaRepository, type V2Database } from '../../../src/main/repositories/MediaRepository'
-import { DownloadRepository } from '../../../src/main/repositories/DownloadRepository'
-import { DownloadCommitRepository } from '../../../src/main/repositories/DownloadCommitRepository'
-import { DownloadRootRepository } from '../../../src/main/repositories/DownloadRootRepository'
+import { MediaRepository, type V2Database } from '@features/media/MediaRepository'
+import { DownloadRepository } from '@features/download/DownloadRepository'
+import { DownloadCommitRepository } from '@features/download/DownloadCommitRepository'
+import { DownloadRootRepository } from '@features/download/DownloadRootRepository'
 
 import {
     DownloadThumbnailRepository,
     downloadThumbnailPaths,
     type ThumbnailFileProof,
     type ThumbnailWork
-} from '../../../src/main/repositories/DownloadThumbnailRepository'
+} from '@features/thumbnail/DownloadThumbnailRepository'
 import {
     DownloadVerificationService,
     downloadStagingDirectory,
     inspectDownloadFile,
     nodeVerificationFileSystem
-} from '../../../src/main/services/DownloadVerificationService'
-import { DownloadThumbnailService } from '../../../src/main/services/DownloadThumbnailService'
+} from '@features/download/DownloadVerificationService'
+import { DownloadThumbnailService } from '@features/thumbnail/DownloadThumbnailService'
 import { createTestWorkspace, cleanupTestWorkspace } from '../../helpers/test-workspace.cjs'
 
 // 이미지 코덱은 대체하고 실제 파일 저장과 DB 상태를 검증한다.
@@ -41,7 +41,7 @@ vi.mock('../../../src/database/index', () => {
     throw new Error('USER_DATABASE_IMPORTED')
 })
 
-vi.mock('../../../src/main/managers/ConfigManager', () => {
+vi.mock('@features/settings/ConfigManager', () => {
     throw new Error('USER_SETTINGS_IMPORTED')
 })
 

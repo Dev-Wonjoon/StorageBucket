@@ -31,7 +31,7 @@ fs.writeFileSync(path.join(compiledDirectory, 'package.json'), JSON.stringify({ 
 
 // 앱 전체 대신 이미지 변환·캐시 서비스 두 파일만 불러온다.
 for (const name of ['ThumbnailImageService', 'DownloadPreviewService']) {
-    const sourceFile = path.resolve(__dirname, `../../src/main/services/${name}.ts`)
+    const sourceFile = path.resolve(__dirname, `../../src/main/features/thumbnail/${name}.ts`)
 
     const compiled = ts.transpileModule(fs.readFileSync(sourceFile, 'utf8'), {
         fileName: sourceFile,

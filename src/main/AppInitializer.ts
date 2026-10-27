@@ -3,19 +3,19 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 import { getDB, initDB } from '../database/index'
-import { MediaRepository } from './repositories/MediaRepository'
-import { MediaService } from './services/MediaService'
-import { setupMediaProtocol } from './utils/protocol'
-import { createDownloadHandlers } from './handlers/DownloadHandler'
-import { shellHandler, createMediaHandlers, type MediaServicePort } from './handlers/MediaHandler'
-import { systemHandler } from './handlers/SystemHandler'
+import { MediaRepository } from '@features/media/MediaRepository'
+import { MediaService } from '@features/media/MediaService'
+import { setupMediaProtocol } from './infrastructure/protocol'
+import { createDownloadHandlers } from '@features/download/DownloadHandler'
+import { shellHandler, createMediaHandlers, type MediaServicePort } from '@features/media/MediaHandler'
+import { systemHandler } from './SystemHandler'
 import type { DownloadServicePort } from '../shared/download-api'
-import { BinManager } from './managers/BinManager'
-import { ConfigManager } from './managers/ConfigManager'
-import { createYouTubeDownloadRuntime } from './services/YouTubeDownload'
-import { startDownloadThumbnailWorker } from './services/DownloadThumbnailRuntime'
-import { createThumbnailHandlers } from './handlers/ThumbnailHandler'
-import { DownloadThumbnailRepository } from './repositories/DownloadThumbnailRepository'
+import { BinManager } from '@features/engines/BinManager'
+import { ConfigManager } from '@features/settings/ConfigManager'
+import { createYouTubeDownloadRuntime } from '@features/download/YouTubeDownload'
+import { startDownloadThumbnailWorker } from '@features/thumbnail/DownloadThumbnailRuntime'
+import { createThumbnailHandlers } from '@features/thumbnail/ThumbnailHandler'
+import { DownloadThumbnailRepository } from '@features/thumbnail/DownloadThumbnailRepository'
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any>
 
@@ -126,7 +126,7 @@ export class AppInitializer {
             ...systemHandler,
             ...createMediaHandlers(() => this.mediaService),
             ...createDownloadHandlers(() => this.downloadService),
-            ...createThumbnailHandlers(() => new DownloadThumbnailRepository(getDB())),
+            ...createThumbnailHandlers(() => new DownloadThumbnailRepository(getDB()))
         }
 
         console.log(`[Main] Found ${Object.keys(handlers).length} handlers to register.`)

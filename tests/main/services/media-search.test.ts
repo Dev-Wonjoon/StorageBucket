@@ -6,9 +6,9 @@ import { generateSQLiteDrizzleJson, generateSQLiteMigration } from 'drizzle-kit/
 import { afterEach, beforeAll, beforeEach, describe, it } from 'vitest'
 import * as s from '../../../src/database/schema-v2'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
-import { MediaRepository, type FileInput, type V2Database } from '../../../src/main/repositories/MediaRepository'
-import { MediaService } from '../../../src/main/services/MediaService'
-import { createMediaHandlers } from '../../../src/main/handlers/MediaHandler'
+import { MediaRepository, type FileInput, type V2Database } from '@features/media/MediaRepository'
+import { MediaService } from '@features/media/MediaService'
+import { createMediaHandlers } from '@features/media/MediaHandler'
 import { createAppApi, type IpcTransport } from '../../../src/preload/api'
 import type { MediaFilter, MediaResult } from '../../../src/shared/media-v2'
 

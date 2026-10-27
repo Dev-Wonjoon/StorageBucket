@@ -8,14 +8,14 @@ import { afterEach, beforeEach, describe, it } from 'vitest'
 import {
     GalleryDlAdapter,
     type GalleryDlDiscoveryPolicy
-} from '../../../src/main/services/GalleryDlAdapter'
-import { EngineProcess, type EngineProcessRequest } from '../../../src/main/services/EngineProcess'
+} from '../../../src/main/features/download/GalleryDlAdapter'
+import { EngineProcess, type EngineProcessRequest } from '../../../src/main/features/download/EngineProcess'
 import {
     DownloadRepositoryError,
     type DownloadTargetInput
-} from '../../../src/main/repositories/DownloadRepository'
-import type { FrozenDownloadTarget } from '../../../src/main/services/DownloadAdapter'
-import { downloadStagingDirectory } from '../../../src/main/services/DownloadVerificationService'
+} from '@features/download/DownloadRepository'
+import type { FrozenDownloadTarget } from '@features/download/DownloadAdapter'
+import { downloadStagingDirectory } from '@features/download/DownloadVerificationService'
 
 let root: string
 let stage: string

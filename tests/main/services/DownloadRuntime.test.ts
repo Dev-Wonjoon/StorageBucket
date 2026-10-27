@@ -9,26 +9,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as s from '../../../src/database/schema-v2'
 import { schemaV2Sql } from '../../../src/database/schema-v2.sql'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
-import type { V2Database } from '../../../src/main/repositories/MediaRepository'
-import { DownloadRepository } from '../../../src/main/repositories/DownloadRepository'
+import type { V2Database } from '@features/media/MediaRepository'
+import { DownloadRepository } from '@features/download/DownloadRepository'
 import {
     createDownloadRuntime,
     type DownloadRuntime
-} from '../../../src/main/services/DownloadRuntime'
-import type { FrozenDownloadAdapter } from '../../../src/main/services/DownloadAdapter'
+} from '@features/download/DownloadRuntime'
+import type { FrozenDownloadAdapter } from '@features/download/DownloadAdapter'
 import type { DownloadResponse } from '../../../src/shared/download-api'
 import { downloadStorageSql } from '../../../src/database/migrate'
-import { DownloadRootRepository } from '../../../src/main/repositories/DownloadRootRepository'
+import { DownloadRootRepository } from '@features/download/DownloadRootRepository'
 
 vi.mock('../../../src/database/index', () => {
     throw new Error('USER_DATABASE_IMPORTED')
 })
 
-vi.mock('../../../src/main/managers/ConfigManager', () => {
+vi.mock('@features/settings/ConfigManager', () => {
     throw new Error('USER_SETTINGS_IMPORTED')
 })
 
-vi.mock('../../../src/main/managers/BinManager', () => {
+vi.mock('@features/engines/BinManager', () => {
     throw new Error('USER_ENGINES_IMPORTED')
 })
 

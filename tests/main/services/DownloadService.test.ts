@@ -8,15 +8,15 @@ import { generateSQLiteDrizzleJson, generateSQLiteMigration } from 'drizzle-kit/
 import { afterEach, beforeAll, beforeEach, describe, it, vi } from 'vitest'
 import * as s from '../../../src/database/schema-v2'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
-import type { V2Database } from '../../../src/main/repositories/MediaRepository'
+import type { V2Database } from '@features/media/MediaRepository'
 import {
     DownloadRepository,
     DownloadRepositoryError
-} from '../../../src/main/repositories/DownloadRepository'
-import { DownloadCommitRepository } from '../../../src/main/repositories/DownloadCommitRepository'
-import { DownloadRecoveryRepository } from '../../../src/main/repositories/DownloadRecoveryRepository'
-import { DownloadRunner, type DownloadRunnerPorts } from '../../../src/main/services/DownloadRunner'
-import { DownloadService } from '../../../src/main/services/DownloadService'
+} from '@features/download/DownloadRepository'
+import { DownloadCommitRepository } from '@features/download/DownloadCommitRepository'
+import { DownloadRecoveryRepository } from '@features/download/DownloadRecoveryRepository'
+import { DownloadRunner, type DownloadRunnerPorts } from '@features/download/DownloadRunner'
+import { DownloadService } from '@features/download/DownloadService'
 import type { DownloadResponse } from '../../../src/shared/download-api'
 import { downloadStorageSql } from '../../../src/database/migrate'
 

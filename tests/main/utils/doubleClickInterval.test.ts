@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 const exec = vi.hoisted(() => vi.fn())
 vi.mock('node:child_process', () => ({ execFile: exec }))
-import { getDoubleClickInterval } from '../../../src/main/utils/doubleClickInterval'
+import { getDoubleClickInterval } from '../../../src/main/infrastructure/doubleClickInterval'
 
 afterEach(() => exec.mockReset())
 describe.skipIf(process.platform !== 'win32')('Windows double-click interval', () => {

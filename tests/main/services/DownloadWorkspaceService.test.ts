@@ -20,29 +20,29 @@ import { generateSQLiteDrizzleJson, generateSQLiteMigration } from 'drizzle-kit/
 import { afterEach, beforeAll, beforeEach, describe, it } from 'vitest'
 import * as s from '../../../src/database/schema-v2'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
-import type { V2Database } from '../../../src/main/repositories/MediaRepository'
+import type { V2Database } from '@features/media/MediaRepository'
 import {
     DownloadRepository,
     DownloadRepositoryError,
     type DownloadResultInput
-} from '../../../src/main/repositories/DownloadRepository'
-import { DownloadCommitRepository } from '../../../src/main/repositories/DownloadCommitRepository'
-import { DownloadRecoveryRepository } from '../../../src/main/repositories/DownloadRecoveryRepository'
-import { DownloadCleanupRepository } from '../../../src/main/repositories/DownloadCleanupRepository'
-import { DownloadCleanupService } from '../../../src/main/services/DownloadCleanupService'
-import { DownloadWorkspaceRepository } from '../../../src/main/repositories/DownloadWorkspaceRepository'
+} from '@features/download/DownloadRepository'
+import { DownloadCommitRepository } from '@features/download/DownloadCommitRepository'
+import { DownloadRecoveryRepository } from '@features/download/DownloadRecoveryRepository'
+import { DownloadCleanupRepository } from '@features/download/DownloadCleanupRepository'
+import { DownloadCleanupService } from '@features/download/DownloadCleanupService'
+import { DownloadWorkspaceRepository } from '@features/download/DownloadWorkspaceRepository'
 import {
     DownloadWorkspaceService,
     nodeWorkspaceFileSystem,
     type WorkspaceFileSystem
-} from '../../../src/main/services/DownloadWorkspaceService'
+} from '@features/download/DownloadWorkspaceService'
 import {
     DownloadVerificationService,
     downloadStagingDirectory
-} from '../../../src/main/services/DownloadVerificationService'
-import { DownloadStorageService } from '../../../src/main/services/DownloadStorageService'
-import { DownloadRunner } from '../../../src/main/services/DownloadRunner'
-import type { DownloadAttemptContext } from '../../../src/main/services/DownloadAdapter'
+} from '@features/download/DownloadVerificationService'
+import { DownloadStorageService } from '@features/download/DownloadStorageService'
+import { DownloadRunner } from '@features/download/DownloadRunner'
+import type { DownloadAttemptContext } from '@features/download/DownloadAdapter'
 
 let ddl: string[]
 let sqlite: Database.Database

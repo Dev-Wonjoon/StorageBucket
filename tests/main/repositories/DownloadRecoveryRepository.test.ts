@@ -7,14 +7,14 @@ import { generateSQLiteDrizzleJson, generateSQLiteMigration } from 'drizzle-kit/
 import { afterEach, beforeAll, beforeEach, describe, it } from 'vitest'
 import * as s from '../../../src/database/schema-v2'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
-import type { V2Database } from '../../../src/main/repositories/MediaRepository'
+import type { V2Database } from '@features/media/MediaRepository'
 import {
     DownloadRepository,
     DownloadRepositoryError
-} from '../../../src/main/repositories/DownloadRepository'
-import { DownloadCommitRepository } from '../../../src/main/repositories/DownloadCommitRepository'
-import { DownloadRecoveryRepository } from '../../../src/main/repositories/DownloadRecoveryRepository'
-import { downloadStagingDirectory } from '../../../src/main/services/DownloadVerificationService'
+} from '@features/download/DownloadRepository'
+import { DownloadCommitRepository } from '@features/download/DownloadCommitRepository'
+import { DownloadRecoveryRepository } from '@features/download/DownloadRecoveryRepository'
+import { downloadStagingDirectory } from '@features/download/DownloadVerificationService'
 
 let ddl: string[]
 let sqlite: Database.Database

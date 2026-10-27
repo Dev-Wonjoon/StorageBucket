@@ -15,7 +15,7 @@ vi.mock('electron', () => ({
     }
 }))
 
-vi.mock('../../../src/main/managers/ConfigManager', () => ({
+vi.mock('@features/settings/ConfigManager', () => ({
     ConfigManager: {
         getInstance: () => ({
             getBasePath: () => fixture.root
@@ -39,7 +39,7 @@ vi.mock('node:child_process', () => ({
 
 describe.skipIf(process.platform !== 'win32')('BinManager 설치', () => {
     let bin: ReturnType<
-        (typeof import('../../../src/main/managers/BinManager'))['BinManager']['getInstance']
+        (typeof import('../../../src/main/features/engines/BinManager'))['BinManager']['getInstance']
     >
     let executable: string
 
@@ -56,7 +56,7 @@ describe.skipIf(process.platform !== 'win32')('BinManager 설치', () => {
             vi.fn(async () => new Response(new Uint8Array([0x4d, 0x5a, 1, 2])))
         )
 
-        const { BinManager } = await import('../../../src/main/managers/BinManager')
+        const { BinManager } = await import('../../../src/main/features/engines/BinManager')
         bin = BinManager.getInstance()
     })
 

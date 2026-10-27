@@ -8,13 +8,13 @@ import * as s from '../../../src/database/schema-v2'
 import { schemaV2Sql } from '../../../src/database/schema-v2.sql'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
 import { downloadStorageSql } from '../../../src/database/migrate'
-import { DownloadRepository } from '../../../src/main/repositories/DownloadRepository'
-import { EngineProcess, type EngineProcessRequest } from '../../../src/main/services/EngineProcess'
-import { YTDLP_VERSION } from '../../../src/main/services/YtdlpAdapter'
+import { DownloadRepository } from '@features/download/DownloadRepository'
+import { EngineProcess, type EngineProcessRequest } from '../../../src/main/features/download/EngineProcess'
+import { YTDLP_VERSION } from '../../../src/main/features/download/YtdlpAdapter'
 import {
     createYouTubePolicy,
     createYouTubeDownloadRuntime
-} from '../../../src/main/services/YouTubeDownload'
+} from '../../../src/main/features/download/YouTubeDownload'
 
 // 기본 테스트에서는 네트워크에 접속하지 않는 합성 데이터다.
 const id = 'BaW_jenozKc'

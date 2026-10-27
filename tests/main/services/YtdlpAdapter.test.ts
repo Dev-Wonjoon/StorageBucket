@@ -6,11 +6,11 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'vitest'
-import { YtdlpAdapter, type YtdlpDiscoveryPolicy } from '../../../src/main/services/YtdlpAdapter'
-import { EngineProcess, type EngineProcessRequest } from '../../../src/main/services/EngineProcess'
-import { DownloadRepositoryError } from '../../../src/main/repositories/DownloadRepository'
-import type { FrozenDownloadTarget } from '../../../src/main/services/DownloadAdapter'
-import { downloadStagingDirectory } from '../../../src/main/services/DownloadVerificationService'
+import { YtdlpAdapter, type YtdlpDiscoveryPolicy } from '../../../src/main/features/download/YtdlpAdapter'
+import { EngineProcess, type EngineProcessRequest } from '../../../src/main/features/download/EngineProcess'
+import { DownloadRepositoryError } from '@features/download/DownloadRepository'
+import type { FrozenDownloadTarget } from '@features/download/DownloadAdapter'
+import { downloadStagingDirectory } from '@features/download/DownloadVerificationService'
 
 let root: string
 let stage: string

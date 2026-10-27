@@ -3,8 +3,8 @@ import { readFile, writeFile, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'vitest'
-import { EngineProcess } from '../../../src/main/services/EngineProcess'
-import { DownloadRepositoryError } from '../../../src/main/repositories/DownloadRepository'
+import { EngineProcess } from '../../../src/main/features/download/EngineProcess'
+import { DownloadRepositoryError } from '@features/download/DownloadRepository'
 
 let root: string
 let host: string

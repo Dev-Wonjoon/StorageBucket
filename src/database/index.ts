@@ -7,7 +7,7 @@ import { readMigrationFiles } from 'drizzle-orm/migrator'
 import * as schema from './schema-v2'
 import { schemaV2Sql } from './schema-v2.sql'
 import { legacyNumericTimeUnit, migrateDatabase } from './migrate'
-import { getDatabasePath } from '../main/utils/portablePath'
+import { getDatabasePath } from '../main/infrastructure/portablePath'
 
 let sqlite: Database.Database | undefined
 let db: BetterSQLite3Database<typeof schema> | undefined

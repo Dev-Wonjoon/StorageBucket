@@ -13,6 +13,9 @@
   ],
   "compilerOptions": {
     "composite": true,
-    "types": ["electron-vite/node"]
+    "types": ["electron-vite/node"],
+    "paths": {
+      "@features/*": ["./src/main/features/*"]
+    }
   }
 }

@@ -6,12 +6,12 @@ import { generateSQLiteDrizzleJson, generateSQLiteMigration } from 'drizzle-kit/
 import { afterEach, beforeAll, beforeEach, describe, it } from 'vitest'
 import * as s from '../../../src/database/schema-v2'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
-import { MediaRepository, type V2Database } from '../../../src/main/repositories/MediaRepository'
+import { MediaRepository, type V2Database } from '@features/media/MediaRepository'
 import {
     DownloadRepository,
     DownloadRepositoryError,
     type EnqueueDownloadInput
-} from '../../../src/main/repositories/DownloadRepository'
+} from '@features/download/DownloadRepository'
 
 let ddl: string[]
 let sqlite: Database.Database

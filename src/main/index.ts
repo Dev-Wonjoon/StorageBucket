@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { getAppDataPath } from './utils/portablePath'
+import { getAppDataPath } from './infrastructure/portablePath'
 import type { AppInitializer } from './AppInitializer'
 
 let initializer: AppInitializer | undefined

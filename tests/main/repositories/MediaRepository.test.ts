@@ -21,7 +21,7 @@ import {
   type DeletionCleanupPayload,
   type FileInput,
   type V2Database
-} from '../../../src/main/repositories/MediaRepository'
+} from '@features/media/MediaRepository'
 
 let ddl: string[]
 let sqlite: Database.Database

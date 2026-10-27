@@ -19,21 +19,21 @@ import { generateSQLiteDrizzleJson, generateSQLiteMigration } from 'drizzle-kit/
 import { afterEach, beforeAll, beforeEach, describe, it } from 'vitest'
 import * as s from '../../../src/database/schema-v2'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
-import type { V2Database } from '../../../src/main/repositories/MediaRepository'
+import type { V2Database } from '@features/media/MediaRepository'
 import {
     DownloadRepository,
     DownloadRepositoryError
-} from '../../../src/main/repositories/DownloadRepository'
-import { DownloadCommitRepository } from '../../../src/main/repositories/DownloadCommitRepository'
+} from '@features/download/DownloadRepository'
+import { DownloadCommitRepository } from '@features/download/DownloadCommitRepository'
 import {
     DownloadVerificationService,
     downloadStagingDirectory
-} from '../../../src/main/services/DownloadVerificationService'
+} from '@features/download/DownloadVerificationService'
 import {
     DownloadStorageService,
     nodeStorageFileSystem,
     type StorageFileSystem
-} from '../../../src/main/services/DownloadStorageService'
+} from '@features/download/DownloadStorageService'
 
 let ddl: string[]
 let sqlite: Database.Database

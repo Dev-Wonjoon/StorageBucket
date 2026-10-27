@@ -1,8 +1,8 @@
 import type Database from 'better-sqlite3'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MediaRepository } from '../../src/main/repositories/MediaRepository'
-import { MediaService } from '../../src/main/services/MediaService'
+import { MediaRepository } from '@features/media/MediaRepository'
+import { MediaService } from '@features/media/MediaService'
 
 const state = vi.hoisted(() => ({
     root: '',
@@ -25,7 +25,7 @@ vi.mock('electron', () => ({
     }
 }))
 
-vi.mock('../../src/main/utils/portablePath', () => ({
+vi.mock('../../src/main/infrastructure/portablePath', () => ({
     getDatabasePath: () => ':memory:'
 }))
 

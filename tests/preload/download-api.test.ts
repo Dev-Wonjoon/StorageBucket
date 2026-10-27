@@ -7,10 +7,10 @@ import { generateSQLiteDrizzleJson, generateSQLiteMigration } from 'drizzle-kit/
 import { afterEach, beforeAll, beforeEach, describe, it, vi } from 'vitest'
 import * as schema from '../../src/database/schema-v2'
 import { schemaV2Guards } from '../../src/database/schema-v2.guards'
-import { createDownloadHandlers } from '../../src/main/handlers/DownloadHandler'
-import { DownloadService } from '../../src/main/services/DownloadService'
-import type { DownloadRunner } from '../../src/main/services/DownloadRunner'
-import { DownloadRepositoryError } from '../../src/main/repositories/DownloadRepository'
+import { createDownloadHandlers } from '../../src/main/features/download/DownloadHandler'
+import { DownloadService } from '@features/download/DownloadService'
+import type { DownloadRunner } from '@features/download/DownloadRunner'
+import { DownloadRepositoryError } from '@features/download/DownloadRepository'
 import {
     downloadFailure,
     type DownloadResponse,

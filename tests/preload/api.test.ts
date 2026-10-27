@@ -1,8 +1,8 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { createAppApi, type IpcTransport } from '../../src/preload/api'
-import * as downloadHandlers from '../../src/main/handlers/DownloadHandler'
-import * as mediaHandlers from '../../src/main/handlers/MediaHandler'
+import * as downloadHandlers from '../../src/main/features/download/DownloadHandler'
+import * as mediaHandlers from '@features/media/MediaHandler'
 
 function fixture() {
     const calls: { channel: string; args: unknown[] }[] = []
@@ -22,18 +22,21 @@ function fixture() {
 describe('preload contract', () => {
     it('정식 명령과 시스템 명령이 선언된 main 채널을 사용한다', async () => {
         const { api, calls, subscribe } = fixture()
-        const directory = new URL('../../src/main/handlers/', import.meta.url)
+        const handlerFiles = [
+            '../../src/main/SystemHandler.ts',
+            '../../src/main/features/download/DownloadHandler.ts',
+            '../../src/main/features/media/MediaHandler.ts',
+            '../../src/main/features/thumbnail/ThumbnailHandler.ts'
+        ].map((file) => new URL(file, import.meta.url))
 
         const registered = new Set(
-            readdirSync(directory)
-                .filter((file) => file.endsWith('.ts'))
-                .flatMap((file) =>
-                    [
-                        ...readFileSync(new URL(file, directory), 'utf8').matchAll(
-                            /['"]([^'"]+)['"]:\s*(?:async\s*)?\(/g
-                        )
-                    ].map((match) => match[1])
-                )
+            handlerFiles.flatMap((file) =>
+                [
+                    ...readFileSync(file, 'utf8').matchAll(
+                        /['"]([^'"]+)['"]:\s*(?:async\s*)?\(/g
+                    )
+                ].map((match) => match[1])
+            )
         )
 
         await Promise.all([

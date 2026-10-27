@@ -13,9 +13,9 @@ import {
     legacyNumericTimeUnit,
     type Version3MigrationOptions
 } from '../../src/database/migrate'
-import type { V2Database } from '../../src/main/repositories/MediaRepository'
-import { DownloadRepository } from '../../src/main/repositories/DownloadRepository'
-import { DownloadRootRepository } from '../../src/main/repositories/DownloadRootRepository'
+import type { V2Database } from '@features/media/MediaRepository'
+import { DownloadRepository } from '@features/download/DownloadRepository'
+import { DownloadRootRepository } from '@features/download/DownloadRootRepository'
 
 const migrations = readMigrationFiles({
     migrationsFolder: fileURLToPath(new URL('../../drizzle', import.meta.url))

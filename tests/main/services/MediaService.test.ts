@@ -5,9 +5,9 @@ import { generateSQLiteDrizzleJson, generateSQLiteMigration } from 'drizzle-kit/
 import { afterEach, beforeAll, beforeEach, describe, it } from 'vitest'
 import * as s from '../../../src/database/schema-v2'
 import { schemaV2Guards } from '../../../src/database/schema-v2.guards'
-import { MediaRepository, type FileInput, type V2Database } from '../../../src/main/repositories/MediaRepository'
+import { MediaRepository, type FileInput, type V2Database } from '@features/media/MediaRepository'
 import type { MediaErrorCode, MediaResult } from '../../../src/shared/media-v2'
-import { MediaService } from '../../../src/main/services/MediaService'
+import { MediaService } from '@features/media/MediaService'
 
 let ddl: string[]
 let sqlite: Database.Database
