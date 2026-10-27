@@ -35,6 +35,16 @@ export interface DownloadFinalFile extends Omit<DownloadFileVerification, 'stage
     finalPath: string
 }
 
+export interface DownloadThumbnailTaskPayload {
+    version: 1
+    purpose: 'download_thumbnail'
+    mediaId: number
+    fileId: number
+    fileKey: string
+    contentHash: string
+    transformVersion: 'jpeg-v1'
+}
+
 function fail(code: ConstructorParameters<typeof DownloadRepositoryError>[0]): never {
     throw new DownloadRepositoryError(code)
 }
@@ -331,7 +341,7 @@ export class DownloadCommitRepository {
                 .run()
 
             const enqueue = (
-                kind: 'obsolete_file_cleanup' | 'search_reindex',
+                kind: 'obsolete_file_cleanup' | 'search_reindex' | 'preview_generation',
                 payload: unknown
             ) => {
                 tx.insert(s.maintenanceTasks)
@@ -361,6 +371,38 @@ export class DownloadCommitRepository {
                 scope: 'media',
                 mediaId: parent.id
             })
+            
+            for (let index = 0; index < plan.targets.length; index++) {
+                const target = plan.targets[index]
+                const metadata = verified(target)
+                const file = inserted[index]
+
+                // 우선 현재 지원하는 YouTube 단일 영상·오디오만 처리한다.
+                if (
+                    metadata.platformName !== 'Youtube' ||
+                    typeof metadata.externalId !== 'string' ||
+                    !/^[A-Za-z0-9_-]{11}$/.test(metadata.externalId) ||
+                    target.targetKey !== `youtube:${metadata.externalId}` ||
+                    (file.kind !== 'video' && file.kind !== 'audio') ||
+                    file.thumbnailPath !== null ||
+                    typeof file.contentHash !== 'string' ||
+                    !/^[0-9a-f]{64}$/.test(file.contentHash)
+                ) {
+                    continue
+                }
+
+                const payload: DownloadThumbnailTaskPayload = {
+                    version: 1,
+                    purpose: 'download_thumbnail',
+                    mediaId: parent.id,
+                    fileId: file.id,
+                    fileKey: file.fileKey,
+                    contentHash: file.contentHash,
+                    transformVersion: 'jpeg-v1'
+                }
+
+                enqueue('preview_generation', payload)
+            }
 
             return {
                 mediaId: parent.id,

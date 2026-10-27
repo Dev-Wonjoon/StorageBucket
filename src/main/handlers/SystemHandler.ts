@@ -4,6 +4,7 @@ import { BinManager } from '../managers/BinManager'
 import { YTDLP_VERSION } from '../services/YtdlpAdapter'
 import { GALLERYDL_VERSION } from '../services/GalleryDlAdapter'
 import { getDoubleClickInterval } from '../utils/doubleClickInterval'
+import { getDownloadPreviews } from '../services/DownloadPreviewRuntime'
 
 export const systemHandler = {
     'system:double-click-interval': async () => getDoubleClickInterval(),
@@ -99,5 +100,16 @@ export const systemHandler = {
     'system:clear-cookie-file': async () => {
         ConfigManager.getInstance().setCookieFilePath('')
         return true
+    },
+
+    'system:download-preview': async (
+        _: IpcMainInvokeEvent,
+        url: unknown
+    ): Promise<string | null> => {
+        try {
+            return await getDownloadPreviews().get(url)
+        } catch {
+            return null
+        }
     }
 }

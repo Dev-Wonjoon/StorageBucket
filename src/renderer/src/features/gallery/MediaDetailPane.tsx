@@ -3,6 +3,7 @@ import { getApi } from '@renderer/shared/api'
 import { useToast } from '@renderer/shared/hooks/useToast'
 import { MediaPreview } from '@renderer/shared/components/media/MediaPreview'
 import { MEDIA_PAGE_SIZE, type GallerySnapshot, type GalleryStore } from '../gallery/galleryStore'
+import { MediaThumbnailStatus } from './MediaThumbnailStatus'
 
 export interface MediaDetailFocusRequest {
     mediaId: number
@@ -398,6 +399,19 @@ export function MediaDetailPane({
                                     title={file.title ?? file.fileKey}
                                     className="aspect-video w-full rounded bg-[var(--bg-active)] object-contain"
                                 />
+
+                                {data.sourceKind === 'download' &&
+                                    file.storageKind === 'app_managed' &&
+                                    (file.kind === 'video' || file.kind === 'audio') &&
+                                    file.thumbnailPath === null && (
+                                        <MediaThumbnailStatus
+                                            key={`${data.id}:${file.id}:${data.revision}`}
+                                            mediaId={data.id}
+                                            fileId={file.id}
+                                            title={file.title ?? file.fileKey}
+                                            disabled={disabled}
+                                        />
+                                    )}
 
                                 <div className="min-w-0 flex-1 space-y-1">
                                     <p className="break-words text-sm">

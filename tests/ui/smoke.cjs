@@ -4,10 +4,19 @@
 const { app, BrowserWindow, protocol } = require('electron')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
-const os = require('node:os')
 const path = require('node:path')
-const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'storagebucket-ui-'))
-const output = process.argv[2] ? path.resolve(process.argv[2]) : path.join(profile, 'screenshots')
+const { requireTestWorkspace, testPath } = require('../helpers/test-workspace.cjs')
+
+const profile = requireTestWorkspace()
+const output = testPath(profile, 'screenshots')
+
+for (const name of ['userData', 'sessionData', 'logs', 'crashDumps', 'temp']) {
+    const directory = testPath(profile, name)
+
+    fs.mkdirSync(directory, { recursive: true })
+    app.setPath(name, directory)
+}
+
 app.setPath('userData', profile)
 app.setPath('sessionData', path.join(profile, 'session'))
 app.commandLine.appendSwitch('disable-gpu')
@@ -36,6 +45,18 @@ function installFixtures() {
         updatedAt: null
     }))
     const tags = new Map()
+    const thumbnailStates = new Map([[100, 'failed']])
+    const thumbnailListeners = new Set()
+
+    function thumbnailStatus(fileId) {
+        const state = thumbnailStates.get(fileId) || 'registered'
+
+        return {
+            state,
+            taskId: state === 'registered' ? null : 'thumbnail-' + fileId,
+            canRetry: state === 'failed'
+        }
+    }
     const jobs = ['running', 'pending', 'completed', 'cancelled'].map((state, i) => ({
         id: 'job-' + i,
         url: 'https://www.youtube.com/watch?v=fixture-' + i,
@@ -86,7 +107,10 @@ function installFixtures() {
                     kind: 'video',
                     position: i,
                     title: '영상 파일 ' + (i + 1),
-                    thumbnailPath: row.cover.path,
+                    thumbnailPath:
+                        mediaId === 1 && i === 0 && thumbnailStates.get(100) !== 'registered'
+                            ? null
+                            : row.cover.path,
                     previewPath: null,
                     thumbnailOrigin: 'app_generated'
                 }))
@@ -163,10 +187,55 @@ function installFixtures() {
                 calls.push({ kind: 'cancel', jobId })
                 return ok({ accepted: true })
             }
+        },
+        getDownloadPreview: async () => null,
+
+        onMediaThumbnailUpdated: (listener) => {
+            thumbnailListeners.add(listener)
+
+            return () => {
+                thumbnailListeners.delete(listener)
+            }
+        },
+
+        thumbnails: {
+            get: async ({ fileId }) => ok(thumbnailStatus(fileId)),
+
+            retry: async ({ mediaId, fileId }) => {
+                calls.push({ kind: 'thumbnail-retry', mediaId, fileId })
+
+                if (mediaId !== 1 || fileId !== 100 || thumbnailStates.get(fileId) !== 'failed') {
+                    return {
+                        ok: false,
+                        error: {
+                            code: 'NOT_RETRYABLE',
+                            message: '재시도할 수 없는 테스트 작업입니다.'
+                        }
+                    }
+                }
+
+                thumbnailStates.set(fileId, 'pending')
+
+                await new Promise((resolve) => setTimeout(resolve, 80))
+
+                return ok(thumbnailStatus(fileId))
+            }
         }
     }
     contextBridge.exposeInMainWorld('api', api)
-    contextBridge.exposeInMainWorld('fixtureProbe', { calls: () => calls })
+    contextBridge.exposeInMainWorld('fixtureProbe', {
+        calls: () => calls,
+
+        completeThumbnail: (fileId) => {
+            thumbnailStates.set(fileId, 'registered')
+
+            const mediaId = Math.floor(fileId / 100)
+
+            for (const listener of [...thumbnailListeners]) {
+                listener(mediaId)
+            }
+        }
+    })
 }
 
 const preload = path.join(profile, 'fixture-preload.cjs')
@@ -233,7 +302,7 @@ async function run() {
     window.webContents.on('console-message', (details) => {
         if (details.level === 'error') errors.push(details.message)
     })
-    await window.loadFile(path.resolve(__dirname, '../../out/renderer/index.html'))
+    await window.loadFile(testPath(profile, 'renderer', 'index.html'))
     await waitFor("document.querySelectorAll('article').length === 30")
     await evaluate(
         "document.documentElement.classList.remove('dark'); window.__confirmCalls = 0; window.confirm = () => { window.__confirmCalls++; return false }; true"
@@ -271,6 +340,72 @@ async function run() {
     )
     assert.equal(await evaluate("!!document.querySelector('aside[aria-labelledby]')"), true)
     await waitFor('!!document.querySelector(\'input[aria-label="추가할 태그 이름"]\')')
+    await waitFor('!!document.querySelector(\'button[aria-label="영상 파일 1 썸네일 다시 시도"]\')')
+
+    await input('input[aria-label="추가할 태그 이름"]', '썸네일 재시도 중인 태그 초안')
+
+    const thumbnailDetailReads = await evaluate(
+        "window.fixtureProbe.calls().filter(c => c.kind === 'get').length"
+    )
+
+    const editsBeforeThumbnail = await evaluate(
+        "window.fixtureProbe.calls().filter(c => c.kind === 'edit').length"
+    )
+
+    // 같은 이벤트 흐름에서 연속 클릭해도 요청은 한 번만 전달돼야 한다.
+    await evaluate(`
+    (() => {
+        const button = document.querySelector(
+            'button[aria-label="영상 파일 1 썸네일 다시 시도"]'
+        )
+        button.click()
+        button.click()
+        return true
+    })()
+`)
+
+    await waitFor(
+        'document.querySelector(\'[data-thumbnail-file="100"]\')?.dataset.thumbnailState === "pending"'
+    )
+
+    assert.equal(
+        await evaluate(
+            "window.fixtureProbe.calls().filter(c => c.kind === 'thumbnail-retry').length"
+        ),
+        1
+    )
+
+    assert.equal(await evaluate("!!document.querySelector('aside[aria-labelledby]')"), true)
+
+    // 합성 작업을 완료하고 실제 변경 이벤트를 전달한다.
+    await evaluate('window.fixtureProbe.completeThumbnail(100); true')
+
+    await waitFor('!document.querySelector(\'[data-thumbnail-file="100"]\')')
+
+    assert.equal(
+        await evaluate('document.querySelector(\'input[aria-label="추가할 태그 이름"]\').value'),
+        '썸네일 재시도 중인 태그 초안'
+    )
+
+    // 미저장 초안이 있으면 갤러리 상세 새로고침은 보류돼야 한다.
+    assert.equal(
+        await evaluate("window.fixtureProbe.calls().filter(c => c.kind === 'get').length"),
+        thumbnailDetailReads
+    )
+
+    assert.equal(
+        await evaluate("window.fixtureProbe.calls().filter(c => c.kind === 'edit').length"),
+        editsBeforeThumbnail
+    )
+
+    // 뒤에 이어지는 기존 테스트를 위해 초안을 비운다.
+    await input('input[aria-label="추가할 태그 이름"]', '')
+
+    await waitFor(
+        "window.fixtureProbe.calls().filter(c => c.kind === 'get').length > " + thumbnailDetailReads
+    )
+
+    await pause(100)
     const reads = await evaluate(
         "window.fixtureProbe.calls().filter(c => c.kind === 'get' && c.mediaId === 1 && c.fileLimit === 50).length"
     )

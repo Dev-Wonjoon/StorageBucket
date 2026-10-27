@@ -24,7 +24,13 @@ export function createAppApi(transport: IpcTransport): AppApi {
             cancel: (request) => transport.invoke('download:cancel', request)
         },
 
+        thumbnails: {
+            get: (request) => transport.invoke('thumbnail:get', request),
+            retry: (request) => transport.invoke('thumbnail:retry', request)
+        },
+
         showItemInFolder: (filepath) => transport.invoke('shell:show-item', filepath),
+        getDownloadPreview: (url) => transport.invoke('system:download-preview', url),
         getDoubleClickInterval: () => transport.invoke('system:double-click-interval'),
 
         getDownloadPath: () => transport.invoke('get-download-path'),
@@ -39,6 +45,12 @@ export function createAppApi(transport: IpcTransport): AppApi {
 
         getCookieFilePath: () => transport.invoke('system:get-cookie-file'),
         setCookieFilePath: () => transport.invoke('system:set-cookie-file'),
-        clearCookieFilePath: () => transport.invoke('system:clear-cookie-file')
+        clearCookieFilePath: () => transport.invoke('system:clear-cookie-file'),
+        onMediaThumbnailUpdated: (listener) =>
+            transport.subscribe<unknown>('media:thumbnail-updated', (value) => {
+                if (typeof value === 'number' && Number.isSafeInteger(value) && value > 0) {
+                    listener(value)
+                }
+            })
     }
 }

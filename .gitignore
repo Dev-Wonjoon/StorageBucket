@@ -63,3 +63,7 @@ drizzle/
 resources/
 downloads/
 thumbnails/
+cache/
+*.jpg
+*.png
+.test-data/

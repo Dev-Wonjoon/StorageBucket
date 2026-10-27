@@ -72,7 +72,10 @@ describe('preload contract', () => {
             api.setCookieBrowser('chrome'),
             api.getCookieFilePath(),
             api.setCookieFilePath(),
-            api.clearCookieFilePath()
+            api.clearCookieFilePath(),
+            api.getDownloadPreview('https://www.youtube.com/watch?v=jNQXAC9IVRw'),
+            api.thumbnails.get({ mediaId: 1, fileId: 2 }),
+            api.thumbnails.retry({ mediaId: 1, fileId: 2 })
         ])
 
         expect(calls.filter((call) => !registered.has(call.channel))).toEqual([])
@@ -97,7 +100,10 @@ describe('preload contract', () => {
                 'setCookieBrowser',
                 'getCookieFilePath',
                 'setCookieFilePath',
-                'clearCookieFilePath'
+                'clearCookieFilePath',
+                'getDownloadPreview',
+                'onMediaThumbnailUpdated',
+                'thumbnails'
             ].sort()
         )
 
@@ -155,6 +161,63 @@ describe('preload contract', () => {
             {
                 channel: 'media:unregister',
                 args: [{ mediaId: 42, expectedRevision: 8 }]
+            }
+        ])
+    })
+
+    it('썸네일 변경 이벤트를 검증해 전달하고 구독을 해제한다', () => {
+        const unsubscribe = vi.fn()
+        const listener = vi.fn()
+
+        const received: {
+            callback?: (value: unknown) => void
+        } = {}
+
+        const transport: IpcTransport = {
+            invoke<T>(): Promise<T> {
+                return Promise.reject(new Error('UNEXPECTED_INVOKE'))
+            },
+
+            subscribe<T>(channel: string, callback: (value: T) => void) {
+                expect(channel).toBe('media:thumbnail-updated')
+
+                received.callback = (value) => callback(value as T)
+                return unsubscribe
+            }
+        }
+
+        const api = createAppApi(transport)
+        const stop = api.onMediaThumbnailUpdated(listener)
+
+        expect(received.callback).toBeTypeOf('function')
+
+        received.callback!(42)
+        received.callback!(null)
+        received.callback!('42')
+        received.callback!(-1)
+        received.callback!(1.5)
+
+        expect(listener).toHaveBeenCalledTimes(1)
+        expect(listener).toHaveBeenCalledWith(42)
+
+        stop()
+        expect(unsubscribe).toHaveBeenCalledTimes(1)
+    })
+
+    it('썸네일 조회와 재시도에 미디어 및 파일 ID를 전달한다', async () => {
+        const { api, calls } = fixture()
+
+        await api.thumbnails.get({ mediaId: 42, fileId: 7 })
+        await api.thumbnails.retry({ mediaId: 42, fileId: 7 })
+
+        expect(calls).toEqual([
+            {
+                channel: 'thumbnail:get',
+                args: [{ mediaId: 42, fileId: 7 }]
+            },
+            {
+                channel: 'thumbnail:retry',
+                args: [{ mediaId: 42, fileId: 7 }]
             }
         ])
     })

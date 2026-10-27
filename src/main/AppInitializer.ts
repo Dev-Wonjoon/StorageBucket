@@ -13,6 +13,9 @@ import type { DownloadServicePort } from '../shared/download-api'
 import { BinManager } from './managers/BinManager'
 import { ConfigManager } from './managers/ConfigManager'
 import { createYouTubeDownloadRuntime } from './services/YouTubeDownload'
+import { startDownloadThumbnailWorker } from './services/DownloadThumbnailRuntime'
+import { createThumbnailHandlers } from './handlers/ThumbnailHandler'
+import { DownloadThumbnailRepository } from './repositories/DownloadThumbnailRepository'
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any>
 
@@ -20,6 +23,7 @@ export class AppInitializer {
     private mainWindow: BrowserWindow | null = null
     private mediaService: MediaServicePort | undefined
     private downloadService: DownloadServicePort | undefined
+    private stopThumbnailWorker: (() => void) | undefined
 
     public async initialize(): Promise<void> {
         try {
@@ -63,6 +67,23 @@ export class AppInitializer {
 
         this.createWindow()
         this.registerIpcHandlers()
+
+        try {
+            this.stopThumbnailWorker = startDownloadThumbnailWorker(getDB(), (mediaId) => {
+                const window = this.mainWindow
+
+                if (window && !window.isDestroyed() && !window.webContents.isDestroyed()) {
+                    window.webContents.send('media:thumbnail-updated', mediaId)
+                }
+            })
+
+            app.once('before-quit', () => {
+                this.stopThumbnailWorker?.()
+                this.stopThumbnailWorker = undefined
+            })
+        } catch (error) {
+            console.error('[ThumbnailWorker] 초기화 실패:', error)
+        }
     }
 
     public createWindow(): void {
@@ -104,7 +125,8 @@ export class AppInitializer {
             ...shellHandler,
             ...systemHandler,
             ...createMediaHandlers(() => this.mediaService),
-            ...createDownloadHandlers(() => this.downloadService)
+            ...createDownloadHandlers(() => this.downloadService),
+            ...createThumbnailHandlers(() => new DownloadThumbnailRepository(getDB())),
         }
 
         console.log(`[Main] Found ${Object.keys(handlers).length} handlers to register.`)

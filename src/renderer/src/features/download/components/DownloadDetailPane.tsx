@@ -26,7 +26,7 @@ export function DownloadDetailPane(): React.JSX.Element | null {
     const failure = job.errorCode ? downloadFailure(job.errorCode) : null
     return (
         <section className="space-y-5" aria-label="선택한 다운로드 작업">
-            <DownloadThumbnail />
+            <DownloadThumbnail url={job.url} title={job.title || '다운로드 썸네일'} />
             <div className="space-y-2">
                 <h3 className="break-words text-lg font-semibold">
                     {job.title || '다운로드 작업'}

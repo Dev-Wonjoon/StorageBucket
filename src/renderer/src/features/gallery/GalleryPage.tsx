@@ -8,6 +8,7 @@ import { MediaDetailPane, type MediaDetailFocusRequest } from './MediaDetailPane
 import { GalleryCardActions } from './GalleryCardActions'
 import { useGalleryViewModel } from './useGalleryViewModel'
 import type { MediaFilter } from '../../../../shared/media-v2'
+import { getApi } from '@renderer/shared/api'
 
 export const GalleryPage = ({
     favoritesOnly = false,
@@ -29,6 +30,48 @@ export const GalleryPage = ({
         setDraftDirty(dirty)
     }, [])
     useLeaveGuard(draftDirty, state.busy)
+
+    const thumbnailRefreshPending = useRef(false)
+
+    const refreshThumbnails = useCallback(() => {
+        if (!thumbnailRefreshPending.current) return
+
+        const current = store.getSnapshot()
+
+        if (dirtyRef.current || current.busy || current.needsRefresh) {
+            return
+        }
+
+        thumbnailRefreshPending.current = false
+        void store.refresh()
+    }, [store])
+
+    useEffect(() => {
+        let timer: ReturnType<typeof setTimeout> | undefined
+
+        const unsubscribe = getApi().onMediaThumbnailUpdated(() => {
+            thumbnailRefreshPending.current = true
+
+            if (timer !== undefined) clearTimeout(timer)
+
+            timer = setTimeout(() => {
+                timer = undefined
+                refreshThumbnails()
+            }, 100)
+        })
+
+        return () => {
+            unsubscribe()
+            if (timer !== undefined) clearTimeout(timer)
+        }
+    }, [refreshThumbnails])
+
+    useEffect(() => {
+        if (!draftDirty && !state.busy && !state.needsRefresh) {
+            refreshThumbnails()
+        }
+    }, [draftDirty, state.busy, state.needsRefresh, refreshThumbnails])
+
     const [editFocus, setEditFocus] = useState<MediaDetailFocusRequest | null>(null)
     const editSequence = useRef(0)
     const listScrollRef = useRef<HTMLDivElement>(null)

@@ -2,6 +2,7 @@ import { useCallback, useContext, useSyncExternalStore } from 'react'
 import { useToast } from '@renderer/shared/hooks/useToast'
 import type { ManualDownloadTrigger } from '../../../../shared/download-api'
 import { DownloadContext } from './downloadContext'
+import { getApi } from '@renderer/shared/api'
 
 export function useDownloadViewModel() {
     const store = useContext(DownloadContext)
@@ -24,6 +25,10 @@ export function useDownloadViewModel() {
             }
 
             showToast('다운로드 대기열에 등록했습니다.', 'info')
+
+            void Promise.resolve()
+                .then(() => getApi().getDownloadPreview(url))
+                .catch(() => {})
 
             return true
         },

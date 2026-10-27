@@ -32,7 +32,10 @@ export function DownloadQueue(): React.JSX.Element {
                                     : 'border-[var(--border-line)]')
                             }
                         >
-                            <DownloadThumbnail />
+                            <DownloadThumbnail
+                                url={job.url}
+                                title={job.title || '다운로드 썸네일'}
+                            />
                             <div className="min-w-0 flex-1 space-y-2">
                                 <p className="truncate text-sm font-medium" title={job.url}>
                                     {job.url}

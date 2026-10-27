@@ -788,28 +788,36 @@ export class MediaRepository {
 
     private summaryQuery(store: Store) {
         const representativeId = sql<number | null>`
-      CASE
-        WHEN ${s.medias.coverMode} = 'manual'
-          THEN ${s.medias.coverFileId}
-        ELSE (
-          SELECT f.id
-          FROM media_file f
-          WHERE f.media_id = ${s.medias.id}
-            AND (
-              (
-                f.kind = 'video'
-                AND f.thumbnail_path IS NOT NULL
-              )
-              OR f.kind = 'image'
+        CASE
+            WHEN ${s.medias.coverMode} = 'manual'
+                THEN ${s.medias.coverFileId}
+            ELSE (
+                SELECT f.id
+                FROM media_file f
+                WHERE f.media_id = ${s.medias.id}
+                    AND (
+                        (
+                            f.kind = 'video'
+                            AND f.thumbnail_path IS NOT NULL
+                        )
+                        OR f.kind = 'image'
+                        OR (
+                            f.kind IN ('unknown', 'audio')
+                            AND f.thumbnail_path IS NOT NULL
+                        )
+                    )
+                ORDER BY
+                    CASE
+                        WHEN f.kind = 'video' THEN 0
+                        WHEN f.kind = 'image' THEN 1
+                        ELSE 2
+                    END,
+                    f.position,
+                    f.id
+                LIMIT 1
             )
-          ORDER BY
-            CASE WHEN f.kind = 'video' THEN 0 ELSE 1 END,
-            f.position,
-            f.id
-          LIMIT 1
-        )
-      END
-    `
+        END
+        `
 
         return store
             .select({

@@ -623,4 +623,100 @@ describe('DownloadCommitRepository', () => {
 
         assert.equal(db.select().from(s.mediaFiles).all().length, 2)
     })
+
+    it('YouTube 커밋 시 영구 썸네일 작업을 함께 등록한다', () => {
+        const videoId = 'jNQXAC9IVRw'
+        const sourceUrl = `https://www.youtube.com/watch?v=${videoId}`
+        const targetKey = `youtube:${videoId}`
+
+        const requestUrl = db
+            .insert(s.downloadUrls)
+            .values({
+                url: sourceUrl,
+                normalizedUrl: sourceUrl,
+                normalizationVersion: 1
+            })
+            .returning()
+            .get()
+
+        const job = repo.enqueue({
+            requestUrlId: requestUrl.id,
+            originalUrl: sourceUrl,
+            mode: 'create'
+        })
+
+        const { attempt: currentAttempt } = repo.startAttempt(job.id, 'manual_initial')
+
+        repo.freezeTargets(job.id, currentAttempt.id, [
+            {
+                targetKey,
+                sourceUrl,
+                metadata: {
+                    kind: 'video',
+                    externalId: videoId,
+                    platformName: 'Youtube'
+                }
+            }
+        ])
+
+        const staging = downloadStagingDirectory(root, job.id, currentAttempt.id)
+
+        repo.recordResults(job.id, currentAttempt.id, [
+            {
+                targetKey,
+                stagedPath: join(staging, 'video.mp4')
+            }
+        ])
+
+        const snapshot = repo.verificationSnapshot(job.id, currentAttempt.id)
+
+        repo.markVerified(
+            snapshot,
+            snapshot.targets.map((target) => ({
+                targetId: target.id,
+                stagedPath: target.stagedPath,
+                realPath: target.stagedPath,
+                size: 3,
+                device: '1',
+                inode: '1',
+                mtimeNs: '100',
+                ctimeNs: '101',
+                sha256: 'a'.repeat(64)
+            }))
+        )
+
+        const plan = commit.prepare(job.id, currentAttempt.id)
+
+        commit.begin(plan)
+        const result = commit.complete(plan, finals(plan))
+
+        const file = db
+            .select()
+            .from(s.mediaFiles)
+            .where(eq(s.mediaFiles.mediaId, result.mediaId))
+            .get()!
+
+        const tasks = db
+            .select()
+            .from(s.maintenanceTasks)
+            .all()
+            .filter((task) => task.kind === 'preview_generation')
+
+        assert.equal(tasks.length, 1)
+        assert.equal(tasks[0].state, 'pending')
+        assert.equal(tasks[0].ownerKind, 'download')
+        assert.equal(tasks[0].downloadAttemptId, currentAttempt.id)
+
+        assert.deepEqual(JSON.parse(tasks[0].payloadJson), {
+            version: 1,
+            purpose: 'download_thumbnail',
+            mediaId: result.mediaId,
+            fileId: file.id,
+            fileKey: targetKey,
+            contentHash: 'a'.repeat(64),
+            transformVersion: 'jpeg-v1'
+        })
+
+        assert.equal(repo.get(job.id)!.state, 'completed')
+    })
 })
