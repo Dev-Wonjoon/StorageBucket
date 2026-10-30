@@ -41,7 +41,7 @@ type Session = {
     directories: StorageDirectories
 }
 
-export const YTDLP_VERSION = '2026.03.17'
+export const YTDLP_VERSION = '2026.10.26'
 const LIMIT = 16 * 1024 * 1024
 
 function fail(code: ConstructorParameters<typeof DownloadRepositoryError>[0]): never {
@@ -140,7 +140,13 @@ function flatten(value: unknown, out: JsonObject[] = [], depth = 0): JsonObject[
 
         text(row.id)
         text(row.extractor_key)
-        text(row.title)
+
+        // 제목이 없어도 식별 가능한 미디어는 처리한다.
+        if (row.title === undefined || row.title === null || row.title === '') {
+            row.title = text(row.id)
+        } else {
+            text(row.title)
+        }
 
         out.push(row)
     }
@@ -282,7 +288,7 @@ function metadata(row: JsonObject, audio: boolean): DownloadTargetInput['metadat
     ] as const) {
         const value = row[source]
 
-        if (value !== undefined && value !== null) {
+        if (value !== undefined && value !== null && value !== '') {
             result[destination] = text(value)
         }
     }

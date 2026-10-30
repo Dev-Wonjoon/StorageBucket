@@ -33,7 +33,9 @@ const targets = {
         files: [
             'tests/main/services/DownloadRuntime.test.ts',
             'tests/main/services/YouTubeDownload.test.ts',
-            'tests/main/services/DownloadEngineRouting.test.ts'
+            'tests/main/services/DownloadEngineRouting.test.ts',
+            'tests/main/services/DownloadEngineSelection.test.ts',
+            'tests/main/services/YtdlpPolicy.test.ts'
         ]
     },
     'gallery-dl-smoke': {
@@ -43,6 +45,13 @@ const targets = {
     'instagram-smoke': {
         type: 'vitest',
         files: ['tests/main/services/InstagramDownload.smoke.test.ts']
+    },
+    'distribution-unit': {
+        type: 'vitest',
+        files: [
+            'tests/main/infrastructure/DistributionPaths.test.ts',
+            'tests/main/managers/BinManager.test.ts'
+        ]
     }
 }
 

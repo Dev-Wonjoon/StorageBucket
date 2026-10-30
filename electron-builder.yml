@@ -16,19 +16,16 @@ extraResources:
 asarUnpack:
   - resources/**
 win:
-  target: portable
+  target: nsis
   executableName: storagebucket
-portable:
-  artifactName: "${productName}-${version}-portable.${ext}"
-  requestExecutionLevel: "user"
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
-  include: build/installer.nsh
-  perMachine: true
-  oneClick: false
+  perMachine: false
+  oneClick: true
+  deleteAppDataOnUninstall: false
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:

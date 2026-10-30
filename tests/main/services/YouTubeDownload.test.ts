@@ -227,17 +227,17 @@ describe('YouTube 다운로드 연결', () => {
         })
     }
 
-    it('미지원 요청은 URL·작업·엔진 실행을 만들지 않는다', async () => {
+    it('기존 진입점도 미등록 URL을 엔진 실행 없이 등록한다', async () => {
         const result = await runtime().service.enqueue({
             mode: 'create',
             url: 'https://example.invalid/post'
         })
 
-        expect(result.ok).toBe(false)
+        expect(result.ok).toBe(true)
 
-        expect(sqlite!.prepare('SELECT count(*) FROM download_urls').pluck().get()).toBe(0)
+        expect(sqlite!.prepare('SELECT count(*) FROM download_urls').pluck().get()).toBe(1)
 
-        expect(sqlite!.prepare('SELECT count(*) FROM download_queue').pluck().get()).toBe(0)
+        expect(sqlite!.prepare('SELECT count(*) FROM download_queue').pluck().get()).toBe(1)
 
         expect(calls).toEqual([])
     })
@@ -283,7 +283,15 @@ describe('YouTube 다운로드 연결', () => {
             trigger: 'manual_initial'
         })
 
-        expect(result.ok && result.data.status).toBe('committed')
+        const job = new DownloadRepository(drizzle(sqlite!, { schema: s })).get(first.data.id)
+
+        expect(
+            result.ok && result.data.status,
+            JSON.stringify({
+                result,
+                errorCode: job?.errorCode
+            })
+        ).toBe('committed')
 
         const file = sqlite!.prepare('SELECT filepath FROM media_file').pluck().get() as string
 

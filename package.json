@@ -1,10 +1,10 @@
 {
     "name": "storagebucket",
-    "version": "1.0.0",
-    "description": "An Electron application with React and TypeScript",
+    "version": "2.0.0-beta-1",
+    "description": "A desktop app for downloading online media and organizing your local media library",
     "main": "./out/main/index.js",
     "author": "example.com",
-    "homepage": "https://electron-vite.org",
+    "homepage": "https://github.com/Dev-Wonjoon/StorageBucket",
     "scripts": {
         "format": "prettier --write .",
         "lint": "eslint --cache .",
@@ -44,7 +44,7 @@
         "@types/react-dom": "^19.3.0",
         "@vitejs/plugin-react": "^6.1.2",
         "drizzle-kit": "^0.31.11",
-        "electron": "^45.0.0",
+        "electron": "45.1.0",
         "electron-builder": "^26.15.3",
         "electron-vite": "^6.0.0",
         "eslint": "^9.39.5",

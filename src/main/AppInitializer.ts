@@ -20,6 +20,7 @@ import { startDownloadThumbnailWorker } from '@features/thumbnail/DownloadThumbn
 import { createThumbnailHandlers } from '@features/thumbnail/ThumbnailHandler'
 import { DownloadThumbnailRepository } from '@features/thumbnail/DownloadThumbnailRepository'
 import { createDownloadRuntime } from '@features/download/DownloadRuntime'
+import { recoverInterruptedDownloadsAtStartup } from '@features/download/DownloadStartupRecovery'
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any>
 
@@ -39,6 +40,21 @@ export class AppInitializer {
             throw error
         }
 
+        const recoveryConfirmed =
+            process.env.STORAGEBUCKET_RECOVER_DOWNLOADS === 'confirmed-stopped'
+
+        // 복구 표시는 엔진이나 다른 자식 프로세스로 전달하지 않는다.
+        delete process.env.STORAGEBUCKET_RECOVER_DOWNLOADS
+
+        if (recoveryConfirmed) {
+            if (app.isPackaged) {
+                throw new Error('이 복구 모드는 개발 실행에서만 사용할 수 있습니다.')
+            }
+
+            const recovered = recoverInterruptedDownloadsAtStartup(getDB(), true)
+
+            console.info('[DownloadRecovery] 중단 작업 복구:', recovered.length)
+        }
         this.mediaService = new MediaService(new MediaRepository(getDB()))
         this.downloadService = createDownloadRuntime(getDB(), {
             getStorageRoot: () => ConfigManager.getInstance().getDownloadPath(),
@@ -106,12 +122,13 @@ export class AppInitializer {
             width: 1200,
             height: 800,
             show: false,
-            autoHideMenuBar: true,
+            autoHideMenuBar: false,
             webPreferences: {
                 preload: join(__dirname, '../preload/index.js'),
                 sandbox: false
             }
         })
+        this.mainWindow.setMenu(null)
 
         this.mainWindow.on('ready-to-show', () => {
             this.mainWindow?.show()

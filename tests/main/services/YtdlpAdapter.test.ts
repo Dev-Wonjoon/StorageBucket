@@ -6,8 +6,15 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'vitest'
-import { YtdlpAdapter, type YtdlpDiscoveryPolicy } from '../../../src/main/features/download/YtdlpAdapter'
-import { EngineProcess, type EngineProcessRequest } from '../../../src/main/features/download/EngineProcess'
+import {
+    YtdlpAdapter,
+    YTDLP_VERSION,
+    type YtdlpDiscoveryPolicy
+} from '../../../src/main/features/download/YtdlpAdapter'
+import {
+    EngineProcess,
+    type EngineProcessRequest
+} from '../../../src/main/features/download/EngineProcess'
 import { DownloadRepositoryError } from '@features/download/DownloadRepository'
 import type { FrozenDownloadTarget } from '@features/download/DownloadAdapter'
 import { downloadStagingDirectory } from '@features/download/DownloadVerificationService'
@@ -71,7 +78,7 @@ async function fake(request: EngineProcessRequest) {
     calls.push(request)
 
     if (request.arguments.includes('--version')) {
-        return { stdout: '2026.03.17\n', stderr: '' }
+        return { stdout: `${YTDLP_VERSION}\n`, stderr: '' }
     }
 
     if (request.arguments.includes('--dump-single-json')) {

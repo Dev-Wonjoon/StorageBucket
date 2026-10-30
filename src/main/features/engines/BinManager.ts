@@ -6,6 +6,7 @@ import { LicenseInfo } from '../../../shared/types'
 import { execFile } from 'node:child_process'
 import { GALLERYDL_VERSION } from '../download/GalleryDlAdapter'
 import { YTDLP_VERSION } from '../download/YtdlpAdapter'
+import { getWritableBasePath } from '../../infrastructure/portablePath'
 
 const isDev = !app.isPackaged
 
@@ -82,11 +83,7 @@ export class BinManager {
     private readonly installing = new Set<EngineName>()
 
     private getInstallDirectory(): string {
-        const applicationDirectory = app.isPackaged
-            ? process.env.PORTABLE_EXECUTABLE_DIR?.trim() || path.dirname(app.getPath('exe'))
-            : app.getAppPath()
-
-        return path.join(applicationDirectory, 'bin')
+        return path.join(getWritableBasePath(), 'bin')
     }
 
     private readVersion(name: EngineName, executable: string): Promise<string> {
@@ -160,21 +157,18 @@ export class BinManager {
     public getBinaryPath(name: EngineName): string {
         const ext = process.platform === 'win32' ? '.exe' : ''
         const filename = `${name}${ext}`
-
         const installedPath = path.join(this.getInstallDirectory(), filename)
 
-        if (fs.existsSync(installedPath)) {
-            return installedPath
-        }
+        // 이전 경로는 조회만 유지하며 새 설치는 사용자 데이터에 기록한다.
+        const candidates = [
+            installedPath,
+            ...(app.isPackaged
+                ? [path.join(path.dirname(app.getPath('exe')), 'bin', filename)]
+                : []),
+            path.join(this.bundledBinPath, filename)
+        ]
 
-        // 이전 설치 위치는 조회만 유지한다.
-        const legacyPath = path.join(this.bundledBinPath, filename)
-
-        if (fs.existsSync(legacyPath)) {
-            return legacyPath
-        }
-
-        return installedPath
+        return candidates.find((candidate) => fs.existsSync(candidate)) ?? installedPath
     }
 
     public checkExists(name: EngineName): boolean {

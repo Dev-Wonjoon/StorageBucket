@@ -25,6 +25,7 @@ import {
     requireTestWorkspace,
     testPath
 } from '../../helpers/test-workspace.cjs'
+import { recoverInterruptedDownloadsAtStartup } from '@features/download/DownloadStartupRecovery'
 
 vi.mock('../../../src/database/index', () => {
     throw new Error('USER_DATABASE_IMPORTED')
@@ -60,6 +61,7 @@ let diagnostics: string
 let wrongSource: boolean
 let galleryVersion: string
 let stagedPath: string | undefined
+let videoDocument: Record<string, unknown>
 
 let downloadFailure: 'DOWNLOAD_ENGINE_FAILED' | 'ENGINE_STOP_UNCONFIRMED' | undefined
 
@@ -162,7 +164,7 @@ async function fake(request: EngineProcessRequest) {
 
     if (!gallery && request.arguments.includes('--dump-single-json')) {
         return {
-            stdout: JSON.stringify(youtubeDocument()),
+            stdout: JSON.stringify(videoDocument),
             stderr: ''
         }
     }
@@ -233,6 +235,7 @@ beforeEach(() => {
     nodeExecutable = testPath(root, 'bin', 'node.exe')
 
     calls = []
+    videoDocument = youtubeDocument()
     galleryType = 'GraphImage'
     diagnostics = ''
     wrongSource = false
@@ -649,18 +652,16 @@ describe('공통 다운로드 런타임의 엔진 라우팅', () => {
         expect(mediaCount()).toBe(0)
     })
 
-    it('미지원 URL은 DB 등록과 엔진 실행 전에 거부한다', async () => {
+    it('미등록 URL도 엔진 실행 없이 대기열에 등록한다', async () => {
         const service = runtime().service
 
         const result = await service.enqueue({
             mode: 'create',
-            url: 'https://example.invalid/post'
+            url: 'https://example.invalid/post?custom=value'
         })
 
-        expect(result.ok).toBe(false)
-
-        expect(sqlite!.prepare('SELECT count(*) FROM download_queue').pluck().get()).toBe(0)
-
+        expect(result.ok).toBe(true)
+        expect(sqlite!.prepare('SELECT count(*) FROM download_queue').pluck().get()).toBe(1)
         expect(calls).toEqual([])
     })
 
@@ -692,5 +693,138 @@ describe('공통 다운로드 런타임의 엔진 라우팅', () => {
         expect(result.error.code).toBe('ENGINE_STOP_UNCONFIRMED')
 
         expect(calls).toEqual([])
+    })
+
+    it.each(['Fixture', 'Generic'])(
+        '미등록 사이트의 %s 결과도 고정한 정보로 저장하고 커밋한다',
+        async (extractor) => {
+            const inputUrl = 'https://example.invalid/watch/123?custom=value'
+
+            videoDocument = {
+                ...youtubeDocument(),
+                id: '123',
+                extractor: extractor.toLowerCase(),
+                extractor_key: extractor,
+                webpage_url: inputUrl,
+                title: null,
+                availability: null,
+                age_limit: null,
+                uploader: ''
+            }
+
+            const service = runtime().service
+            const job = data(await service.enqueue({ mode: 'create', url: inputUrl }))
+
+            expect(calls).toEqual([])
+
+            const result = data(
+                await service.run({
+                    jobId: job.id,
+                    trigger: 'manual_initial'
+                })
+            )
+
+            expect(result.status).toBe('committed')
+            expect(mediaCount()).toBe(1)
+
+            expect(
+                calls.filter((call) => call.arguments.includes('--dump-single-json'))
+            ).toHaveLength(1)
+
+            const download = calls.find((call) => call.arguments.includes('--load-info-json'))!
+
+            expect(download.arguments).not.toContain(inputUrl)
+            expect(JSON.parse(download.input!)).not.toHaveProperty('webpage_url')
+            expect(JSON.parse(download.input!).title).toBe('123')
+
+            expect(calls.some((call) => call.executable === binaries.galleryDl)).toBe(false)
+        }
+    )
+
+    it.each([{ is_live: true }, { has_drm: true }])(
+        '일반 사이트에서도 현재 처리할 수 없는 결과 %j 는 커밋하지 않는다',
+        async (changes) => {
+            const inputUrl = 'https://example.invalid/watch/123'
+
+            videoDocument = {
+                ...youtubeDocument(),
+                id: '123',
+                extractor_key: 'Fixture',
+                webpage_url: inputUrl,
+                ...changes
+            }
+
+            const service = runtime().service
+            const job = data(await service.enqueue({ mode: 'create', url: inputUrl }))
+
+            const result = data(
+                await service.run({
+                    jobId: job.id,
+                    trigger: 'manual_initial'
+                })
+            )
+
+            expect(result.status).toBe('cleanup_required')
+            expect(mediaCount()).toBe(0)
+
+            expect(calls.some((call) => call.arguments.includes('--load-info-json'))).toBe(false)
+
+            expect(calls.some((call) => call.executable === binaries.galleryDl)).toBe(false)
+        }
+    )
+    it('종료 확인 없이 시작 복구를 실행하면 기존 기록을 유지한다', async () => {
+        const service = runtime().service
+        const job = data(await service.enqueue({ mode: 'create', url: youtube }))
+
+        new DownloadRepository(db).startAttempt(job.id, 'manual_initial')
+
+        expect(() => recoverInterruptedDownloadsAtStartup(db, false)).toThrow(
+            'ENGINE_STOP_UNCONFIRMED'
+        )
+
+        expect(new DownloadRepository(db).get(job.id)!.state).toBe('running')
+        expect(calls).toEqual([])
+    })
+
+    it('종료 확인 후 기록만 복구하고 새 런타임은 새 요청을 받는다', async () => {
+        const service = runtime().service
+        const job = data(await service.enqueue({ mode: 'create', url: youtube }))
+
+        new DownloadRepository(db).startAttempt(job.id, 'manual_initial')
+
+        const before = runtime().service
+        const blocked = await before.enqueue({
+            mode: 'create',
+            url: 'https://example.invalid/before-recovery'
+        })
+
+        expect(blocked.ok).toBe(false)
+        if (blocked.ok) throw new Error('실행 차단을 예상했습니다.')
+        expect(blocked.error.code).toBe('ENGINE_STOP_UNCONFIRMED')
+
+        const keep = testPath(root, 'keep-partial.bin')
+        await writeFile(keep, '검증되지 않은 기존 파일', { flag: 'wx' })
+
+        const recovered = recoverInterruptedDownloadsAtStartup(db, true)
+
+        expect(recovered).toHaveLength(1)
+        expect(recovered[0].status).toBe('cleanup_required')
+        expect(new DownloadRepository(db).get(job.id)!.state).toBe('interrupted')
+        expect(new DownloadRepository(db).get(job.id)!.cleanupRequired).toBe(true)
+
+        expect(await readFile(keep, 'utf8')).toBe('검증되지 않은 기존 파일')
+
+        expect(db.select().from(s.downloadAttempts).all()).toHaveLength(1)
+
+        // 복구 뒤 런타임을 새로 구성하여 시작 차단 상태를 다시 계산한다.
+        const restored = runtime().service
+        const added = await restored.enqueue({
+            mode: 'create',
+            url: 'https://example.invalid/after-recovery'
+        })
+
+        expect(added.ok).toBe(true)
+        expect(calls).toEqual([])
+        expect(recoverInterruptedDownloadsAtStartup(db, true)).toEqual([])
     })
 })

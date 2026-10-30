@@ -1,6 +1,6 @@
-import { app } from 'electron'
 import path from 'path'
 import Store from 'electron-store'
+import { getDefaultDownloadPath, getWritableBasePath } from '../../infrastructure/portablePath'
 
 interface AppConfig {
     basePath: string
@@ -15,17 +15,14 @@ export class ConfigManager {
     private store: Store<AppConfig>
 
     private constructor() {
-        const isDev = !app.isPackaged
-        const defaultBasePath = isDev
-            ? app.getAppPath()
-            : process.env.PORTABLE_EXECUTABLE_DIR?.trim() || path.dirname(app.getPath('exe'))
+        const defaultBasePath = getWritableBasePath()
 
         const AppStore = (Store as any).default || Store
 
         this.store = new AppStore({
             defaults: {
                 basePath: defaultBasePath,
-                downloadPath: path.join(defaultBasePath, 'downloads'),
+                downloadPath: getDefaultDownloadPath(),
                 thumbnailPath: path.join(defaultBasePath, 'thumbnails'),
                 cookieBrowser: '',
                 cookieFilePath: ''

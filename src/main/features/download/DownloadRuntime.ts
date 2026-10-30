@@ -30,8 +30,9 @@ import {
     GALLERYDL_VERSION,
     type GalleryDlAuthentication
 } from './GalleryDlAdapter'
-import { createYouTubePolicy } from './YouTubePolicy'
+import { createYtdlpPolicy } from './YtdlpPolicy'
 import { createMappedGalleryDlPolicy } from './GalleryDlPolicy'
+import { selectDownloadEngine } from './DownloadEngineRouting'
 
 export interface DownloadRuntimePorts {
     acceptsRequest?: (...args: Parameters<DownloadAdapterSelector>) => boolean
@@ -116,21 +117,23 @@ function createEnginePorts(
     }
 
     function selectPolicy(url: string, options: Readonly<DownloadJobOptions>) {
-        const youtube = createYouTubePolicy(url)
+        const kind = selectDownloadEngine(url, options)
 
-        if (youtube?.accepts(url, options)) {
-            return {
-                kind: 'yt-dlp' as const,
-                policy: youtube
+        if (kind === 'yt-dlp') {
+            const policy = createYtdlpPolicy(url)
+
+            if (policy?.accepts(url, options)) {
+                return { kind, policy }
             }
+
+            return undefined
         }
 
-        const gallery = createMappedGalleryDlPolicy(url)
+        if (kind === 'gallery-dl' && config.getBinaries().galleryDl) {
+            const policy = createMappedGalleryDlPolicy(url)
 
-        if (gallery?.accepts(url, options) && config.getBinaries().galleryDl) {
-            return {
-                kind: 'gallery-dl' as const,
-                policy: gallery
+            if (policy?.accepts(url, options)) {
+                return { kind, policy }
             }
         }
 

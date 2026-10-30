@@ -1,17 +1,36 @@
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+    createTestWorkspace,
+    cleanupTestWorkspace,
+    requireTestWorkspace,
+    testPath
+} from '../../helpers/test-workspace.cjs'
 
 const fixture = vi.hoisted(() => ({
     root: '',
-    version: '1.32.1'
+    version: '1.32.1',
+    packaged: false
 }))
 
 vi.mock('electron', () => ({
     app: {
-        isPackaged: false,
-        getAppPath: () => fixture.root
+        get isPackaged() {
+            return fixture.packaged
+        },
+        getAppPath: () => fixture.root,
+        getPath: (name: string) => {
+            if (name === 'userData') {
+                return testPath(fixture.root, 'profile')
+            }
+
+            if (name === 'exe') {
+                return testPath(fixture.root, 'program', 'storagebucket.exe')
+            }
+
+            throw new Error('허용하지 않은 테스트 경로입니다.')
+        }
     }
 }))
 
@@ -37,6 +56,7 @@ vi.mock('node:child_process', () => ({
     )
 }))
 
+requireTestWorkspace()
 describe.skipIf(process.platform !== 'win32')('BinManager 설치', () => {
     let bin: ReturnType<
         (typeof import('../../../src/main/features/engines/BinManager'))['BinManager']['getInstance']
@@ -45,26 +65,32 @@ describe.skipIf(process.platform !== 'win32')('BinManager 설치', () => {
 
     beforeEach(async () => {
         vi.resetModules()
+        vi.stubEnv('PORTABLE_EXECUTABLE_DIR', '')
 
-        fixture.root = await mkdtemp(join(tmpdir(), 'storagebucket-engine-test-'))
+        fixture.root = createTestWorkspace('engine-install')
         fixture.version = '1.32.1'
+        fixture.packaged = false
 
-        executable = join(fixture.root, 'bin', 'gallery-dl.exe')
+        executable = testPath(fixture.root, 'bin', 'gallery-dl.exe')
 
+        // 실제 네트워크 요청 없이 실행 파일 응답을 모의한다.
         vi.stubGlobal(
             'fetch',
             vi.fn(async () => new Response(new Uint8Array([0x4d, 0x5a, 1, 2])))
         )
 
         const { BinManager } = await import('../../../src/main/features/engines/BinManager')
+
         bin = BinManager.getInstance()
     })
 
-    afterEach(async () => {
+    afterEach(() => {
         vi.unstubAllGlobals()
+        vi.unstubAllEnvs()
         vi.restoreAllMocks()
 
-        await rm(fixture.root, { recursive: true, force: true })
+        cleanupTestWorkspace(fixture.root)
+        fixture.root = ''
     })
 
     it('고정 버전을 Codeberg에서 받아 영구 경로에 설치한다', async () => {
@@ -114,5 +140,17 @@ describe.skipIf(process.platform !== 'win32')('BinManager 설치', () => {
 
         expect(await bin.downloadEngine('gallery-dl')).toBe(false)
         expect(await readdir(join(fixture.root, 'bin'))).toEqual([])
+    })
+
+    it('설치형의 엔진은 프로그램 폴더 밖의 사용자 데이터에 저장한다', async () => {
+        fixture.packaged = true
+
+        const installed = testPath(fixture.root, 'profile', 'bin', 'gallery-dl.exe')
+
+        expect(await bin.downloadEngine('gallery-dl')).toBe(true)
+        expect(bin.getBinaryPath('gallery-dl')).toBe(installed)
+        expect(await readFile(installed)).toEqual(Buffer.from([0x4d, 0x5a, 1, 2]))
+
+        expect(await readdir(testPath(fixture.root, 'profile', 'bin'))).toEqual(['gallery-dl.exe'])
     })
 })
